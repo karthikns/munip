@@ -2,6 +2,7 @@
 
 PixelViewer::PixelViewer(QWidget *par) : QWidget(par)
 {
+  setObjectName("PixelViewer");
   workImage = 0;
   label = new QLabel(this);
   pixelEdit = new QTextEdit(this);
