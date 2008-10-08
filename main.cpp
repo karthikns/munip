@@ -1,4 +1,5 @@
 #include "pixelviewer.h"
+// We met at NS place on 8th october 2008
 
 int main(int argc, char *argv[])
 {
