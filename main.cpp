@@ -1,12 +1,10 @@
-#include "pixelviewer.h"
-// We met at NS place on 8th october 2008
+#include "mainwindow.h"
+#include <QApplication>
 
 int main(int argc, char *argv[])
 {
   QApplication app(argc, argv);
-
-  PixelViewer *viewer = new PixelViewer(0);
-  viewer->show();
-
+  MainWindow *mw = new MainWindow();
+  mw->show();
   return app.exec();
 }
