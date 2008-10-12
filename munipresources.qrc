@@ -1,0 +1,13 @@
+<!DOCTYPE RCC><RCC version="1.0">
+  <qresource>
+	<file>images/about.png</file>
+	<file>images/close.png</file>
+    <file>images/open.png</file>
+	<file>images/quit.png</file>
+    <file>images/save-as.png</file>
+    <file>images/save.png</file>
+    <file>images/show-grid.png</file>
+    <file>images/zoom-in.png</file>
+	<file>images/zoom-out.png</file>
+  </qresource>
+</RCC>
