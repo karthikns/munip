@@ -1,8 +1,9 @@
 #ifndef STAFF_H
 #define STAFF_H
 
+#include "monoimage.h"
+
 #include <QPoint>
-#include <QImage>
 #include <QList>
 
 namespace Munip {
@@ -59,7 +60,6 @@ namespace Munip {
 
     };
 
-
     class StaffLineRemover
     {
     public:
@@ -77,11 +77,11 @@ namespace Munip {
         /**
          * This is the monochrome horizontally projected image.
          */
-        QImage m_monoImage;
+        MonoImage m_monoImage;
         /**
          * This is the image with all the staff lines removed.
          */
-        QImage m_processedImage;
+        MonoImage m_processedImage;
     };
 
 }

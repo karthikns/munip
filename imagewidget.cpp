@@ -34,6 +34,8 @@ void ImageWidget::init()
 {
     m_scale = 1.0;
     m_showGrid = true;
+    m_widgetID = -1;
+    m_processorWidget = 0;
 
     QGraphicsScene *scene = new QGraphicsScene(this);
     m_pixmapItem = new QGraphicsPixmapItem();
@@ -57,6 +59,50 @@ bool ImageWidget::showGrid() const
 QString ImageWidget::fileName() const
 {
     return m_fileName;
+}
+
+QPixmap ImageWidget::pixmap() const
+{
+    return m_pixmapItem->pixmap();
+}
+
+QImage ImageWidget::image() const
+{
+    return m_pixmapItem->pixmap().toImage();
+}
+
+int ImageWidget::widgetID() const
+{
+    return m_widgetID;
+}
+
+void ImageWidget::setWidgetID(int id)
+{
+    m_widgetID = id;
+    updateWindowTitle();
+}
+
+ImageWidget*ImageWidget:: processorWidget() const
+{
+    return m_processorWidget;
+}
+
+void ImageWidget::setProcessorWidget(ImageWidget *wid)
+{
+    m_processorWidget = wid;
+    updateWindowTitle();
+}
+
+void ImageWidget::updateWindowTitle()
+{
+    QString title = QString("wid = %1:  %2 ")
+        .arg(m_widgetID)
+        .arg(m_fileName.isEmpty() ? tr("Untitled") : QFileInfo(m_fileName).fileName());
+
+    if (m_processorWidget) {
+        title.append(tr(" (Processed from wid = %1 )").arg(m_processorWidget->widgetID()));
+    }
+    setWindowTitle(title);
 }
 
 void ImageWidget::slotSetShowGrid(bool b)
@@ -102,6 +148,9 @@ void ImageWidget::slotSave()
         QMessageBox::warning(this, tr("Failed saving"),
                              tr("Could not save image to file %1").arg(m_fileName));
         m_fileName = QString(); // reset
+    }
+    else {
+        updateWindowTitle();
     }
 }
 

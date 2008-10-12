@@ -16,6 +16,16 @@ public:
     bool showGrid() const;
 
     QString fileName() const;
+    QPixmap pixmap() const;
+    QImage image() const;
+
+    int widgetID() const;
+    void setWidgetID(int id);
+
+    ImageWidget* processorWidget() const;
+    void setProcessorWidget(ImageWidget *wid);
+
+    void updateWindowTitle();
 
 public slots:
     void slotSetShowGrid(bool b);
@@ -37,6 +47,9 @@ private:
     QString m_fileName;
     bool m_showGrid;
     qreal m_scale;
+
+    int m_widgetID;
+    ImageWidget *m_processorWidget;
 };
 
 #endif

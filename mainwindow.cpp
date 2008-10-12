@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 
 #include "imagewidget.h"
+#include "scanner/staff.h"
 
 #include <QAction>
 #include <QApplication>
@@ -12,6 +13,18 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QToolBar>
+
+struct IDGenerator
+{
+    static int lastID;
+
+    static int gen()
+    {
+        return ++lastID;
+    }
+};
+
+int IDGenerator::lastID = -1;
 
 MainWindow::MainWindow()
 {
@@ -82,6 +95,7 @@ void MainWindow::setupActions()
     m_showGridAction->setCheckable(true);
     m_showGridAction->setShortcut(tr("Ctrl+G"));
     m_showGridAction->setStatusTip(tr("Hide/Shows the grid"));
+    m_showGridAction->setEnabled(false);
     connect(m_showGridAction, SIGNAL(toggled(bool)), this, SLOT(slotToggleShowGrid(bool)));
 
     QMenu *viewMenu = menuBar->addMenu(tr("&View"));
@@ -89,6 +103,16 @@ void MainWindow::setupActions()
     viewMenu->addAction(zoomOutAction);
     viewMenu->addSeparator();
     viewMenu->addAction(m_showGridAction);
+
+    QAction *removeLinesAction = new QAction(tr("Remove lines"), this);
+    removeLinesAction->setShortcut(tr("Ctrl+R"));
+    removeLinesAction->setStatusTip(tr("Removes the horizontal staff lines from the image"));
+    connect(removeLinesAction, SIGNAL(triggered()), this, SLOT(slotRemoveLines()));
+
+    QMenu *processMenu = menuBar->addMenu(tr("&Process"));
+    processMenu->addAction(removeLinesAction);
+
+    menuBar->addSeparator();
 
     QAction *aboutAction = new QAction(tr("About MuNIP"), this);
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(slotAboutMunip()));
@@ -114,6 +138,7 @@ void MainWindow::slotOpen()
                                                     tr("Images (*.png *.xpm *.jpg *.bmp)"));
     if (!fileName.isEmpty()) {
         ImageWidget *imgWidget = new ImageWidget(fileName);
+        imgWidget->setWidgetID(IDGenerator::gen());
         QMdiSubWindow *sub = m_mdiArea->addSubWindow(imgWidget);
         sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
         sub->show();
@@ -154,7 +179,6 @@ void MainWindow::slotZoomIn()
     }
 }
 
-
 void MainWindow::slotZoomOut()
 {
     ImageWidget *img = activeImageWidget();
@@ -169,6 +193,25 @@ void MainWindow::slotToggleShowGrid(bool b)
     if (img) {
         img->slotSetShowGrid(b);
     }
+}
+
+void MainWindow::slotRemoveLines()
+{
+    ImageWidget *imgWidget = activeImageWidget();
+    if (!imgWidget) {
+        return;
+    }
+
+    Munip::StaffLineRemover remover(imgWidget->image());
+    remover.removeLines();
+
+    ImageWidget *processedImageWidget = new ImageWidget(QPixmap::fromImage(remover.processedImage()));
+    processedImageWidget->setWidgetID(IDGenerator::gen());
+    processedImageWidget->setProcessorWidget(imgWidget);
+
+    QMdiSubWindow *sub = m_mdiArea->addSubWindow(processedImageWidget);
+    sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
+    sub->show();
 }
 
 void MainWindow::slotAboutMunip()

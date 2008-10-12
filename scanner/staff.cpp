@@ -1,30 +1,12 @@
 #include "staff.h"
 
+#include "tools.h"
+
 #include <QVector>
 #include <QRgb>
 
 namespace Munip
 {
-    int monoPixelValue(const QImage& image, int x, int y)
-    {
-        QRgb rgb = image.pixel(x, y);
-        return qGray(rgb) == 0 ? 0:1;
-    }
-
-    // value = 0, then its black. Else its white.
-    void setMonoPixelValue(QImage &image, int x, int y, int value)
-    {
-        Q_ASSERT(image.format() == QImage::Format_Mono);
-        // But in colortable index 0 might represent white. To take
-        // care of that we have following.
-        QVector<QRgb> colorTable = image.colorTable();
-        //  There are only 2 entries in colortable
-        int blackIndex = qGray(colorTable[0]) == 0 ? 0 : 1;
-        int whiteIndex = 1 - blackIndex;
-
-        image.setPixel(x, y, value == 0 ? blackIndex : whiteIndex);
-    }
-
     StaffLine::StaffLine(const QPoint& start, const QPoint& end, int staffID)
     {
         m_startPos = start;
@@ -127,9 +109,8 @@ namespace Munip
         return m_startPos.y() < other.m_startPos.y();
     }
 
-    StaffLineRemover::StaffLineRemover(const QImage& monoImage)
+    StaffLineRemover::StaffLineRemover(const QImage& monoImage) : m_monoImage(monoImage), m_processedImage(monoImage)
     {
-        m_monoImage = m_processedImage = monoImage;
     }
 
     StaffLineRemover::~StaffLineRemover()
@@ -140,7 +121,7 @@ namespace Munip
     {
         int startx,starty,endx,endy;
         startx = starty = 0;
-        endx = startx+m_processedImage.width();
+        endx = startx + m_processedImage.width();
         endy = starty + m_processedImage.height();
 
         QVector<bool> parsed(endy - starty, false);
@@ -151,18 +132,18 @@ namespace Munip
             {
                 if (parsed[y] == true) continue;
 
-                int currPixel = monoPixelValue(m_monoImage, x, y);
-                if(currPixel == 0)
+                MonoImage::MonoColor currPixel = m_monoImage.pixelValue(x, y);
+                if(currPixel == MonoImage::Black)
                 {
                     QPoint staffStart(x, y);
-                    while(currPixel == 0 && y < endy)
+                    while(currPixel == MonoImage::Black && y < endy)
                     {
-                        setMonoPixelValue(m_processedImage, x, y, 1);
+                        m_processedImage.setPixelValue(x, y, MonoImage::White);
                         parsed[y] = true;
                         y = y+1;
                         if (y < endy && parsed[y+1]) break;
                         // TODO : CHeck if the new y is parsed or not (should we check ? )
-                        currPixel = monoPixelValue(m_monoImage, x, y);
+                        currPixel = m_monoImage.pixelValue(x, y);
                     }
                     QPoint staffEnd(x, y-1);
                     m_staffList.append(Staff(staffStart, staffEnd));
