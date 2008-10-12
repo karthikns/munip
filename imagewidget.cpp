@@ -37,8 +37,11 @@ void ImageWidget::init()
     m_widgetID = -1;
     m_processorWidget = 0;
 
+    QPixmap dummy(10, 10);
+    dummy.fill(Qt::white);
+
     QGraphicsScene *scene = new QGraphicsScene(this);
-    m_pixmapItem = new QGraphicsPixmapItem();
+    m_pixmapItem = new QGraphicsPixmapItem(dummy);
     m_pixmapItem->setShapeMode(QGraphicsPixmapItem::BoundingRectShape);
 
     scene->addItem(m_pixmapItem);

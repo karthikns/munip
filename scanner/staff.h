@@ -67,6 +67,8 @@ namespace Munip {
         ~StaffLineRemover();
 
         void removeLines();
+        void removeLines2();
+        QList<QPoint> checkForLine(int seedX, int seedY);
         QImage processedImage() const;
 
         QList<Staff> staffList() const;

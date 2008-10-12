@@ -2,6 +2,7 @@
 
 #include "imagewidget.h"
 #include "scanner/staff.h"
+#include "tools.h"
 
 #include <QAction>
 #include <QApplication>
@@ -104,12 +105,18 @@ void MainWindow::setupActions()
     viewMenu->addSeparator();
     viewMenu->addAction(m_showGridAction);
 
-    QAction *removeLinesAction = new QAction(tr("Remove lines"), this);
+    QAction *toMonochromeAction = new QAction(tr("Convert to &monochrome"), this);
+    toMonochromeAction->setShortcut(tr("Ctrl+M"));
+    toMonochromeAction->setStatusTip(tr("Converts the active image to monochrome"));
+    connect(toMonochromeAction, SIGNAL(triggered()), this, SLOT(slotConvertToMonochrome()));
+
+    QAction *removeLinesAction = new QAction(tr("&Remove lines"), this);
     removeLinesAction->setShortcut(tr("Ctrl+R"));
     removeLinesAction->setStatusTip(tr("Removes the horizontal staff lines from the image"));
     connect(removeLinesAction, SIGNAL(triggered()), this, SLOT(slotRemoveLines()));
 
     QMenu *processMenu = menuBar->addMenu(tr("&Process"));
+    processMenu->addAction(toMonochromeAction);
     processMenu->addAction(removeLinesAction);
 
     menuBar->addSeparator();
@@ -195,6 +202,23 @@ void MainWindow::slotToggleShowGrid(bool b)
     }
 }
 
+void MainWindow::slotConvertToMonochrome()
+{
+    ImageWidget *imgWidget = activeImageWidget();
+    if (!imgWidget) {
+        return;
+    }
+
+    QPixmap mono = QPixmap::fromImage(Munip::convertToMonochrome(imgWidget->image()));
+    ImageWidget *monoWidget = new ImageWidget(mono);
+    monoWidget->setWidgetID(IDGenerator::gen());
+    monoWidget->setProcessorWidget(imgWidget);
+
+    QMdiSubWindow *sub = m_mdiArea->addSubWindow(monoWidget);
+    sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
+    sub->show();
+}
+
 void MainWindow::slotRemoveLines()
 {
     ImageWidget *imgWidget = activeImageWidget();
@@ -203,7 +227,7 @@ void MainWindow::slotRemoveLines()
     }
 
     Munip::StaffLineRemover remover(imgWidget->image());
-    remover.removeLines();
+    remover.removeLines2();
 
     ImageWidget *processedImageWidget = new ImageWidget(QPixmap::fromImage(remover.processedImage()));
     processedImageWidget->setWidgetID(IDGenerator::gen());

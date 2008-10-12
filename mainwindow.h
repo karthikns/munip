@@ -25,6 +25,7 @@ public slots:
     void slotZoomOut();
     void slotToggleShowGrid(bool b);
 
+    void slotConvertToMonochrome();
     void slotRemoveLines();
 
     void slotAboutMunip();
