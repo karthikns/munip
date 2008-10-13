@@ -177,6 +177,7 @@ namespace Munip
         //            updated white-marked image which acts as input
         //            to next stage, thereby reducing false positives
         //            considerably.
+        removeLines();
         QRect imgRect = m_processedImage.rect();
         MonoImage display(m_processedImage);
         for(int i = 0; i < imgRect.right(); ++i)

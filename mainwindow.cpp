@@ -124,6 +124,12 @@ void MainWindow::setupActions()
     removeLinesAction->setShortcut(tr("Ctrl+R"));
     removeLinesAction->setStatusTip(tr("Removes the horizontal staff lines from the image"));
     connect(removeLinesAction, SIGNAL(triggered()), this, SLOT(slotRemoveLines()));
+    
+    QAction * removeVerLinesAction = new QAction(tr("&Remove Only Vertical Lines"),this);
+    toMonochromeAction-> setShortcut(tr("Ctrl+M"));
+    toMonochromeAction -> setStatusTip(tr("Removes Only The Vertical Lines.Also Sets Up the Staff and Staff Line Classes"));
+    connect(removeVerLinesAction,SIGNAL(triggered()),this,SLOT(slotRemoveVerLines()));
+    
 
     QMenu *processMenu = menuBar->addMenu(tr("&Process"));
     processMenu->addAction(toMonochromeAction);
@@ -132,6 +138,7 @@ void MainWindow::setupActions()
     addToolBar(Qt::LeftToolBarArea, processBar);
     processBar->addAction(toMonochromeAction);
     processBar->addAction(removeLinesAction);
+    processBar -> addAction(removeVerLinesAction);
 
     menuBar->addSeparator();
 
@@ -254,6 +261,21 @@ void MainWindow::slotRemoveLines()
     QMdiSubWindow *sub = m_mdiArea->addSubWindow(processedImageWidget);
     sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
     sub->show();
+}
+void MainWindow :: slotRemoveVerLines()
+{
+     ImageWidget *imgWidget = activeImageWidget();
+     if(!imgWidget){
+                    return;
+                    }
+     Munip :: StaffLineRemover remover(imgWidget->image());
+     remover.removeLines();
+     ImageWidget * processedImageWidget = new ImageWidget(QPixmap :: fromImage(remover.processedImage()));
+     processedImageWidget -> setWidgetID(IDGenerator :: gen());
+     processedImageWidget -> setProcessorWidget(imgWidget);
+     QMdiSubWindow * sub = m_mdiArea -> addSubWindow(processedImageWidget);
+     sub -> widget() -> setAttribute(Qt :: WA_DeleteOnClose);
+     sub -> show();
 }
 
 void MainWindow::slotAboutMunip()

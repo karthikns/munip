@@ -27,6 +27,7 @@ public slots:
 
     void slotConvertToMonochrome();
     void slotRemoveLines();
+    void slotRemoveVerLines();
 
     void slotAboutMunip();
 
