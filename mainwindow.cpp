@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 
 #include "imagewidget.h"
+#include "projection.h"
 #include "scanner/staff.h"
 #include "tools.h"
 
@@ -124,20 +125,28 @@ void MainWindow::setupActions()
     removeLinesAction->setShortcut(tr("Ctrl+R"));
     removeLinesAction->setStatusTip(tr("Removes the horizontal staff lines from the image"));
     connect(removeLinesAction, SIGNAL(triggered()), this, SLOT(slotRemoveLines()));
-    
+
     QAction * removeVerLinesAction = new QAction(tr("&Remove Only Vertical Lines"),this);
     toMonochromeAction-> setShortcut(tr("Ctrl+M"));
     toMonochromeAction -> setStatusTip(tr("Removes Only The Vertical Lines.Also Sets Up the Staff and Staff Line Classes"));
     connect(removeVerLinesAction,SIGNAL(triggered()),this,SLOT(slotRemoveVerLines()));
-    
+
+
+    QAction *projectionAction = new QAction(tr("&Projection"), this);
+    projectionAction->setShortcut(tr("Ctrl+P"));
+    projectionAction->setStatusTip(tr("Calculates horizontal projection of the image"));;
+    connect(projectionAction, SIGNAL(triggered()), this, SLOT(slotProjection()));
 
     QMenu *processMenu = menuBar->addMenu(tr("&Process"));
     processMenu->addAction(toMonochromeAction);
     processMenu->addAction(removeLinesAction);
+    processMenu->addAction(projectionAction);
+
     QToolBar *processBar = new QToolBar(tr("&Process"), this);
     addToolBar(Qt::LeftToolBarArea, processBar);
     processBar->addAction(toMonochromeAction);
     processBar->addAction(removeLinesAction);
+    processBar->addAction(projectionAction);
     processBar -> addAction(removeVerLinesAction);
 
     menuBar->addSeparator();
@@ -276,6 +285,19 @@ void MainWindow :: slotRemoveVerLines()
      QMdiSubWindow * sub = m_mdiArea -> addSubWindow(processedImageWidget);
      sub -> widget() -> setAttribute(Qt :: WA_DeleteOnClose);
      sub -> show();
+}
+
+void MainWindow::slotProjection()
+{
+    ImageWidget *imgWidget = activeImageWidget();
+    if (!imgWidget) {
+        return;
+    }
+
+    ProjectionWidget *wid = new ProjectionWidget(imgWidget->image());
+    QMdiSubWindow *sub = m_mdiArea->addSubWindow(wid);
+    sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
+    sub->show();
 }
 
 void MainWindow::slotAboutMunip()

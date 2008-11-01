@@ -22,12 +22,14 @@ MonoImage& MonoImage::operator=(const MonoImage& other)
 {
     QImage::operator=(other);
     calcIndicies();
+    return *this;
 }
 
 MonoImage& MonoImage::operator=(const QImage& other)
 {
     QImage::operator=(other);
     calcIndicies();
+    return *this;
 }
 
 void MonoImage::calcIndicies()
@@ -40,7 +42,7 @@ void MonoImage::calcIndicies()
     m_whiteIndex = 1 - m_blackIndex;
 }
 
-MonoImage::MonoColor MonoImage::pixelValue(int x, int y)
+MonoImage::MonoColor MonoImage::pixelValue(int x, int y) const
 {
     int pixelIndex = QImage::pixelIndex(x, y);
     return pixelIndex == m_blackIndex ?

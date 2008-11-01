@@ -18,7 +18,7 @@ public:
     MonoImage& operator=(const QImage& other);
     MonoImage& operator=(const MonoImage& other);
 
-    MonoColor pixelValue(int x, int y);
+    MonoColor pixelValue(int x, int y) const;
     void setPixelValue(int x, int y, MonoColor color);
 
 private:
