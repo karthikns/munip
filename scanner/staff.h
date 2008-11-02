@@ -7,6 +7,8 @@
 #include <QList>
 
 namespace Munip {
+    // Forwared declarations
+    class Page;
 
     class StaffLine
     {
@@ -60,10 +62,20 @@ namespace Munip {
 
     };
 
+
+    /**
+     * The functionality of class is to detect and remove the staff
+     * lines and store the data in appropriate data structures.
+     *
+     * The steps involved are
+     * 1) Calculate vertical run-lengths for each column.
+     * 2) Connected componented analysis to remove the symbols.
+     * 3) Yet to add.
+     */
     class StaffLineRemover
     {
     public:
-        StaffLineRemover(const QImage &monoProjectedImage);
+        StaffLineRemover(Page *page);
         ~StaffLineRemover();
 
         void removeLines();
@@ -74,17 +86,36 @@ namespace Munip {
         QList<Staff> staffList() const;
 
     private:
+        Page *m_page;
         QList<Staff> m_staffList;
 
-        /**
-         * This is the monochrome horizontally projected image.
-         */
-        MonoImage m_monoImage;
         /**
          * This is the image with all the staff lines removed.
          */
         MonoImage m_processedImage;
     };
 
+    /**
+     * This class represents a single page characterstics. We need to
+     * create multiple page objects to process multiple pages (because
+     * different pages might have different characterstics).
+     */
+    class Page
+    {
+    public:
+        Page(const MonoImage& image);
+        ~Page();
+
+        const MonoImage& originalImage() const;
+        void process();
+
+        MonoImage staffLineRemovedImage() const;
+    private:
+        MonoImage m_originalImage;
+        StaffLineRemover *m_staffLineRemover;
+        int m_staffSpaceHeight;
+        int m_staffLineHeight;
+    };
 }
+
 #endif

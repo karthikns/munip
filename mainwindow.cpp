@@ -260,10 +260,10 @@ void MainWindow::slotRemoveLines()
         return;
     }
 
-    Munip::StaffLineRemover remover(imgWidget->image());
-    remover.removeLines2();
+    Munip::Page page(imgWidget->image());
+    page.process();
 
-    ImageWidget *processedImageWidget = new ImageWidget(QPixmap::fromImage(remover.processedImage()));
+    ImageWidget *processedImageWidget = new ImageWidget(QPixmap::fromImage(page.staffLineRemovedImage()));
     processedImageWidget->setWidgetID(IDGenerator::gen());
     processedImageWidget->setProcessorWidget(imgWidget);
 
@@ -271,20 +271,25 @@ void MainWindow::slotRemoveLines()
     sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
     sub->show();
 }
+
 void MainWindow :: slotRemoveVerLines()
 {
-     ImageWidget *imgWidget = activeImageWidget();
-     if(!imgWidget){
-                    return;
-                    }
-     Munip :: StaffLineRemover remover(imgWidget->image());
-     remover.removeLines();
-     ImageWidget * processedImageWidget = new ImageWidget(QPixmap :: fromImage(remover.processedImage()));
-     processedImageWidget -> setWidgetID(IDGenerator :: gen());
-     processedImageWidget -> setProcessorWidget(imgWidget);
-     QMdiSubWindow * sub = m_mdiArea -> addSubWindow(processedImageWidget);
-     sub -> widget() -> setAttribute(Qt :: WA_DeleteOnClose);
-     sub -> show();
+    ImageWidget *imgWidget = activeImageWidget();
+
+    if(!imgWidget){
+        return;
+    }
+
+    Munip::Page page(imgWidget->image());
+    page.process();
+
+    ImageWidget *processedImageWidget = new ImageWidget(QPixmap::fromImage(page.staffLineRemovedImage()));
+    processedImageWidget->setWidgetID(IDGenerator::gen());
+    processedImageWidget->setProcessorWidget(imgWidget);
+
+    QMdiSubWindow *sub = m_mdiArea->addSubWindow(processedImageWidget);
+    sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
+    sub->show();
 }
 
 void MainWindow::slotProjection()

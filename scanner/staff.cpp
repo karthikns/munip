@@ -112,8 +112,12 @@ namespace Munip
         return m_startPos.y() < other.m_startPos.y();
     }
 
-    StaffLineRemover::StaffLineRemover(const QImage& monoImage) : m_monoImage(monoImage), m_processedImage(monoImage)
+    StaffLineRemover::StaffLineRemover(Page *page)
     {
+        Q_ASSERT(page);
+        m_page = page;
+        // Initially processedImage = OriginalImage
+        m_processedImage = m_page->originalImage();
     }
 
     StaffLineRemover::~StaffLineRemover()
@@ -135,7 +139,7 @@ namespace Munip
             {
                 if (parsed[y] == true) continue;
 
-                MonoImage::MonoColor currPixel = m_monoImage.pixelValue(x, y);
+                MonoImage::MonoColor currPixel = m_page->originalImage().pixelValue(x, y);
                 if(currPixel == MonoImage::Black)
                 {
                     QPoint staffStart(x, y);
@@ -146,7 +150,7 @@ namespace Munip
                         y = y+1;
                         if (y < endy && parsed[y+1]) break;
                         // TODO : CHeck if the new y is parsed or not (should we check ? )
-                        currPixel = m_monoImage.pixelValue(x, y);
+                        currPixel = m_page->originalImage().pixelValue(x, y);
                     }
                     QPoint staffEnd(x, y-1);
                     m_staffList.append(Staff(staffStart, staffEnd));
@@ -293,4 +297,40 @@ namespace Munip
         return m_staffList;
     }
 
+    Page::Page(const MonoImage& image) : m_originalImage(image)
+    {
+        m_staffSpaceHeight = m_staffLineHeight = -1;
+        m_staffLineRemover = 0;
+    }
+
+    Page::~Page()
+    {
+        delete m_staffLineRemover;
+    }
+
+    const MonoImage& Page::originalImage() const
+    {
+        return m_originalImage;
+    }
+
+    MonoImage Page::staffLineRemovedImage() const
+    {
+        if (m_staffLineRemover) {
+            return m_staffLineRemover->processedImage();
+        }
+        return MonoImage();
+    }
+
+    /**
+     * This method calls the required processing techniques in proper
+     * sequence.
+     */
+    void Page::process()
+    {
+        if (!m_staffLineRemover) {
+            m_staffLineRemover = new StaffLineRemover(this);
+        }
+
+        m_staffLineRemover->removeLines2();
+    }
 }
