@@ -281,9 +281,9 @@ void MainWindow :: slotRemoveVerLines()
     }
 
     Munip::Page page(imgWidget->image());
-    page.process();
+    page.correctSkew();
 
-    ImageWidget *processedImageWidget = new ImageWidget(QPixmap::fromImage(page.staffLineRemovedImage()));
+    ImageWidget *processedImageWidget = new ImageWidget(QPixmap::fromImage(page.processedImage()));
     processedImageWidget->setWidgetID(IDGenerator::gen());
     processedImageWidget->setProcessorWidget(imgWidget);
 
