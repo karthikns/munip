@@ -7,6 +7,7 @@
 #include <QList>
 
 #include <vector>
+#include<iostream>
 
 namespace Munip {
    // Forwared declarations
@@ -116,9 +117,11 @@ namespace Munip {
 			MonoImage staffLineRemovedImage() const;
 			double detectSkew();
 			void correctSkew();
-      QPointF meanOfPoints(const std::vector<QPoint>& pixels) const;
-      std::vector<double> covariance(const std::vector<QPoint>& blackPixels, QPointF mean) const;
-      double highestEigenValue(const std::vector<double> &matrix) const;
+			void dfs(int,int,std::vector<QPoint>);
+			double findSkew(std :: vector<QPoint>&);
+      		QPointF meanOfPoints(const std::vector<QPoint>& pixels) const;
+     		std::vector<double> covariance(const std::vector<QPoint>& blackPixels, QPointF mean) const;
+      		double highestEigenValue(const std::vector<double> &matrix) const;
 
 		private:
 			MonoImage m_originalImage;
@@ -126,6 +129,7 @@ namespace Munip {
 			StaffLineRemover *m_staffLineRemover;
 			int m_staffSpaceHeight;
 			int m_staffLineHeight;
+			std :: vector<double> m_skewList;
 	};
 }
 

@@ -332,28 +332,98 @@ namespace Munip
       return MonoImage();
    }
 
+	double Page :: findSkew(std :: vector<QPoint>& points)
+	{
+		QPointF mean = meanOfPoints(points);
+		std::vector<double> covmat = covariance(points, mean);
+		if(covmat[1] == 0)
+		{
+			for(int i = 0; i < points.size(); i++)
+				qDebug() << points[i];
+		}
+		//Q_ASSERT(covmat!= 0);
+		double eigenvalue = highestEigenValue(covmat);
+     	double skew = (eigenvalue - covmat[0]) / (covmat[1]);
+      	double theta = atan((skew));
+		return skew;
+	
+	}
+
+   void Page :: dfs(int x,int y, std :: vector<QPoint> points)
+   {
+		m_originalImage.setPixelValue(x,y,MonoImage :: White);
+		if(points.size() == 20)
+		{
+			double skew;
+			m_skewList.push_back((skew = findSkew(points)));
+			while(points.size() > 0)
+				points.pop_back();
+        }
+		if(m_originalImage.pixelValue(x+1,y+1) == MonoImage :: Black && x+1 < m_originalImage.width() &&  y +1< m_originalImage.height())
+		{
+			points.push_back(QPoint(x,y));
+			dfs(x+1,y+1,points);
+		}
+		if(m_originalImage.pixelValue(x+1,y) == MonoImage :: Black &&  x+1 < m_originalImage.width())
+		{
+			points.push_back(QPoint(x,y));
+			dfs(x+1,y,points);
+		}
+		if(m_originalImage.pixelValue(x+1,y-1) == MonoImage :: Black && y -1 > 0)
+		{
+			points.push_back(QPoint(x,y));
+			dfs(x+1,y-1,points);
+		}
+	}
+
    double Page::detectSkew()
    {
-      std::vector<QPoint> blackPixelList;
-      for(int y = 0;  y < m_originalImage.height();y++)
+	  int flag = 1;
+	  int x = 0,y = 0;
+      for( x = 0;  x < m_originalImage.width();x++)
       {
-         for(int x = 0; x < m_originalImage.width();x++)
+         for( y = 0; y < m_originalImage.height();y++)
          {
             if(m_originalImage.pixelValue(x,y) == MonoImage :: Black)
-            {
-               QPoint ob(x,y);
-               blackPixelList.push_back(ob);
-            }
+     		{	
+				std :: vector<QPoint> t;	 
+				dfs(x,y,t);
+			}
+			
          }
+		 
       }
-      QPointF mean = meanOfPoints(blackPixelList);
-      qDebug() << Q_FUNC_INFO << "mean:" << mean;
-      std::vector<double> covmat = covariance(blackPixelList, mean);
-      double eigenvalue = highestEigenValue(covmat);
-      double skew = (eigenvalue - covmat[0]) / (covmat[1]);
-      double theta = atan((skew));
-      qDebug() << Q_FUNC_INFO << skew<<"   "<<(180/M_PI) * theta;
-      return  M_PI/2.0 - theta;
+	  /*Computation of the skew with highest frequency*/
+	  sort(m_skewList.begin(),m_skewList.end());
+	  for(int i = 0; i < m_skewList.size(); i++)
+	  		qDebug()<<m_skewList[i];
+
+	  int i = 0,n = m_skewList.size();
+	  int modefrequency = 0;
+	  int maxstartindex,maxendindex;	
+	  double modevalue;
+	  while( i <= n-1)
+	  {
+		int runlength = 1;
+		double t = m_skewList[i];
+		int runvalue = (int) (t * 100);
+		while( i + runlength <= n-1 && (int)(m_skewList[i+runlength]*100) == runvalue)
+			runlength++;
+		if(runlength > modefrequency)
+		{
+			modefrequency = runlength;
+			maxstartindex = i;
+			maxendindex = i + runlength;
+		}
+		i += runlength;
+	  }
+		double skew = 0;
+	  for(int i = maxstartindex; i<= maxendindex;i++)
+	  		skew += m_skewList[i];
+	  skew /= modefrequency;
+			
+	  qDebug() << Q_FUNC_INFO <<skew;
+	  return skew;
    }
 
    void Page::correctSkew()
@@ -403,7 +473,6 @@ namespace Munip
 
    std::vector<double> Page::covariance(const std::vector<QPoint>& blackPixels, QPointF mean) const
    {
-      mean = QPointF(0, 0);
       std::vector<double> varianceMatrix(4, 0);
       double &vxx = varianceMatrix[0];
       double &vxy = varianceMatrix[1];
@@ -418,10 +487,12 @@ namespace Munip
          vyy += ( blackPixels[i].y() - mean.y() ) * ( blackPixels[i].y() - mean.y() );
       }
 
-//       vxx /= blackPixels.size();
-//       vxy /= blackPixels.size();
-//       vyx /= blackPixels.size();
-//       vyy /= blackPixels.size();
+       vxx /= blackPixels.size();
+
+
+       vxy /= blackPixels.size();
+       vyx /= blackPixels.size();
+       vyy /= blackPixels.size();
 
       return varianceMatrix;
    }
@@ -431,9 +502,9 @@ namespace Munip
    {
       double a = 1;
       double b = -( matrix[0] + matrix[3] );
-      double c = (matrix[0]  * matrix[1]) - (matrix[1] * matrix[3]);
+      double c = (matrix[0]  * matrix[3]) - (matrix[1] * matrix[2]);
       double D = b * b - 4*a*c;
-      qDebug() << a << b << c << D;
+      //qDebug() << a << b << c << D;
       Q_ASSERT(D >= 0);
       double lambda = (-b + std :: sqrt(D))/(2*a);
       return lambda;
