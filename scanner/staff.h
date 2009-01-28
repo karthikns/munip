@@ -126,6 +126,7 @@ namespace Munip {
 		private:
 			MonoImage m_originalImage;
 			MonoImage m_processedImage;
+			MonoImage test;
 			StaffLineRemover *m_staffLineRemover;
 			int m_staffSpaceHeight;
 			int m_staffLineHeight;

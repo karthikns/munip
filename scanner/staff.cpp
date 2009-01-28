@@ -300,7 +300,8 @@ namespace Munip
 
    Page::Page(const MonoImage& image) :
 			m_originalImage(image),
-			m_processedImage(image)
+			m_processedImage(image),
+			test(image)
    {
       m_staffSpaceHeight = m_staffLineHeight = -1;
       m_staffLineRemover = 0;
@@ -433,15 +434,15 @@ namespace Munip
          return;
 
 
-      if (0) {
-         for(int y = 0;  y < m_originalImage.height();y++)
+      if (1) {
+         for(int y = 0;  y < test.height();y++)
          {
-            for(int x = 0; x < m_originalImage.width();x++)
+            for(int x = 0; x < test.width();x++)
             {
-               if(m_originalImage.pixelValue(x,y) == MonoImage :: Black)
+               if(test.pixelValue(x,y) == MonoImage :: Black)
                {
-                  int x1 = x * cos(theta) + y * sin(theta);
-                  int y1 = -x * sin(theta) + y * cos(theta);
+		 int x1 = qRound(x * cos(theta) + y * sin(theta));
+		 int y1 = qRound(-x * sin(theta) + y * cos(theta));
                   qDebug() << Q_FUNC_INFO << QPoint(x1, y1);
                   m_processedImage.setPixelValue(x1,y1,MonoImage :: Black);
                }
