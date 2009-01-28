@@ -429,7 +429,7 @@ namespace Munip
 
    void Page::correctSkew()
    {
-      double theta = detectSkew();
+     double theta = std::atan(detectSkew());
       if(theta == 0.0)
          return;
 
