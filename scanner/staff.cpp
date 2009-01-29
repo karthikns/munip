@@ -338,10 +338,7 @@ namespace Munip
 		QPointF mean = meanOfPoints(points);
 		std::vector<double> covmat = covariance(points, mean);
 		if(covmat[1] == 0)
-		{
-			for(int i = 0; i < points.size(); i++)
-				qDebug() << points[i];
-		}
+			return 0;
 		//Q_ASSERT(covmat!= 0);
 		double eigenvalue = highestEigenValue(covmat);
      	double skew = (eigenvalue - covmat[0]) / (covmat[1]);
