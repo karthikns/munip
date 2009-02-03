@@ -15,327 +15,327 @@
 
 namespace Munip
 {
-   StaffLine::StaffLine(const QPoint& start, const QPoint& end, int staffID)
-   {
-      m_startPos = start;
-      m_endPos = end;
-      m_staffID = staffID;
-      m_lineWidth = -1; // still to be set
-   }
+    StaffLine::StaffLine(const QPoint& start, const QPoint& end, int staffID)
+    {
+        m_startPos = start;
+        m_endPos = end;
+        m_staffID = staffID;
+        m_lineWidth = -1; // still to be set
+    }
 
-   StaffLine::~StaffLine()
-   {
+    StaffLine::~StaffLine()
+    {
 
-   }
+    }
 
-   QPoint StaffLine::startPos() const
-   {
-      return m_startPos;
-   }
+    QPoint StaffLine::startPos() const
+    {
+        return m_startPos;
+    }
 
-   void StaffLine::setStartPos(const QPoint& point)
-   {
-      m_startPos = point;
-   }
+    void StaffLine::setStartPos(const QPoint& point)
+    {
+        m_startPos = point;
+    }
 
-   QPoint StaffLine::endPos() const
-   {
-      return m_endPos;
-   }
+    QPoint StaffLine::endPos() const
+    {
+        return m_endPos;
+    }
 
-   void StaffLine::setEndPos(const QPoint& point)
-   {
-      m_endPos = point;
-   }
+    void StaffLine::setEndPos(const QPoint& point)
+    {
+        m_endPos = point;
+    }
 
-   int StaffLine::staffID() const
-   {
-      return m_staffID;
-   }
+    int StaffLine::staffID() const
+    {
+        return m_staffID;
+    }
 
-   void StaffLine::setStaffID(int id)
-   {
-      m_staffID = id;
-   }
+    void StaffLine::setStaffID(int id)
+    {
+        m_staffID = id;
+    }
 
-   int StaffLine::lineWidth() const
-   {
-      return m_lineWidth;
-   }
+    int StaffLine::lineWidth() const
+    {
+        return m_lineWidth;
+    }
 
-   void StaffLine::setLineWidth(int wid)
-   {
-      m_lineWidth = wid;
-   }
-
-
-   Staff::Staff(const QPoint& vStart, const QPoint& vEnd)
-   {
-      m_startPos = vStart;
-      m_endPos = vEnd;
-   }
-
-   Staff::~Staff()
-   {
-
-   }
+    void StaffLine::setLineWidth(int wid)
+    {
+        m_lineWidth = wid;
+    }
 
 
-   QPoint Staff::startPos() const
-   {
-      return m_startPos;
-   }
+    Staff::Staff(const QPoint& vStart, const QPoint& vEnd)
+    {
+        m_startPos = vStart;
+        m_endPos = vEnd;
+    }
 
-   void Staff::setStartPos(const QPoint& point)
-   {
-      m_startPos = point;
-   }
+    Staff::~Staff()
+    {
+
+    }
 
 
-   QPoint Staff::endPos() const
-   {
-      return m_endPos;
-   }
+    QPoint Staff::startPos() const
+    {
+        return m_startPos;
+    }
 
-   void Staff::setEndPos(const QPoint& point)
-   {
-      m_endPos = point;
-   }
+    void Staff::setStartPos(const QPoint& point)
+    {
+        m_startPos = point;
+    }
 
-   QList<StaffLine> Staff::staffLines() const
-   {
-      return m_staffLines;
-   }
 
-   void Staff::addStaffLine(const StaffLine& sline)
-   {
-      m_staffLines.append(sline);
-   }
+    QPoint Staff::endPos() const
+    {
+        return m_endPos;
+    }
 
-   bool Staff::operator<(Staff& other)
-   {
-      return m_startPos.y() < other.m_startPos.y();
-   }
+    void Staff::setEndPos(const QPoint& point)
+    {
+        m_endPos = point;
+    }
 
-   StaffLineRemover::StaffLineRemover(Page *page)
-   {
-      Q_ASSERT(page);
-      m_page = page;
-      // Initially processedImage = OriginalImage
-      m_processedImage = m_page->originalImage();
-   }
+    QList<StaffLine> Staff::staffLines() const
+    {
+        return m_staffLines;
+    }
 
-   StaffLineRemover::~StaffLineRemover()
-   {
-   }
+    void Staff::addStaffLine(const StaffLine& sline)
+    {
+        m_staffLines.append(sline);
+    }
 
-   void StaffLineRemover::removeLines()
-   {
-      int startx,starty,endx,endy;
-      startx = starty = 0;
-      endx = startx + m_processedImage.width();
-      endy = starty + m_processedImage.height();
+    bool Staff::operator<(Staff& other)
+    {
+        return m_startPos.y() < other.m_startPos.y();
+    }
 
-      QVector<bool> parsed(endy - starty, false);
+    StaffLineRemover::StaffLineRemover(Page *page)
+    {
+        Q_ASSERT(page);
+        m_page = page;
+        // Initially processedImage = OriginalImage
+        m_processedImage = m_page->originalImage();
+    }
 
-      for(int x = startx; x < endx; x++)
-      {
-         for(int y = starty; y < endy; y++)
-         {
-            if (parsed[y] == true) continue;
+    StaffLineRemover::~StaffLineRemover()
+    {
+    }
 
-            MonoImage::MonoColor currPixel = m_page->originalImage().pixelValue(x, y);
-            if(currPixel == MonoImage::Black)
+    void StaffLineRemover::removeLines()
+    {
+        int startx,starty,endx,endy;
+        startx = starty = 0;
+        endx = startx + m_processedImage.width();
+        endy = starty + m_processedImage.height();
+
+        QVector<bool> parsed(endy - starty, false);
+
+        for(int x = startx; x < endx; x++)
+        {
+            for(int y = starty; y < endy; y++)
             {
-               QPoint staffStart(x, y);
-               while(currPixel == MonoImage::Black && y < endy)
-               {
-                  m_processedImage.setPixelValue(x, y, MonoImage::White);
-                  parsed[y] = true;
-                  y = y+1;
-                  if (y < endy && parsed[y+1]) break;
-                  // TODO : CHeck if the new y is parsed or not (should we check ? )
-                  currPixel = m_page->originalImage().pixelValue(x, y);
-               }
-               QPoint staffEnd(x, y-1);
-               m_staffList.append(Staff(staffStart, staffEnd));
+                if (parsed[y] == true) continue;
+
+                MonoImage::MonoColor currPixel = m_page->originalImage().pixelValue(x, y);
+                if(currPixel == MonoImage::Black)
+                {
+                    QPoint staffStart(x, y);
+                    while(currPixel == MonoImage::Black && y < endy)
+                    {
+                        m_processedImage.setPixelValue(x, y, MonoImage::White);
+                        parsed[y] = true;
+                        y = y+1;
+                        if (y < endy && parsed[y+1]) break;
+                        // TODO : CHeck if the new y is parsed or not (should we check ? )
+                        currPixel = m_page->originalImage().pixelValue(x, y);
+                    }
+                    QPoint staffEnd(x, y-1);
+                    m_staffList.append(Staff(staffStart, staffEnd));
+                }
             }
-         }
-      }
+        }
 
-      //qSort(m_staffList.begin(), m_staffList.end());
-   }
+        //qSort(m_staffList.begin(), m_staffList.end());
+    }
 
-   /**
-    * This is method I(gopal) tried to remove lines. The logic is as
-    * follows
-    *
-    * - Look for a black pixel in a row-wise left-to-right fashion.
-    *
-    * - Call checkForLine method, which returns a list of points
-    *   forming a line. The method returns an empty list if there is
-    *   no possibility of lines.
-    *
-    * - Mark all the above points white.
-    *
-    * @todo Don't remove points that can be part of symbol.
-    */
-   void StaffLineRemover::removeLines2()
-   {
-      // Important: USE m_processedImage everywhere as it has an
-      //            updated white-marked image which acts as input
-      //            to next stage, thereby reducing false positives
-      //            considerably.
-      removeLines();
-      QRect imgRect = m_processedImage.rect();
-      MonoImage display(m_processedImage);
-      for(int i = 0; i < imgRect.right(); ++i)
-         for(int j = 0; j < imgRect.height(); ++j)
-            display.setPixelValue(i, j, MonoImage::Black);
+    /**
+     * This is method I(gopal) tried to remove lines. The logic is as
+     * follows
+     *
+     * - Look for a black pixel in a row-wise left-to-right fashion.
+     *
+     * - Call checkForLine method, which returns a list of points
+     *   forming a line. The method returns an empty list if there is
+     *   no possibility of lines.
+     *
+     * - Mark all the above points white.
+     *
+     * @todo Don't remove points that can be part of symbol.
+     */
+    void StaffLineRemover::removeLines2()
+    {
+        // Important: USE m_processedImage everywhere as it has an
+        //            updated white-marked image which acts as input
+        //            to next stage, thereby reducing false positives
+        //            considerably.
+        removeLines();
+        QRect imgRect = m_processedImage.rect();
+        MonoImage display(m_processedImage);
+        for(int i = 0; i < imgRect.right(); ++i)
+            for(int j = 0; j < imgRect.height(); ++j)
+                display.setPixelValue(i, j, MonoImage::Black);
 
 
-      for(int y = imgRect.top(); y <= imgRect.bottom(); ++y)
-      {
-         for(int x = imgRect.left(); x <= imgRect.right(); ++x)
-         {
-            if (m_processedImage.pixelValue(x, y) == MonoImage::Black) {
-               //// Some work delegated.
-               QList<QPoint> lineSlithers = checkForLine(x, y);
+        for(int y = imgRect.top(); y <= imgRect.bottom(); ++y)
+        {
+            for(int x = imgRect.left(); x <= imgRect.right(); ++x)
+            {
+                if (m_processedImage.pixelValue(x, y) == MonoImage::Black) {
+                    //// Some work delegated.
+                    QList<QPoint> lineSlithers = checkForLine(x, y);
 
-               if (lineSlithers.isEmpty()) {
-                  continue;
-               }
+                    if (lineSlithers.isEmpty()) {
+                        continue;
+                    }
 
-               int maxX = x, maxY = y;
-               foreach(QPoint point, lineSlithers) {
-                  maxX = qMax(point.x(), maxX);
-                  maxY = qMax(point.y(), maxY);
+                    int maxX = x, maxY = y;
+                    foreach(QPoint point, lineSlithers) {
+                        maxX = qMax(point.x(), maxX);
+                        maxY = qMax(point.y(), maxY);
 
-                  m_processedImage.setPixelValue(point.x(), point.y(), MonoImage::White);
-                  display.setPixelValue(point.x(), point.y(), MonoImage::White);
+                        m_processedImage.setPixelValue(point.x(), point.y(), MonoImage::White);
+                        display.setPixelValue(point.x(), point.y(), MonoImage::White);
 
-               }
-               x = maxX, y = maxY;
+                    }
+                    x = maxX, y = maxY;
+                }
             }
-         }
-      }
+        }
 
-      // This shows an image in which only the above detected points
-      // are marked white and rest all is black.
-      QLabel *label = new QLabel();
-      label->setPixmap(QPixmap::fromImage(display));
-      label->show();
+        // This shows an image in which only the above detected points
+        // are marked white and rest all is black.
+        QLabel *label = new QLabel();
+        label->setPixmap(QPixmap::fromImage(display));
+        label->show();
 
-   }
+    }
 
-   /**
-    * The logic is as follows.
-    *
-    * - It first determines a continuous horizontal line (can have
-    *   holes in between line, but continuous)
-    *
-    * - Also nearing points to the above belonging to line (say line
-    *   of thickness 3 pixels) are checked and added as part of line.
-    *
-    * - If the horizontal length is greater than some threshold, then
-    *   all the above points are returned.
-    */
-   QList<QPoint> StaffLineRemover::checkForLine(int x, int y)
-   {
-      QList<QPoint> slithers;
-      slithers.append(QPoint(x, y));
-      bool isLine = false;
-      QPoint lastSlither(x, y);
-      int minY, maxY;
-      minY = maxY = y;
+    /**
+     * The logic is as follows.
+     *
+     * - It first determines a continuous horizontal line (can have
+     *   holes in between line, but continuous)
+     *
+     * - Also nearing points to the above belonging to line (say line
+     *   of thickness 3 pixels) are checked and added as part of line.
+     *
+     * - If the horizontal length is greater than some threshold, then
+     *   all the above points are returned.
+     */
+    QList<QPoint> StaffLineRemover::checkForLine(int x, int y)
+    {
+        QList<QPoint> slithers;
+        slithers.append(QPoint(x, y));
+        bool isLine = false;
+        QPoint lastSlither(x, y);
+        int minY, maxY;
+        minY = maxY = y;
 
-      int i = x+1;
-      for(; i < m_processedImage.width(); ++i) {
-         if (m_processedImage.pixelValue(i, lastSlither.y()) == MonoImage::Black) {
-            ;
-         }
-         else if (lastSlither.y() > 0 && m_processedImage.pixelValue(i, lastSlither.y()-1) == MonoImage::Black) {
-            lastSlither.ry()--;
-         }
-         else if (lastSlither.y() < (m_processedImage.height()-1) &&
-                  m_processedImage.pixelValue(i, lastSlither.y() + 1) == MonoImage::Black) {
-            lastSlither.ry()++;
+        int i = x+1;
+        for(; i < m_processedImage.width(); ++i) {
+            if (m_processedImage.pixelValue(i, lastSlither.y()) == MonoImage::Black) {
+                ;
+            }
+            else if (lastSlither.y() > 0 && m_processedImage.pixelValue(i, lastSlither.y()-1) == MonoImage::Black) {
+                lastSlither.ry()--;
+            }
+            else if (lastSlither.y() < (m_processedImage.height()-1) &&
+                     m_processedImage.pixelValue(i, lastSlither.y() + 1) == MonoImage::Black) {
+                lastSlither.ry()++;
 
-         }
-         else {
-            break;
-         }
+            }
+            else {
+                break;
+            }
 
-         lastSlither.rx() = i;
-         slithers.append(lastSlither);
-         minY = qMin(minY, lastSlither.y());
-         maxY = qMax(maxY, lastSlither.y());
-      }
-
+            lastSlither.rx() = i;
+            slithers.append(lastSlither);
+            minY = qMin(minY, lastSlither.y());
+            maxY = qMax(maxY, lastSlither.y());
+        }
 
 
-      const int ThreasholdLineLength = 80;
-      isLine = (i-x) > ThreasholdLineLength;
-      if (isLine) {
-         // for(int j = x; j < i; ++j) {
-         //     for(int k = minY; k <= maxY; ++k) {
-         //         if (m_processedImage.pixelValue(j, k) == MonoImage::Black) {
-         //             slithers.append(QPoint(j, k));
-         //         }
-         //     }
-         // }
-         return slithers;
-      }
-      else {
-         slithers.clear();
-         return slithers;
-      }
-   }
 
-   QImage StaffLineRemover::processedImage() const
-   {
-      return m_processedImage;
-   }
+        const int ThreasholdLineLength = 80;
+        isLine = (i-x) > ThreasholdLineLength;
+        if (isLine) {
+            // for(int j = x; j < i; ++j) {
+            //     for(int k = minY; k <= maxY; ++k) {
+            //         if (m_processedImage.pixelValue(j, k) == MonoImage::Black) {
+            //             slithers.append(QPoint(j, k));
+            //         }
+            //     }
+            // }
+            return slithers;
+        }
+        else {
+            slithers.clear();
+            return slithers;
+        }
+    }
 
-   QList<Staff> StaffLineRemover::staffList() const
-   {
-      return m_staffList;
-   }
+    QImage StaffLineRemover::processedImage() const
+    {
+        return m_processedImage;
+    }
 
-   Page::Page(const MonoImage& image) :
-			m_originalImage(image),
-			m_processedImage(image),
-			test(image)
-   {
-      m_staffSpaceHeight = m_staffLineHeight = -1;
-      m_staffLineRemover = 0;
-      for(int x = 0; x < image.width(); ++x)
-         for(int y = 0; y < image.height(); ++y)
-            m_processedImage.setPixelValue(x, y, MonoImage::White);
-   }
+    QList<Staff> StaffLineRemover::staffList() const
+    {
+        return m_staffList;
+    }
 
-   Page::~Page()
-   {
-      delete m_staffLineRemover;
-   }
+    Page::Page(const MonoImage& image) :
+        m_originalImage(image),
+        m_processedImage(image),
+        test(image)
+    {
+        m_staffSpaceHeight = m_staffLineHeight = -1;
+        m_staffLineRemover = 0;
+        for(int x = 0; x < image.width(); ++x)
+            for(int y = 0; y < image.height(); ++y)
+                m_processedImage.setPixelValue(x, y, MonoImage::White);
+    }
 
-   const MonoImage& Page::originalImage() const
-   {
-      return m_originalImage;
-   }
+    Page::~Page()
+    {
+        delete m_staffLineRemover;
+    }
 
-   const MonoImage& Page::processedImage() const
-   {
-      return m_processedImage;
-   }
+    const MonoImage& Page::originalImage() const
+    {
+        return m_originalImage;
+    }
 
-   MonoImage Page::staffLineRemovedImage() const
-   {
-      if (m_staffLineRemover) {
-         return m_staffLineRemover->processedImage();
-      }
-      return MonoImage();
-   }
+    const MonoImage& Page::processedImage() const
+    {
+        return m_processedImage;
+    }
+
+    MonoImage Page::staffLineRemovedImage() const
+    {
+        if (m_staffLineRemover) {
+            return m_staffLineRemover->processedImage();
+        }
+        return MonoImage();
+    }
 
 	double Page :: findSlope(std :: vector<QPoint>& points)
 	{
@@ -349,8 +349,8 @@ namespace Munip
 		return slope;
 	}
 
-   void Page :: dfs(int x,int y, std :: vector<QPoint> points)
-   {
+    void Page :: dfs(int x,int y, std :: vector<QPoint> points)
+    {
 		m_originalImage.setPixelValue(x,y,MonoImage :: White);
 		if(points.size() == 20)
 		{
@@ -376,164 +376,164 @@ namespace Munip
 		}
 	}
 
-   double Page::detectSkew()
-   {
-	  int x = 0,y = 0;
-      for( x = 0;  x < m_originalImage.width();x++)
-      {
-         for( y = 0; y < m_originalImage.height();y++)
-         {
-            if(m_originalImage.pixelValue(x,y) == MonoImage :: Black)
-     		{
-				std :: vector<QPoint> t;
-				dfs(x,y,t);
-			}
+    double Page::detectSkew()
+    {
+        int x = 0,y = 0;
+        for( x = 0;  x < m_originalImage.width();x++)
+        {
+            for( y = 0; y < m_originalImage.height();y++)
+            {
+                if(m_originalImage.pixelValue(x,y) == MonoImage :: Black)
+                {
+                    std :: vector<QPoint> t;
+                    dfs(x,y,t);
+                }
 
-         }
+            }
 
-      }
-	  /*Computation of the skew with highest frequency*/
-      std::sort(m_skewList.begin(),m_skewList.end());
-	  for(size_t i = 0; i < m_skewList.size(); i++)
+        }
+        /*Computation of the skew with highest frequency*/
+        std::sort(m_skewList.begin(),m_skewList.end());
+        for(size_t i = 0; i < m_skewList.size(); i++)
 	  		qDebug()<<m_skewList[i];
 
-	  int i = 0,n = m_skewList.size();
-	  int modefrequency = 0;
-	  int maxstartindex = -1, maxendindex = -1;
-	  while( i <= n-1)
-	  {
-		int runlength = 1;
-		double t = m_skewList[i];
-		int runvalue = (int) (t * 100);
-		while( i + runlength <= n-1 && (int)(m_skewList[i+runlength]*100) == runvalue)
-			runlength++;
-		if(runlength > modefrequency)
-		{
-			modefrequency = runlength;
-			maxstartindex = i;
-			maxendindex = i + runlength;
-		}
-		i += runlength;
-	  }
+        int i = 0,n = m_skewList.size();
+        int modefrequency = 0;
+        int maxstartindex = -1, maxendindex = -1;
+        while( i <= n-1)
+        {
+            int runlength = 1;
+            double t = m_skewList[i];
+            int runvalue = (int) (t * 100);
+            while( i + runlength <= n-1 && (int)(m_skewList[i+runlength]*100) == runvalue)
+                runlength++;
+            if(runlength > modefrequency)
+            {
+                modefrequency = runlength;
+                maxstartindex = i;
+                maxendindex = i + runlength;
+            }
+            i += runlength;
+        }
 		double skew = 0;
-	  for(int i = maxstartindex; i<= maxendindex;i++)
+        for(int i = maxstartindex; i<= maxendindex;i++)
 	  		skew += m_skewList[i];
-	  skew /= modefrequency;
+        skew /= modefrequency;
 
-	  qDebug() << Q_FUNC_INFO <<skew;
-	  return skew;
-   }
+        qDebug() << Q_FUNC_INFO <<skew;
+        return skew;
+    }
 
-   void Page::correctSkew()
-   {
-     double theta = std::atan(detectSkew());
-      if(theta == 0.0)
-         return;
-
-
-      QTransform transform, trueTransform;
-      qreal angle = -180.0/M_PI * theta;
-      transform.rotate(angle);
-      // Find out the true tranformation used (automatically adjusted
-      // by QImage::transformed method)
-      trueTransform = test.trueMatrix(transform, test.width(), test.height());
-
-      // Processed image will have the transformed image rotated by
-      // staff skew after following operation. Apart from that it also
-      // has black triangular corners produced due to bounding rect
-      // extentsion.
-      m_processedImage = MonoImage(test.transformed(transform, Qt::SmoothTransformation));
+    void Page::correctSkew()
+    {
+        double theta = std::atan(detectSkew());
+        if(theta == 0.0)
+            return;
 
 
-      // Calculate the black triangular areas as single polygon.
-      const QPolygonF oldImageTransformedRect = trueTransform.map(QPolygonF(QRectF(m_originalImage.rect())));
-      const QPolygonF newImageRect = QPolygonF(QRectF(m_processedImage.rect()));
-      const QPolygonF remainingBlackTriangularAreas = newImageRect.subtracted(oldImageTransformedRect);
+        QTransform transform, trueTransform;
+        qreal angle = -180.0/M_PI * theta;
+        transform.rotate(angle);
+        // Find out the true tranformation used (automatically adjusted
+        // by QImage::transformed method)
+        trueTransform = test.trueMatrix(transform, test.width(), test.height());
 
-      // Now simply fill the above obtained polygon with white to
-      // eliminate the black corner triangle.
-      //
-      // NOTE: Pen width = 2 ensures there is no faint line garbage
-      //       left behind.
-      QPainter painter(&m_processedImage);
-      painter.setPen(QPen(Qt::white, 2));
-      painter.setBrush(QBrush(Qt::white));
-      painter.drawPolygon(remainingBlackTriangularAreas);
-      painter.end();
-
-      qDebug() << Q_FUNC_INFO << theta;
-   }
+        // Processed image will have the transformed image rotated by
+        // staff skew after following operation. Apart from that it also
+        // has black triangular corners produced due to bounding rect
+        // extentsion.
+        m_processedImage = MonoImage(test.transformed(transform, Qt::SmoothTransformation));
 
 
-   QPointF Page::meanOfPoints(const std::vector<QPoint>& pixels) const
-   {
-      QPointF mean;
+        // Calculate the black triangular areas as single polygon.
+        const QPolygonF oldImageTransformedRect = trueTransform.map(QPolygonF(QRectF(m_originalImage.rect())));
+        const QPolygonF newImageRect = QPolygonF(QRectF(m_processedImage.rect()));
+        const QPolygonF remainingBlackTriangularAreas = newImageRect.subtracted(oldImageTransformedRect);
 
-      for( unsigned int i = 0; i < pixels.size(); ++i )
-      {
-         mean.rx() += pixels[i].x();
-         mean.ry() += pixels[i].y();
-      }
+        // Now simply fill the above obtained polygon with white to
+        // eliminate the black corner triangle.
+        //
+        // NOTE: Pen width = 2 ensures there is no faint line garbage
+        //       left behind.
+        QPainter painter(&m_processedImage);
+        painter.setPen(QPen(Qt::white, 2));
+        painter.setBrush(QBrush(Qt::white));
+        painter.drawPolygon(remainingBlackTriangularAreas);
+        painter.end();
 
-      if(pixels.size()==0)
-         return mean;
-
-      mean /= pixels.size();
-      return mean;
-   }
-
-
-   std::vector<double> Page::covariance(const std::vector<QPoint>& blackPixels, QPointF mean) const
-   {
-      std::vector<double> varianceMatrix(4, 0);
-      double &vxx = varianceMatrix[0];
-      double &vxy = varianceMatrix[1];
-      double &vyx = varianceMatrix[2];
-      double &vyy = varianceMatrix[3];
+        qDebug() << Q_FUNC_INFO << theta;
+    }
 
 
-      for( unsigned int i=0; i < blackPixels.size(); ++i )
-      {
-         vxx += ( blackPixels[i].x() - mean.x() ) * ( blackPixels[i].x() - mean.x() );
-         vyx = vxy += ( blackPixels[i].x() - mean.x() ) * ( blackPixels[i].y() - mean.y() );
-         vyy += ( blackPixels[i].y() - mean.y() ) * ( blackPixels[i].y() - mean.y() );
-      }
+    QPointF Page::meanOfPoints(const std::vector<QPoint>& pixels) const
+    {
+        QPointF mean;
 
-       vxx /= blackPixels.size();
+        for( unsigned int i = 0; i < pixels.size(); ++i )
+        {
+            mean.rx() += pixels[i].x();
+            mean.ry() += pixels[i].y();
+        }
 
+        if(pixels.size()==0)
+            return mean;
 
-       vxy /= blackPixels.size();
-       vyx /= blackPixels.size();
-       vyy /= blackPixels.size();
-
-      return varianceMatrix;
-   }
-
-
-   double Page::highestEigenValue(const std::vector<double> &matrix) const
-   {
-      double a = 1;
-      double b = -( matrix[0] + matrix[3] );
-      double c = (matrix[0]  * matrix[3]) - (matrix[1] * matrix[2]);
-      double D = b * b - 4*a*c;
-      //qDebug() << a << b << c << D;
-      Q_ASSERT(D >= 0);
-      double lambda = (-b + std :: sqrt(D))/(2*a);
-      return lambda;
-
-   }
+        mean /= pixels.size();
+        return mean;
+    }
 
 
-   /**
-    * This method calls the required processing techniques in proper
-    * sequence.
-    */
-   void Page::process()
-   {
-      if (!m_staffLineRemover) {
-         m_staffLineRemover = new StaffLineRemover(this);
-      }
+    std::vector<double> Page::covariance(const std::vector<QPoint>& blackPixels, QPointF mean) const
+    {
+        std::vector<double> varianceMatrix(4, 0);
+        double &vxx = varianceMatrix[0];
+        double &vxy = varianceMatrix[1];
+        double &vyx = varianceMatrix[2];
+        double &vyy = varianceMatrix[3];
 
-      m_staffLineRemover->removeLines2();
-   }
+
+        for( unsigned int i=0; i < blackPixels.size(); ++i )
+        {
+            vxx += ( blackPixels[i].x() - mean.x() ) * ( blackPixels[i].x() - mean.x() );
+            vyx = vxy += ( blackPixels[i].x() - mean.x() ) * ( blackPixels[i].y() - mean.y() );
+            vyy += ( blackPixels[i].y() - mean.y() ) * ( blackPixels[i].y() - mean.y() );
+        }
+
+        vxx /= blackPixels.size();
+
+
+        vxy /= blackPixels.size();
+        vyx /= blackPixels.size();
+        vyy /= blackPixels.size();
+
+        return varianceMatrix;
+    }
+
+
+    double Page::highestEigenValue(const std::vector<double> &matrix) const
+    {
+        double a = 1;
+        double b = -( matrix[0] + matrix[3] );
+        double c = (matrix[0]  * matrix[3]) - (matrix[1] * matrix[2]);
+        double D = b * b - 4*a*c;
+        //qDebug() << a << b << c << D;
+        Q_ASSERT(D >= 0);
+        double lambda = (-b + std :: sqrt(D))/(2*a);
+        return lambda;
+
+    }
+
+
+    /**
+     * This method calls the required processing techniques in proper
+     * sequence.
+     */
+    void Page::process()
+    {
+        if (!m_staffLineRemover) {
+            m_staffLineRemover = new StaffLineRemover(this);
+        }
+
+        m_staffLineRemover->removeLines2();
+    }
 }

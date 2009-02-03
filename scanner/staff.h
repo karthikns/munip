@@ -10,63 +10,63 @@
 #include<iostream>
 
 namespace Munip {
-   // Forwared declarations
+    // Forwared declarations
 	class Page;
 
 	class StaffLine
 	{
-		public:
-			StaffLine(const QPoint& start, const QPoint& end, int staffID);
-			~StaffLine();
+    public:
+        StaffLine(const QPoint& start, const QPoint& end, int staffID);
+        ~StaffLine();
 
-			QPoint startPos() const;
-			void setStartPos(const QPoint& point);
+        QPoint startPos() const;
+        void setStartPos(const QPoint& point);
 
-			QPoint endPos() const;
-			void setEndPos(const QPoint& point);
+        QPoint endPos() const;
+        void setEndPos(const QPoint& point);
 
-			int staffID() const;
-			void setStaffID(int);
+        int staffID() const;
+        void setStaffID(int);
 
-			int lineWidth() const;
-			void setLineWidth(int wid);
+        int lineWidth() const;
+        void setLineWidth(int wid);
 
-		private:
-			QPoint m_startPos;
-			QPoint m_endPos;
-			int m_lineWidth; // width between the current line and the next. -1 if last line
-			int m_staffID; // The Staff Number To Which The Line Belongs
+    private:
+        QPoint m_startPos;
+        QPoint m_endPos;
+        int m_lineWidth; // width between the current line and the next. -1 if last line
+        int m_staffID; // The Staff Number To Which The Line Belongs
 
-         // int error; //Contains The Error Code incase of Parallax
-         // int paralax;
+        // int error; //Contains The Error Code incase of Parallax
+        // int paralax;
 	};
 
 	class Staff
 	{
-		public:
-			Staff(const QPoint& vStart, const QPoint& vEnd);
-			~Staff();
+    public:
+        Staff(const QPoint& vStart, const QPoint& vEnd);
+        ~Staff();
 
-			QPoint startPos() const;
-			void setStartPos(const QPoint& point);
+        QPoint startPos() const;
+        void setStartPos(const QPoint& point);
 
-			QPoint endPos() const;
-			void setEndPos(const QPoint& point);
+        QPoint endPos() const;
+        void setEndPos(const QPoint& point);
 
-			QList<StaffLine> staffLines() const;
-			void addStaffLine(const StaffLine& staffLine);
+        QList<StaffLine> staffLines() const;
+        void addStaffLine(const StaffLine& staffLine);
 
-			bool operator<(Staff& other);
+        bool operator<(Staff& other);
 
-		private:
-			QList<StaffLine> m_staffLines;
-			QPoint m_startPos;
-			QPoint m_endPos;
+    private:
+        QList<StaffLine> m_staffLines;
+        QPoint m_startPos;
+        QPoint m_endPos;
 
 	};
 
 
-   /**
+    /**
 	 * The functionality of class is to detect and remove the staff
 	 * lines and store the data in appropriate data structures.
 	 *
@@ -74,63 +74,63 @@ namespace Munip {
 	 * 1) Calculate vertical run-lengths for each column.
 	 * 2) Connected componented analysis to remove the symbols.
 	 * 3) Yet to add.
-	*/
+     */
 	class StaffLineRemover
 	{
-		public:
-			StaffLineRemover(Page *page);
-			~StaffLineRemover();
+    public:
+        StaffLineRemover(Page *page);
+        ~StaffLineRemover();
 
-			void removeLines();
-			void removeLines2();
-			QList<QPoint> checkForLine(int seedX, int seedY);
-			QImage processedImage() const;
+        void removeLines();
+        void removeLines2();
+        QList<QPoint> checkForLine(int seedX, int seedY);
+        QImage processedImage() const;
 
-			QList<Staff> staffList() const;
+        QList<Staff> staffList() const;
 
-		private:
-			Page *m_page;
-			QList<Staff> m_staffList;
+    private:
+        Page *m_page;
+        QList<Staff> m_staffList;
 
-         /**
-			 * This is the image with all the staff lines removed.
-		  */
-			MonoImage m_processedImage;
+        /**
+         * This is the image with all the staff lines removed.
+         */
+        MonoImage m_processedImage;
 	};
 
-   /**
+    /**
 	 * This class represents a single page characterstics. We need to
 	 * create multiple page objects to process multiple pages (because
 	 * different pages might have different characterstics).
-	*/
+     */
 	class Page
 	{
-		public:
-			Page(const MonoImage& image);
-			~Page();
+    public:
+        Page(const MonoImage& image);
+        ~Page();
 
-			const MonoImage& originalImage() const;
-			const MonoImage& processedImage() const;
+        const MonoImage& originalImage() const;
+        const MonoImage& processedImage() const;
 
-			void process();
+        void process();
 
-			MonoImage staffLineRemovedImage() const;
-			double detectSkew();
-			void correctSkew();
-			void dfs(int,int,std::vector<QPoint>);
-			double findSlope(std :: vector<QPoint>&);
-      		QPointF meanOfPoints(const std::vector<QPoint>& pixels) const;
-     		std::vector<double> covariance(const std::vector<QPoint>& blackPixels, QPointF mean) const;
-      		double highestEigenValue(const std::vector<double> &matrix) const;
+        MonoImage staffLineRemovedImage() const;
+        double detectSkew();
+        void correctSkew();
+        void dfs(int,int,std::vector<QPoint>);
+        double findSlope(std :: vector<QPoint>&);
+        QPointF meanOfPoints(const std::vector<QPoint>& pixels) const;
+        std::vector<double> covariance(const std::vector<QPoint>& blackPixels, QPointF mean) const;
+        double highestEigenValue(const std::vector<double> &matrix) const;
 
-		private:
-			MonoImage m_originalImage;
-			MonoImage m_processedImage;
-			MonoImage test;
-			StaffLineRemover *m_staffLineRemover;
-			int m_staffSpaceHeight;
-			int m_staffLineHeight;
-			std :: vector<double> m_skewList;
+    private:
+        MonoImage m_originalImage;
+        MonoImage m_processedImage;
+        MonoImage test;
+        StaffLineRemover *m_staffLineRemover;
+        int m_staffSpaceHeight;
+        int m_staffLineHeight;
+        std :: vector<double> m_skewList;
 	};
 }
 
