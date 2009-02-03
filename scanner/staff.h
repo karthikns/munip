@@ -118,7 +118,7 @@ namespace Munip {
 			double detectSkew();
 			void correctSkew();
 			void dfs(int,int,std::vector<QPoint>);
-			double findSkew(std :: vector<QPoint>&);
+			double findSlope(std :: vector<QPoint>&);
       		QPointF meanOfPoints(const std::vector<QPoint>& pixels) const;
      		std::vector<double> covariance(const std::vector<QPoint>& blackPixels, QPointF mean) const;
       		double highestEigenValue(const std::vector<double> &matrix) const;

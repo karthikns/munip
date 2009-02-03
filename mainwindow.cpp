@@ -8,6 +8,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QDebug>
+#include <QDir>
 #include <QFileDialog>
 #include <QMdiArea>
 #include <QMdiSubWindow>
@@ -127,8 +128,8 @@ void MainWindow::setupActions()
     connect(removeLinesAction, SIGNAL(triggered()), this, SLOT(slotRemoveLines()));
 
     QAction * removeVerLinesAction = new QAction(tr("&Remove Only Vertical Lines"),this);
-    toMonochromeAction-> setShortcut(tr("Ctrl+M"));
-    toMonochromeAction -> setStatusTip(tr("Removes Only The Vertical Lines.Also Sets Up the Staff and Staff Line Classes"));
+    removeVerLinesAction -> setShortcut(tr("F9"));
+    removeVerLinesAction -> setStatusTip(tr("Removes Only The Vertical Lines.Also Sets Up the Staff and Staff Line Classes"));
     connect(removeVerLinesAction,SIGNAL(triggered()),this,SLOT(slotRemoveVerLines()));
 
 
@@ -175,7 +176,8 @@ ImageWidget* MainWindow::activeImageWidget() const
 
 void MainWindow::slotOpen()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"), QString(),
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"),
+                                                    QDir::currentPath() + QDir::separator() + QString("images"),
                                                     tr("Images (*.png *.xpm *.jpg *.bmp)"));
     if (!fileName.isEmpty()) {
         ImageWidget *imgWidget = new ImageWidget(fileName);

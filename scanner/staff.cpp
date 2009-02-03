@@ -4,6 +4,8 @@
 
 #include <QDebug>
 #include <QLabel>
+#include <QPainter>
+#include <QPen>
 #include <QRgb>
 #include <QSet>
 #include <QVector>
@@ -335,7 +337,7 @@ namespace Munip
       return MonoImage();
    }
 
-	double Page :: findSkew(std :: vector<QPoint>& points)
+	double Page :: findSlope(std :: vector<QPoint>& points)
 	{
 		QPointF mean = meanOfPoints(points);
 		std::vector<double> covmat = covariance(points, mean);
@@ -343,10 +345,8 @@ namespace Munip
 			return 0;
 		//Q_ASSERT(covmat!= 0);
 		double eigenvalue = highestEigenValue(covmat);
-     	double skew = (eigenvalue - covmat[0]) / (covmat[1]);
-      	double theta = atan((skew));
-		return skew;
-
+     	double slope = (eigenvalue - covmat[0]) / (covmat[1]);
+		return slope;
 	}
 
    void Page :: dfs(int x,int y, std :: vector<QPoint> points)
@@ -355,7 +355,7 @@ namespace Munip
 		if(points.size() == 20)
 		{
 			double skew;
-			m_skewList.push_back((skew = findSkew(points)));
+			m_skewList.push_back((skew = findSlope(points)));
 			while(points.size() > 0)
 				points.pop_back();
         }
@@ -378,7 +378,6 @@ namespace Munip
 
    double Page::detectSkew()
    {
-	  int flag = 1;
 	  int x = 0,y = 0;
       for( x = 0;  x < m_originalImage.width();x++)
       {
@@ -395,13 +394,12 @@ namespace Munip
       }
 	  /*Computation of the skew with highest frequency*/
       std::sort(m_skewList.begin(),m_skewList.end());
-	  for(int i = 0; i < m_skewList.size(); i++)
+	  for(size_t i = 0; i < m_skewList.size(); i++)
 	  		qDebug()<<m_skewList[i];
 
 	  int i = 0,n = m_skewList.size();
 	  int modefrequency = 0;
-	  int maxstartindex,maxendindex;
-	  double modevalue;
+	  int maxstartindex = -1, maxendindex = -1;
 	  while( i <= n-1)
 	  {
 		int runlength = 1;
@@ -433,32 +431,37 @@ namespace Munip
          return;
 
 
-      if (0) {
-         for(int y = 0;  y < test.height();y++)
-         {
-            for(int x = 0; x < test.width();x++)
-            {
-               if(test.pixelValue(x,y) == MonoImage :: Black)
-               {
-                   int x1 = qRound(x * cos(theta) + y * sin(theta));
-                   int y1 = qRound(-x * sin(theta) + y * cos(theta));
-                  qDebug() << Q_FUNC_INFO << QPoint(x1, y1);
-                  m_processedImage.setPixelValue(x1,y1,MonoImage :: Black);
-               }
-            }
-         }
-         QTransform transform;
-         transform.rotate(0);
-         m_processedImage = MonoImage(m_processedImage.transformed(transform, Qt::SmoothTransformation));
-      }
-      else {
-          QTransform transform;
-          transform.rotate(-180.0/M_PI * theta);
-          m_processedImage = MonoImage(test.transformed(transform, Qt::SmoothTransformation));
-      }
+      QTransform transform, trueTransform;
+      qreal angle = -180.0/M_PI * theta;
+      transform.rotate(angle);
+      // Find out the true tranformation used (automatically adjusted
+      // by QImage::transformed method)
+      trueTransform = test.trueMatrix(transform, test.width(), test.height());
+
+      // Processed image will have the transformed image rotated by
+      // staff skew after following operation. Apart from that it also
+      // has black triangular corners produced due to bounding rect
+      // extentsion.
+      m_processedImage = MonoImage(test.transformed(transform, Qt::SmoothTransformation));
+
+
+      // Calculate the black triangular areas as single polygon.
+      const QPolygonF oldImageTransformedRect = trueTransform.map(QPolygonF(QRectF(m_originalImage.rect())));
+      const QPolygonF newImageRect = QPolygonF(QRectF(m_processedImage.rect()));
+      const QPolygonF remainingBlackTriangularAreas = newImageRect.subtracted(oldImageTransformedRect);
+
+      // Now simply fill the above obtained polygon with white to
+      // eliminate the black corner triangle.
+      //
+      // NOTE: Pen width = 2 ensures there is no faint line garbage
+      //       left behind.
+      QPainter painter(&m_processedImage);
+      painter.setPen(QPen(Qt::white, 2));
+      painter.setBrush(QBrush(Qt::white));
+      painter.drawPolygon(remainingBlackTriangularAreas);
+      painter.end();
 
       qDebug() << Q_FUNC_INFO << theta;
-
    }
 
 
