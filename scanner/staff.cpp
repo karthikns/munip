@@ -11,8 +11,6 @@
 #include <QVector>
 #include <cmath>
 
-#include <algorithm>
-
 namespace Munip
 {
     StaffLine::StaffLine(const QPoint& start, const QPoint& end, int staffID)
@@ -337,44 +335,44 @@ namespace Munip
         return MonoImage();
     }
 
-	double Page :: findSlope(std :: vector<QPoint>& points)
-	{
-		QPointF mean = meanOfPoints(points);
-		std::vector<double> covmat = covariance(points, mean);
-		if(covmat[1] == 0)
-			return 0;
-		//Q_ASSERT(covmat!= 0);
-		double eigenvalue = highestEigenValue(covmat);
-     	double slope = (eigenvalue - covmat[0]) / (covmat[1]);
-		return slope;
-	}
-
-    void Page :: dfs(int x,int y, std :: vector<QPoint> points)
+    double Page :: findSkew(QList<QPoint>& points)
     {
-		m_originalImage.setPixelValue(x,y,MonoImage :: White);
-		if(points.size() == 20)
-		{
-			double skew;
-			m_skewList.push_back((skew = findSlope(points)));
-			while(points.size() > 0)
-				points.pop_back();
+        QPointF mean = meanOfPoints(points);
+        QList<double> covmat = covariance(points, mean);
+        if(covmat[1] == 0)
+            return 0;
+        Q_ASSERT(covmat[1] != 0);
+        double eigenvalue = highestEigenValue(covmat);
+        double slope = (eigenvalue - covmat[0]) / (covmat[1]);
+        return slope;
+    }
+
+    void Page :: dfs(int x,int y, QList<QPoint> points)
+    {
+        m_originalImage.setPixelValue(x,y,MonoImage :: White);
+        if(points.size() == 20)
+        {
+            double skew;
+            m_skewList.push_back((skew = findSkew(points)));
+            while(points.size() > 0)
+                points.pop_back();
         }
-		if(m_originalImage.pixelValue(x+1,y+1) == MonoImage :: Black && x+1 < m_originalImage.width() &&  y +1< m_originalImage.height())
-		{
-			points.push_back(QPoint(x,y));
-			dfs(x+1,y+1,points);
-		}
-		if(m_originalImage.pixelValue(x+1,y) == MonoImage :: Black &&  x+1 < m_originalImage.width())
-		{
-			points.push_back(QPoint(x,y));
-			dfs(x+1,y,points);
-		}
-		if(m_originalImage.pixelValue(x+1,y-1) == MonoImage :: Black && y -1 > 0)
-		{
-			points.push_back(QPoint(x,y));
-			dfs(x+1,y-1,points);
-		}
-	}
+        if(m_originalImage.pixelValue(x+1,y+1) == MonoImage :: Black && x+1 < m_originalImage.width() &&  y +1< m_originalImage.height())
+        {
+            points.push_back(QPoint(x,y));
+            dfs(x+1,y+1,points);
+        }
+        if(m_originalImage.pixelValue(x+1,y) == MonoImage :: Black &&  x+1 < m_originalImage.width())
+        {
+            points.push_back(QPoint(x,y));
+            dfs(x+1,y,points);
+        }
+        if(m_originalImage.pixelValue(x+1,y-1) == MonoImage :: Black && y -1 > 0)
+        {
+            points.push_back(QPoint(x,y));
+            dfs(x+1,y-1,points);
+        }
+    }
 
     double Page::detectSkew()
     {
@@ -385,7 +383,7 @@ namespace Munip
             {
                 if(m_originalImage.pixelValue(x,y) == MonoImage :: Black)
                 {
-                    std :: vector<QPoint> t;
+                    QList<QPoint> t;
                     dfs(x,y,t);
                 }
 
@@ -393,9 +391,9 @@ namespace Munip
 
         }
         /*Computation of the skew with highest frequency*/
-        std::sort(m_skewList.begin(),m_skewList.end());
-        for(size_t i = 0; i < m_skewList.size(); i++)
-	  		qDebug()<<m_skewList[i];
+        qSort(m_skewList.begin(), m_skewList.end());
+        foreach(double skew, m_skewList)
+            qDebug() << skew;
 
         int i = 0,n = m_skewList.size();
         int modefrequency = 0;
@@ -415,9 +413,9 @@ namespace Munip
             }
             i += runlength;
         }
-		double skew = 0;
+        double skew = 0;
         for(int i = maxstartindex; i<= maxendindex;i++)
-	  		skew += m_skewList[i];
+            skew += m_skewList[i];
         skew /= modefrequency;
 
         qDebug() << Q_FUNC_INFO <<skew;
@@ -432,7 +430,7 @@ namespace Munip
 
 
         QTransform transform, trueTransform;
-        qreal angle = -180.0/M_PI * theta;
+        double angle = -180.0/M_PI * theta;
         transform.rotate(angle);
         // Find out the true tranformation used (automatically adjusted
         // by QImage::transformed method)
@@ -465,14 +463,13 @@ namespace Munip
     }
 
 
-    QPointF Page::meanOfPoints(const std::vector<QPoint>& pixels) const
+    QPointF Page::meanOfPoints(const QList<QPoint>& pixels) const
     {
         QPointF mean;
 
-        for( unsigned int i = 0; i < pixels.size(); ++i )
-        {
-            mean.rx() += pixels[i].x();
-            mean.ry() += pixels[i].y();
+        foreach(const QPoint &pixel, pixels) {
+            mean.rx() += pixel.x();
+            mean.ry() += pixel.y();
         }
 
         if(pixels.size()==0)
@@ -483,20 +480,20 @@ namespace Munip
     }
 
 
-    std::vector<double> Page::covariance(const std::vector<QPoint>& blackPixels, QPointF mean) const
+    QList<double> Page::covariance(const QList<QPoint>& blackPixels, QPointF mean) const
     {
-        std::vector<double> varianceMatrix(4, 0);
+        QList<double> varianceMatrix;
+        varianceMatrix << 0 << 0 << 0 << 0;
         double &vxx = varianceMatrix[0];
         double &vxy = varianceMatrix[1];
         double &vyx = varianceMatrix[2];
         double &vyy = varianceMatrix[3];
 
 
-        for( unsigned int i=0; i < blackPixels.size(); ++i )
-        {
-            vxx += ( blackPixels[i].x() - mean.x() ) * ( blackPixels[i].x() - mean.x() );
-            vyx = vxy += ( blackPixels[i].x() - mean.x() ) * ( blackPixels[i].y() - mean.y() );
-            vyy += ( blackPixels[i].y() - mean.y() ) * ( blackPixels[i].y() - mean.y() );
+        foreach(const QPoint& pixel, blackPixels) {
+            vxx += ( pixel.x() - mean.x() ) * ( pixel.x() - mean.x() );
+            vyx = vxy += ( pixel.x() - mean.x() ) * ( pixel.y() - mean.y() );
+            vyy += ( pixel.y() - mean.y() ) * ( pixel.y() - mean.y() );
         }
 
         vxx /= blackPixels.size();
@@ -510,7 +507,7 @@ namespace Munip
     }
 
 
-    double Page::highestEigenValue(const std::vector<double> &matrix) const
+    double Page::highestEigenValue(const QList<double> &matrix) const
     {
         double a = 1;
         double b = -( matrix[0] + matrix[3] );

@@ -6,15 +6,12 @@
 #include <QPoint>
 #include <QList>
 
-#include <vector>
-#include<iostream>
-
 namespace Munip {
     // Forwared declarations
-	class Page;
+    class Page;
 
-	class StaffLine
-	{
+    class StaffLine
+    {
     public:
         StaffLine(const QPoint& start, const QPoint& end, int staffID);
         ~StaffLine();
@@ -39,10 +36,10 @@ namespace Munip {
 
         // int error; //Contains The Error Code incase of Parallax
         // int paralax;
-	};
+    };
 
-	class Staff
-	{
+    class Staff
+    {
     public:
         Staff(const QPoint& vStart, const QPoint& vEnd);
         ~Staff();
@@ -63,20 +60,20 @@ namespace Munip {
         QPoint m_startPos;
         QPoint m_endPos;
 
-	};
+    };
 
 
     /**
-	 * The functionality of class is to detect and remove the staff
-	 * lines and store the data in appropriate data structures.
-	 *
-	 * The steps involved are
-	 * 1) Calculate vertical run-lengths for each column.
-	 * 2) Connected componented analysis to remove the symbols.
-	 * 3) Yet to add.
+     * The functionality of class is to detect and remove the staff
+     * lines and store the data in appropriate data structures.
+     *
+     * The steps involved are
+     * 1) Calculate vertical run-lengths for each column.
+     * 2) Connected componented analysis to remove the symbols.
+     * 3) Yet to add.
      */
-	class StaffLineRemover
-	{
+    class StaffLineRemover
+    {
     public:
         StaffLineRemover(Page *page);
         ~StaffLineRemover();
@@ -96,15 +93,15 @@ namespace Munip {
          * This is the image with all the staff lines removed.
          */
         MonoImage m_processedImage;
-	};
+    };
 
     /**
-	 * This class represents a single page characterstics. We need to
-	 * create multiple page objects to process multiple pages (because
-	 * different pages might have different characterstics).
+     * This class represents a single page characterstics. We need to
+     * create multiple page objects to process multiple pages (because
+     * different pages might have different characterstics).
      */
-	class Page
-	{
+    class Page
+    {
     public:
         Page(const MonoImage& image);
         ~Page();
@@ -117,11 +114,11 @@ namespace Munip {
         MonoImage staffLineRemovedImage() const;
         double detectSkew();
         void correctSkew();
-        void dfs(int,int,std::vector<QPoint>);
-        double findSlope(std :: vector<QPoint>&);
-        QPointF meanOfPoints(const std::vector<QPoint>& pixels) const;
-        std::vector<double> covariance(const std::vector<QPoint>& blackPixels, QPointF mean) const;
-        double highestEigenValue(const std::vector<double> &matrix) const;
+        void dfs(int x, int y, QList<QPoint> points);
+        double findSkew(QList<QPoint> &points);
+        QPointF meanOfPoints(const QList<QPoint>& pixels) const;
+        QList<double> covariance(const QList<QPoint>& blackPixels, QPointF mean) const;
+        double highestEigenValue(const QList<double> &matrix) const;
 
     private:
         MonoImage m_originalImage;
@@ -130,8 +127,8 @@ namespace Munip {
         StaffLineRemover *m_staffLineRemover;
         int m_staffSpaceHeight;
         int m_staffLineHeight;
-        std :: vector<double> m_skewList;
-	};
+        QList<double> m_skewList;
+    };
 }
 
 #endif
