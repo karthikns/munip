@@ -476,8 +476,8 @@ namespace Munip
           QRect r( x, y, x, y );       
           DFS66( x, y, r, NSImage );
 
-
-           m_processedImage = NSImage;
+          qDebug() << Q_FUNC_INFO << r.left() << "  " << r.top() << "  " << r.right() << "  " << r.bottom();
+          m_processedImage = NSImage;
     }
 
 void Page::DFS66( int x, int y, QRect &r, MonoImage &img )
