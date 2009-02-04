@@ -119,6 +119,13 @@ namespace Munip {
         QPointF meanOfPoints(const QList<QPoint>& pixels) const;
         QList<double> covariance(const QList<QPoint>& blackPixels, QPointF mean) const;
         double highestEigenValue(const QList<double> &matrix) const;
+        
+        
+        //NS playground
+        
+        void DFS66( int x, int y, QRect &r, MonoImage &img );
+        int CHK66( int x, int y, MonoImage &img );
+        void FILL66( int x, int y, MonoImage &img );
 
     private:
         MonoImage m_originalImage;

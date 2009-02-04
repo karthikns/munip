@@ -22,3 +22,4 @@ SOURCES += imagewidget.cpp \
            tools.cpp \
            scanner/staff.cpp
 RESOURCES += munipresources.qrc
+CONFIG += console 

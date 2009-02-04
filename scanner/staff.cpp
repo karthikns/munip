@@ -459,8 +459,67 @@ namespace Munip
         painter.drawPolygon(remainingBlackTriangularAreas);
         painter.end();
 
-        qDebug() << Q_FUNC_INFO << theta;
+        qDebug() << Q_FUNC_INFO << theta;               
+
+        // NS Playground
+        // Start of Removal of Lines
+        // DFS by 6*6 and bounding each connected component of image to a rectangle
+        MonoImage NSImage(m_processedImage);
+        
+        int x, y;
+        for( y=0; y < NSImage.height(); ++y )
+             for( x=0; x < NSImage.width(); ++x )
+                  if( NSImage.pixelValue( x, y ) == MonoImage :: Black )
+                      break;
+             
+        
+          QRect r( x, y, x, y );       
+          DFS66( x, y, r, NSImage );
+
+
+           m_processedImage = NSImage;
     }
+
+void Page::DFS66( int x, int y, QRect &r, MonoImage &img )
+{
+     if( !CHK66(x,y,img) )
+         return;
+
+     FILL66( x, y, img );
+     
+     if( x < r.left() )
+         r.setLeft(x);
+     if( x > r.right() )
+         r.setRight(x);
+
+     if( y < r.top() )
+         r.setTop(y);
+     if( y > r.bottom() )
+         r.setBottom(y);
+     
+     DFS66( x-5, y-5, r, img );
+     DFS66( x-5, y+5, r, img );
+     DFS66( x+5, y-5, r, img );
+     DFS66( x+3, y+3, r, img );    
+}
+
+int Page::CHK66( int x, int y, MonoImage &img )
+{      
+     for( int i=x-6; i<= x+6; ++i )
+          for( int j=y-6; j<= y+6; ++j )
+               if( img.pixelValue( i, j ) == MonoImage :: Black )
+                    return 1;
+     return 0;
+}
+
+void Page::FILL66( int x, int y, MonoImage &img )
+{
+     for( int i=x-6; i<= x+6; ++i )
+          for( int j=y-6; j<= y+6; ++j )
+               img.setPixelValue( i, j, MonoImage :: White );
+}
+
+// END OF NS PLAYGROUND
 
 
     QPointF Page::meanOfPoints(const QList<QPoint>& pixels) const

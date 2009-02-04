@@ -12,7 +12,7 @@ namespace Munip
 
         // Modify colortable to our own monochrome
         QVector<QRgb> colorTable = converted.colorTable();
-        const int threshold = 240;
+        const int threshold = 200;
         for(int i = 0; i < colorTable.size(); ++i) {
             int gray = qGray(colorTable[i]);
             if(gray > threshold) {
