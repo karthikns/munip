@@ -119,18 +119,14 @@ namespace Munip {
         QPointF meanOfPoints(const QList<QPoint>& pixels) const;
         QList<double> covariance(const QList<QPoint>& blackPixels, QPointF mean) const;
         double highestEigenValue(const QList<double> &matrix) const;
-        
-        
-        //NS playground
-        
-        void DFS66( int x, int y, QRect &r, MonoImage &img );
-        int CHK66( int x, int y, MonoImage &img );
-        void FILL66( int x, int y, MonoImage &img );
+        void removeStraightLines();
+        QLine checkStraightLine(int startX, int y);
 
     private:
         MonoImage m_originalImage;
         MonoImage m_processedImage;
         MonoImage test;
+        MonoImage straightLineVisitedImage;
         StaffLineRemover *m_staffLineRemover;
         int m_staffSpaceHeight;
         int m_staffLineHeight;
