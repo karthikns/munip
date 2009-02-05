@@ -144,6 +144,7 @@ void MainWindow::setupActions()
     processMenu->addAction(toMonochromeAction);
     processMenu->addAction(removeLinesAction);
     processMenu->addAction(projectionAction);
+    processMenu->addAction(removeVerLinesAction);
 
     SideBar *processBar = new SideBar();
     //addToolBar(Qt::LeftToolBarArea, processBar);
