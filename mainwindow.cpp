@@ -3,12 +3,14 @@
 #include "imagewidget.h"
 #include "projection.h"
 #include "scanner/staff.h"
+#include "sidebar.h"
 #include "tools.h"
 
 #include <QAction>
 #include <QApplication>
 #include <QDebug>
 #include <QDir>
+#include <QDockWidget>
 #include <QFileDialog>
 #include <QMdiArea>
 #include <QMdiSubWindow>
@@ -143,12 +145,15 @@ void MainWindow::setupActions()
     processMenu->addAction(removeLinesAction);
     processMenu->addAction(projectionAction);
 
-    QToolBar *processBar = new QToolBar(tr("&Process"), this);
-    addToolBar(Qt::LeftToolBarArea, processBar);
+    SideBar *processBar = new SideBar();
+    //addToolBar(Qt::LeftToolBarArea, processBar);
     processBar->addAction(toMonochromeAction);
     processBar->addAction(removeLinesAction);
     processBar->addAction(projectionAction);
     processBar -> addAction(removeVerLinesAction);
+    QDockWidget *dock = new QDockWidget(tr("Process"), this);
+    dock->setWidget(processBar);
+    addDockWidget(Qt::LeftDockWidgetArea, dock, Qt::Vertical);
 
     menuBar->addSeparator();
 
