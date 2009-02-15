@@ -2,7 +2,7 @@
 
 #include "imagewidget.h"
 #include "projection.h"
-#include "scanner/staff.h"
+#include "processstep.h"
 #include "sidebar.h"
 #include "tools.h"
 
@@ -19,17 +19,7 @@
 #include <QMessageBox>
 #include <QToolBar>
 
-struct IDGenerator
-{
-    static int lastID;
-
-    static int gen()
-    {
-        return ++lastID;
-    }
-};
-
-int IDGenerator::lastID = -1;
+MainWindow* MainWindow::m_instance = 0;
 
 MainWindow::MainWindow()
 {
@@ -43,10 +33,19 @@ MainWindow::MainWindow()
             this, SLOT(slotOnSubWindowActivate(QMdiSubWindow*)));
 
     setWindowTitle(QString("Music Notation Information Processing (MuNIP)"));
+    // Ensure only one instance of this MainWindow exists.
+    Q_ASSERT_X(!m_instance, "MainWindow construction", "MainWindow already exists!");
+
+    m_instance = const_cast<MainWindow*>(this);
 }
 
 MainWindow::~MainWindow()
 {
+}
+
+MainWindow* MainWindow::instance()
+{
+    return m_instance;
 }
 
 void MainWindow::setupActions()
@@ -119,21 +118,18 @@ void MainWindow::setupActions()
     viewBar->addAction(zoomOutAction);
     viewBar->addAction(m_showGridAction);
 
-    QAction *toMonochromeAction = new QAction(tr("Convert to &monochrome"), this);
-    toMonochromeAction->setShortcut(tr("Ctrl+M"));
+    QAction *toGrayScaleAction = new Munip::ProcessStepAction("GrayScaleConversion", QIcon(),
+                                                              tr("&GrayScale conversion"), this);
+    toGrayScaleAction->setShortcut(tr("Ctrl+1"));
+
+    QAction *toMonochromeAction = new Munip::ProcessStepAction("MonoChromeConversion", QIcon(),
+                                                               tr("Convert to &monochrome"), this);
+    toMonochromeAction->setShortcut(tr("Ctrl+2"));
     toMonochromeAction->setStatusTip(tr("Converts the active image to monochrome"));
-    connect(toMonochromeAction, SIGNAL(triggered()), this, SLOT(slotConvertToMonochrome()));
 
-    QAction *removeLinesAction = new QAction(tr("&Remove lines"), this);
-    removeLinesAction->setShortcut(tr("Ctrl+R"));
-    removeLinesAction->setStatusTip(tr("Removes the horizontal staff lines from the image"));
-    connect(removeLinesAction, SIGNAL(triggered()), this, SLOT(slotRemoveLines()));
-
-    QAction * removeVerLinesAction = new QAction(tr("&Remove Only Vertical Lines"),this);
-    removeVerLinesAction -> setShortcut(tr("F9"));
-    removeVerLinesAction -> setStatusTip(tr("Removes Only The Vertical Lines.Also Sets Up the Staff and Staff Line Classes"));
-    connect(removeVerLinesAction,SIGNAL(triggered()),this,SLOT(slotRemoveVerLines()));
-
+    QAction *correctSkewAction = new Munip::ProcessStepAction("SkewCorrection", QIcon(),
+                                                               tr("Correct &Skew"), this);
+    correctSkewAction->setShortcut(tr("Ctrl+3"));
 
     QAction *projectionAction = new QAction(tr("&Projection"), this);
     projectionAction->setShortcut(tr("Ctrl+P"));
@@ -141,17 +137,17 @@ void MainWindow::setupActions()
     connect(projectionAction, SIGNAL(triggered()), this, SLOT(slotProjection()));
 
     QMenu *processMenu = menuBar->addMenu(tr("&Process"));
+    processMenu->addAction(toGrayScaleAction);
     processMenu->addAction(toMonochromeAction);
-    processMenu->addAction(removeLinesAction);
+    processMenu->addAction(correctSkewAction);
     processMenu->addAction(projectionAction);
-    processMenu->addAction(removeVerLinesAction);
 
     SideBar *processBar = new SideBar();
-    //addToolBar(Qt::LeftToolBarArea, processBar);
+    processBar->addAction(toGrayScaleAction);
     processBar->addAction(toMonochromeAction);
-    processBar->addAction(removeLinesAction);
+    processBar->addAction(correctSkewAction);
     processBar->addAction(projectionAction);
-    processBar -> addAction(removeVerLinesAction);
+
     QDockWidget *dock = new QDockWidget(tr("Process"), this);
     dock->setWidget(processBar);
     addDockWidget(Qt::LeftDockWidgetArea, dock, Qt::Vertical);
@@ -180,6 +176,13 @@ ImageWidget* MainWindow::activeImageWidget() const
 
 }
 
+void MainWindow::addSubWindow(QWidget *widget)
+{
+    QMdiSubWindow *sub = m_mdiArea->addSubWindow(widget);
+    widget->setAttribute(Qt::WA_DeleteOnClose);
+    sub->show();
+}
+
 void MainWindow::slotOpen()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"),
@@ -187,7 +190,7 @@ void MainWindow::slotOpen()
                                                     tr("Images (*.png *.xpm *.jpg *.bmp)"));
     if (!fileName.isEmpty()) {
         ImageWidget *imgWidget = new ImageWidget(fileName);
-        imgWidget->setWidgetID(IDGenerator::gen());
+        imgWidget->setWidgetID(Munip::IDGenerator::gen());
         QMdiSubWindow *sub = m_mdiArea->addSubWindow(imgWidget);
         sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
         sub->show();
@@ -244,62 +247,6 @@ void MainWindow::slotToggleShowGrid(bool b)
     }
 }
 
-void MainWindow::slotConvertToMonochrome()
-{
-    ImageWidget *imgWidget = activeImageWidget();
-    if (!imgWidget) {
-        return;
-    }
-
-    QPixmap mono = QPixmap::fromImage(Munip::convertToMonochrome(imgWidget->image()));
-    ImageWidget *monoWidget = new ImageWidget(mono);
-    monoWidget->setWidgetID(IDGenerator::gen());
-    monoWidget->setProcessorWidget(imgWidget);
-
-    QMdiSubWindow *sub = m_mdiArea->addSubWindow(monoWidget);
-    sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
-    sub->show();
-}
-
-void MainWindow::slotRemoveLines()
-{
-    ImageWidget *imgWidget = activeImageWidget();
-    if (!imgWidget) {
-        return;
-    }
-
-    Munip::Page page(imgWidget->image());
-    page.process();
-
-    ImageWidget *processedImageWidget = new ImageWidget(QPixmap::fromImage(page.staffLineRemovedImage()));
-    processedImageWidget->setWidgetID(IDGenerator::gen());
-    processedImageWidget->setProcessorWidget(imgWidget);
-
-    QMdiSubWindow *sub = m_mdiArea->addSubWindow(processedImageWidget);
-    sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
-    sub->show();
-}
-
-void MainWindow :: slotRemoveVerLines()
-{
-    ImageWidget *imgWidget = activeImageWidget();
-
-    if(!imgWidget){
-        return;
-    }
-
-    Munip::Page page(imgWidget->image());
-    page.correctSkew();
-
-    ImageWidget *processedImageWidget = new ImageWidget(QPixmap::fromImage(page.processedImage()));
-    processedImageWidget->setWidgetID(IDGenerator::gen());
-    processedImageWidget->setProcessorWidget(imgWidget);
-
-    QMdiSubWindow *sub = m_mdiArea->addSubWindow(processedImageWidget);
-    sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
-    sub->show();
-}
-
 void MainWindow::slotProjection()
 {
     ImageWidget *imgWidget = activeImageWidget();
@@ -307,7 +254,8 @@ void MainWindow::slotProjection()
         return;
     }
 
-    ProjectionWidget *wid = new ProjectionWidget(imgWidget->image());
+    Munip::ProjectionData data = Munip::grayScaleHistogram(imgWidget->image());
+    Munip::ProjectionWidget *wid = new Munip::ProjectionWidget(data);
     QMdiSubWindow *sub = m_mdiArea->addSubWindow(wid);
     sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
     sub->show();

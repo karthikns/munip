@@ -9,10 +9,15 @@ class QMdiSubWindow;
 
 class MainWindow : public QMainWindow
 {
-Q_OBJECT
+    Q_OBJECT;
 public:
     MainWindow();
     ~MainWindow();
+
+    ImageWidget* activeImageWidget() const;
+    void addSubWindow(QWidget *widget);
+
+    static MainWindow* instance();
 
 public slots:
     void slotOpen();
@@ -25,10 +30,7 @@ public slots:
     void slotZoomOut();
     void slotToggleShowGrid(bool b);
 
-    void slotConvertToMonochrome();
-    void slotRemoveLines();
     void slotProjection();
-    void slotRemoveVerLines();
 
     void slotAboutMunip();
 
@@ -37,10 +39,11 @@ private slots:
 
 private:
     void setupActions();
-    ImageWidget* activeImageWidget() const;
 
     QAction *m_showGridAction;
     QMdiArea *m_mdiArea;
+
+    static MainWindow* m_instance;
 };
 
 #endif //MAINWINDOW_H

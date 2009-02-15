@@ -2,13 +2,60 @@
 
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QGraphicsPixmapItem>
 #include <QMessageBox>
+#include <QStyleOptionGraphicsItem>
 
-ImageWidget::ImageWidget(const QPixmap& pixmap, QWidget *parent) : QGraphicsView(parent)
+#include <cmath>
+
+ImageItem::ImageItem(const QImage& image, QGraphicsItem* parent) :
+    QGraphicsItem(parent),
+    m_image(image),
+    m_pixmap(QPixmap::fromImage(image))
+{
+}
+
+ImageItem::~ImageItem()
+{
+}
+
+QImage ImageItem::image() const
+{
+    return m_image;
+}
+
+void ImageItem::setImage(const QImage& image)
+{
+    prepareGeometryChange();
+    m_image = image;
+    m_pixmap = QPixmap::fromImage(image);
+}
+
+QRectF ImageItem::boundingRect() const
+{
+    return QRectF(m_image.rect());
+}
+
+QPainterPath ImageItem::shape() const
+{
+    return QGraphicsItem::shape();
+}
+
+void ImageItem::paint(QPainter *painter, const QStyleOptionGraphicsItem* opt, QWidget* )
+{
+    const QRectF& exposed = opt->exposedRect;
+    QRect rect;
+    rect.setLeft(std::floor(exposed.left()));
+    rect.setTop(std::floor(exposed.top()));
+    rect.setRight(std::ceil(exposed.right()));
+    rect.setBottom(std::ceil(exposed.bottom()));
+
+    painter->drawPixmap(rect, m_pixmap, rect);
+}
+
+ImageWidget::ImageWidget(const QImage& image, QWidget *parent) : QGraphicsView(parent)
 {
     init();
-    m_pixmapItem->setPixmap(pixmap);
+    m_imageItem->setImage(image);
 }
 
 ImageWidget::ImageWidget(const QString& fileName, QWidget *parent) : QGraphicsView(parent)
@@ -17,10 +64,10 @@ ImageWidget::ImageWidget(const QString& fileName, QWidget *parent) : QGraphicsVi
     QFileInfo info(fileName);
     if (info.exists() && info.isReadable()) {
         m_fileName = fileName;
-        m_pixmapItem->setPixmap(QPixmap(m_fileName));
+        m_imageItem->setImage(QImage(m_fileName));
     }
     else {
-        QMessageBox::warning(0, tr("Couldn't load pixmap"),
+        QMessageBox::warning(0, tr("Couldn't load image"),
                              tr("Either file %1 does not exists or is not readable").arg(fileName));
     }
 }
@@ -37,14 +84,14 @@ void ImageWidget::init()
     m_widgetID = -1;
     m_processorWidget = 0;
 
-    QPixmap dummy(10, 10);
+    QImage dummy(10, 10, QImage::Format_Mono);
     dummy.fill(Qt::white);
 
     QGraphicsScene *scene = new QGraphicsScene(this);
-    m_pixmapItem = new QGraphicsPixmapItem(dummy);
-    m_pixmapItem->setShapeMode(QGraphicsPixmapItem::BoundingRectShape);
+    m_imageItem = new ImageItem(dummy);
+    //m_imageItem->setShapeMode(QGraphicsPixmapItem::BoundingRectShape);
 
-    scene->addItem(m_pixmapItem);
+    scene->addItem(m_imageItem);
     setScene(scene);
 
     setDragMode(ScrollHandDrag);
@@ -64,14 +111,14 @@ QString ImageWidget::fileName() const
     return m_fileName;
 }
 
-QPixmap ImageWidget::pixmap() const
-{
-    return m_pixmapItem->pixmap();
-}
+// QPixmap ImageWidget::pixmap() const
+// {
+//     return QPixmap::fromImage(m_imageItem->image());
+// }
 
 QImage ImageWidget::image() const
 {
-    return m_pixmapItem->pixmap().toImage();
+    return m_imageItem->image();
 }
 
 int ImageWidget::widgetID() const
@@ -126,7 +173,7 @@ void ImageWidget::slotZoomIn()
     m_scale *= 2.0;
     QTransform transform;
     transform.scale(m_scale, m_scale);
-    m_pixmapItem->setTransform(transform);
+    m_imageItem->setTransform(transform);
 }
 
 void ImageWidget::slotZoomOut()
@@ -134,7 +181,7 @@ void ImageWidget::slotZoomOut()
     m_scale *= 0.5;
     QTransform transform;
     transform.scale(m_scale, m_scale);
-    m_pixmapItem->setTransform(transform);
+    m_imageItem->setTransform(transform);
 }
 
 void ImageWidget::slotSave()
@@ -146,7 +193,7 @@ void ImageWidget::slotSave()
             return;
         }
     }
-    bool result = m_pixmapItem->pixmap().save(m_fileName);
+    bool result = m_imageItem->image().save(m_fileName);
     if (!result) {
         QMessageBox::warning(this, tr("Failed saving"),
                              tr("Could not save image to file %1").arg(m_fileName));
