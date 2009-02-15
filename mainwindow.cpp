@@ -128,8 +128,12 @@ void MainWindow::setupActions()
     toMonochromeAction->setStatusTip(tr("Converts the active image to monochrome"));
 
     QAction *correctSkewAction = new Munip::ProcessStepAction("SkewCorrection", QIcon(),
-                                                               tr("Correct &Skew"), this);
+                                                              tr("Correct &Skew"), this);
     correctSkewAction->setShortcut(tr("Ctrl+3"));
+
+    QAction *staffLineRemoval = new Munip::ProcessStepAction("StaffLineRemoval", QIcon(),
+                                                             tr("&Remove Staff lines"), this);
+    staffLineRemoval->setShortcut(tr("Ctrl+4"));
 
     QAction *projectionAction = new QAction(tr("&Projection"), this);
     projectionAction->setShortcut(tr("Ctrl+P"));
@@ -140,12 +144,14 @@ void MainWindow::setupActions()
     processMenu->addAction(toGrayScaleAction);
     processMenu->addAction(toMonochromeAction);
     processMenu->addAction(correctSkewAction);
+    processMenu->addAction(staffLineRemoval);
     processMenu->addAction(projectionAction);
 
     SideBar *processBar = new SideBar();
     processBar->addAction(toGrayScaleAction);
     processBar->addAction(toMonochromeAction);
     processBar->addAction(correctSkewAction);
+    processBar->addAction(staffLineRemoval);
     processBar->addAction(projectionAction);
 
     QDockWidget *dock = new QDockWidget(tr("Process"), this);

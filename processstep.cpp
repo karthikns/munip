@@ -120,6 +120,8 @@ namespace Munip
             step = new MonoChromeConversion(originalImage, queue);
         else if (className == QByteArray("SkewCorrection"))
             step = new SkewCorrection(originalImage, queue);
+        else if (className == QByteArray("StaffLineRemoval"))
+            step = new StaffLineRemoval(originalImage, queue);
         return step;
     }
 
@@ -172,28 +174,7 @@ namespace Munip
     void MonoChromeConversion::process()
     {
         emit started();
-
-        int h = m_originalImage.height();
-        int w = m_originalImage.width();
-
-        m_processedImage = QImage(w, h, QImage::Format_Mono);
-        uchar *destData = m_processedImage.bits();
-        int destBytes = m_processedImage.numBytes();
-        memset(destData, 0, destBytes);
-
-        const int White = 0, Black = 1;
-        // Ensure above index values to color table
-        m_processedImage.setColor(0, 0xffffffff);
-        m_processedImage.setColor(1, 0xff000000);
-
-        for(int x = 0; x < w; ++x) {
-            for(int y = 0; y < h; ++y) {
-                bool isWhite = (qGray(m_originalImage.pixel(x, y)) > m_threshold);
-                int color = isWhite ? White : Black;
-                m_processedImage.setPixel(x, y, color);
-            }
-        }
-
+        m_processedImage = Munip::convertToMonochrome(m_originalImage, m_threshold);
         emit ended();
     }
 
@@ -226,6 +207,7 @@ namespace Munip
         // has black triangular corners produced due to bounding rect
         // extentsion.
         m_processedImage = m_processedImage.transformed(transform, Qt::SmoothTransformation);
+        m_processedImage = Munip::convertToMonochrome(m_processedImage, 240);
 
 
         // Calculate the black triangular areas as single polygon.
@@ -336,5 +318,135 @@ namespace Munip
         double eigenvalue = Munip::highestEigenValue(covmat);
         double slope = (eigenvalue - covmat[0]) / (covmat[1]);
         return slope;
+    }
+
+    StaffLineRemoval::StaffLineRemoval(const QImage& originalImage, ProcessQueue *queue) :
+        ProcessStep(originalImage, queue)
+    {
+        for(int y = 0; y < m_processedImage.height(); y++)
+            m_isLine.append(false);
+
+        Q_ASSERT(originalImage.format() == QImage::Format_Mono);
+    }
+
+    void StaffLineRemoval::process()
+    {
+        emit started();
+
+        detectLines();
+        removeLines();
+
+        emit ended();
+    }
+
+    bool StaffLineRemoval::endOfLine(QPoint& p, int & countPixels)
+    {
+        int x = p.x();
+        int y = p.y();
+        int count = 0;
+
+        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
+
+        while(x < m_processedImage.width() &&
+              count < 20 &&
+              m_processedImage.pixelIndex(x,y) == White)
+        {   count++;
+            if(m_processedImage.pixelIndex(x,y+1) == Black && y+1 < m_processedImage.height())
+                countPixels++;
+            x++;
+        }
+        p.setX(x);
+
+        if(count == 20 || x >= m_processedImage.width())
+            return true;
+
+        return false;
+    }
+
+    void StaffLineRemoval::detectLines()
+    {
+        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
+
+        for(int y = 0;  y < m_processedImage.height();y++)
+        {
+            int count = 0;
+            for(int x = 0; x < m_processedImage.width();x++)
+            {
+                if(m_processedImage.pixelIndex(x,y) == Black)
+                {
+                    QPoint start(x,y);
+                    QPoint point = start;
+                    while(x < m_processedImage.width() && !endOfLine(point,count))
+                    {
+                        while(x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == Black)
+                        {
+                            count++;
+                            x++;
+                        }
+                        x++;
+                        point.setX(x);
+                    }
+
+                    QPoint end(x,y);
+                    qDebug() << Q_FUNC_INFO << count << point.x() - start.x();
+                    if(count*1.0 /(point.x()-start.x()) >= 0.9)
+                    {
+                        m_lineLocation.push_back(start);
+                        m_lineLocation.push_back(end);
+                        //if(!m_isLine[y-1])
+                        //m_isLine[y-1] = true;
+                        m_isLine[y] = true;
+                        //m_isLine[y+1] = true;
+                        //qDebug() << y;
+                        break;
+                    }
+                    count = 0;
+                }
+            }
+
+        }
+    }
+
+    bool StaffLineRemoval::canBeRemoved(QPoint& p)
+    {
+        int x = p.x();
+        int y = p.y();
+
+        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
+
+        if(m_processedImage.pixelIndex(x,y+1) == Black && m_processedImage.pixelIndex(x,y-1) == Black)
+            return false;
+        if(m_processedImage.pixelIndex(x+1,y+1) == Black && m_processedImage.pixelIndex(x-1,y-1) == Black)
+            return false;
+        if(m_processedImage.pixelIndex(x-1,y+1) == Black && m_processedImage.pixelIndex(x+1,y-1) == Black)
+            return false;
+        return true;
+    }
+
+    void StaffLineRemoval::removeLines()
+    {
+        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+        /*
+          for(int i = 0; i < m_lineLocation.size();i+= 2)
+          {
+          QPoint start = m_lineLocation[i];
+          QPoint end = m_lineLocation[i+1];
+          for(int x = start.x(); x < end.x(); x++)
+          m_processedImage.setPixelValue(x,start.y(),MonoImage::White);
+          }
+        */
+        for(int y = 0; y < m_processedImage.height()-1; y++)
+        {
+            if(m_isLine[y])
+                for(int x = 1; x < m_processedImage.width()-1;x++)
+                {
+                    QPoint p(x,y);
+                    if(canBeRemoved(p))
+                        m_processedImage.setPixel(p , White);
+                }
+        }
     }
 }

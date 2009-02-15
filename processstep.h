@@ -87,7 +87,7 @@ namespace Munip {
 
     class GrayScaleConversion : public ProcessStep
     {
-        Q_OBJECT
+        Q_OBJECT;
     public:
         GrayScaleConversion(const QImage& originalImage, ProcessQueue *processQueue = 0);
         virtual void process();
@@ -95,7 +95,7 @@ namespace Munip {
 
     class MonoChromeConversion : public ProcessStep
     {
-        Q_OBJECT
+        Q_OBJECT;
     public:
         MonoChromeConversion(const QImage& originalImage, ProcessQueue *procecssQueue = 0);
         virtual void process();
@@ -109,7 +109,7 @@ namespace Munip {
 
     class SkewCorrection : public ProcessStep
     {
-        Q_OBJECT
+        Q_OBJECT;
     public:
         SkewCorrection(const QImage& originalImage, ProcessQueue *processqueue = 0);
         virtual void process();
@@ -122,6 +122,25 @@ namespace Munip {
         QImage m_workImage;
         QList<double> m_skewList;
     };
+
+    class StaffLineRemoval : public ProcessStep
+    {
+        Q_OBJECT;
+    public:
+        StaffLineRemoval(const QImage& originalImage, ProcessQueue *processQueue = 0);
+
+        virtual void process();
+
+        void detectLines();
+        bool endOfLine(QPoint& p, int&);
+        void removeLines();
+        bool canBeRemoved(QPoint& p);
+
+    private:
+        QList<QPoint> m_lineLocation;
+        QList<bool> m_isLine;
+    };
+
 }
 
 #endif
