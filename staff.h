@@ -1,8 +1,6 @@
 #ifndef STAFF_H
 #define STAFF_H
 
-#include "monoimage.h"
-
 #include <QPoint>
 #include <QList>
 
