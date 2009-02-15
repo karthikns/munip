@@ -5,8 +5,6 @@
 #include <QGraphicsView>
 #include <QVarLengthArray>
 
-#include "monoimage.h"
-
 namespace Munip {
     typedef QVector<int> ProjectionData;
 
@@ -39,7 +37,7 @@ namespace Munip {
     };
 
     // Projection calculating methods
-    ProjectionData horizontalProjection(const MonoImage& image);
+    ProjectionData horizontalProjection(const QImage& image);
     ProjectionData grayScaleHistogram(const QImage& image);
 };
 

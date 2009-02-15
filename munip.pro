@@ -8,7 +8,6 @@ CONFIG += debug console
 # Input
 HEADERS += imagewidget.h \
            mainwindow.h \
-           monoimage.h \
            processstep.h \
            projection.h \
            sidebar.h \
@@ -17,7 +16,6 @@ HEADERS += imagewidget.h \
 SOURCES += imagewidget.cpp \
            main.cpp \
            mainwindow.cpp \
-           monoimage.cpp \
            processstep.cpp \
            projection.cpp \
            sidebar.cpp \
