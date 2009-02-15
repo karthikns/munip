@@ -250,7 +250,7 @@ namespace Munip
     double SkewCorrection::detectSkew()
     {
         int x = 0, y = 0;
-        const int Black = 1;
+        const int Black = m_workImage.color(0) == 0xffffffff ? 1 : 0;
         for(x = 0;  x < m_workImage.width(); x++) {
             for(y = 0; y < m_workImage.height(); y++) {
                 if(m_originalImage.pixelIndex(x,y) == Black) {
@@ -296,8 +296,8 @@ namespace Munip
 
     void SkewCorrection::dfs(int x,int y, QList<QPoint> points)
     {
-        const int Black = 1;
-        const int White = 0;
+        const int Black = m_workImage.color(0) == 0xffffffff ? 1 : 0;
+        const int White = 1 - Black;
 
         m_workImage.setPixel(x, y, White);
         if(points.size() == 20)
