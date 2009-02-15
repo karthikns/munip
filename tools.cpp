@@ -6,31 +6,34 @@ namespace Munip
 {
     int IDGenerator::lastID = -1;
 
-    QImage convertToMonochrome(const QImage& image)
+    QImage convertToMonochrome(const QImage& image, int threshold)
     {
         if (image.format() == QImage::Format_Mono) {
             return image;
         }
-        // First convert to 8-bit image.
-        QImage converted = image.convertToFormat(QImage::Format_Indexed8);
 
-        // Modify colortable to our own monochrome
-        QVector<QRgb> colorTable = converted.colorTable();
-        const int threshold = 240;
-        for(int i = 0; i < colorTable.size(); ++i) {
-            int gray = qGray(colorTable[i]);
-            if(gray > threshold) {
-                gray = 255;
+        int h = image.height();
+        int w = image.width();
+
+        QImage monochromed(w, h, QImage::Format_Mono);
+        uchar *destData = monochromed.bits();
+        int destBytes = monochromed.numBytes();
+        memset(destData, 0, destBytes);
+
+        const int White = 0, Black = 1;
+        // Ensure above index values to color table
+        monochromed.setColor(0, 0xffffffff);
+        monochromed.setColor(1, 0xff000000);
+
+        for(int x = 0; x < w; ++x) {
+            for(int y = 0; y < h; ++y) {
+                bool isWhite = (qGray(image.pixel(x, y)) > threshold);
+                int color = isWhite ? White : Black;
+                monochromed.setPixel(x, y, color);
             }
-            else {
-                gray = 0;
-            }
-            colorTable[i] = qRgb(gray, gray, gray);
         }
-        converted.setColorTable(colorTable);
-        // convert to 1-bit monochrome
-        converted = converted.convertToFormat(QImage::Format_Mono);
-        return converted;
+
+        return monochromed;
     }
 
     QPointF meanOfPoints(const QList<QPoint>& pixels)

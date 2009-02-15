@@ -15,7 +15,7 @@ namespace Munip
         }
     };
 
-    QImage convertToMonochrome(const QImage& image);
+    QImage convertToMonochrome(const QImage& image, int threshold = 200);
     QPointF meanOfPoints(const QList<QPoint>& pixels);
     QList<double> covariance(const QList<QPoint>& blackPixels, QPointF mean);
     double highestEigenValue(const QList<double> &matrix);
