@@ -17,6 +17,9 @@ public:
     void addAction(QAction *action);
     void removeAction(QAction *action);
 
+protected:
+    void paintEvent(QPaintEvent*);
+
 private:
     QMap<QAction *, QPushButton *> m_actionButtonMap;
     QVBoxLayout *m_layout;
