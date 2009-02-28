@@ -12,11 +12,13 @@
 #include <QDir>
 #include <QDockWidget>
 #include <QFileDialog>
+#include <QLabel>
 #include <QMdiArea>
 #include <QMdiSubWindow>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QStatusBar>
 #include <QToolBar>
 
 MainWindow* MainWindow::m_instance = 0;
@@ -25,6 +27,7 @@ MainWindow::MainWindow()
 {
     m_showGridAction = 0;
     m_mdiArea = new QMdiArea(this);
+    m_coordinateLabel = new QLabel(this);
 
     setCentralWidget(m_mdiArea);
     setupActions();
@@ -135,6 +138,14 @@ void MainWindow::setupActions()
                                                              tr("&Remove Staff lines"), this);
     staffLineRemoval->setShortcut(tr("Ctrl+4"));
 
+    QAction *convolution = new Munip::ProcessStepAction("ConvolutionLineDetect", QIcon(),
+                                                             tr("&Convolution"), this);
+    staffLineRemoval->setShortcut(tr("Ctrl+5"));
+
+    QAction *hough = new Munip::ProcessStepAction("HoughTransformation", QIcon(),
+                                                  tr("&Hough transformation"), this);
+    hough->setShortcut(tr("Ctrl+6"));
+
     QAction *projectionAction = new QAction(tr("&Projection"), this);
     projectionAction->setShortcut(tr("Ctrl+P"));
     projectionAction->setStatusTip(tr("Calculates horizontal projection of the image"));;
@@ -145,6 +156,8 @@ void MainWindow::setupActions()
     processMenu->addAction(toMonochromeAction);
     processMenu->addAction(correctSkewAction);
     processMenu->addAction(staffLineRemoval);
+    processMenu->addAction(convolution);
+    processMenu->addAction(hough);
     processMenu->addAction(projectionAction);
 
     SideBar *processBar = new SideBar();
@@ -152,6 +165,8 @@ void MainWindow::setupActions()
     processBar->addAction(toMonochromeAction);
     processBar->addAction(correctSkewAction);
     processBar->addAction(staffLineRemoval);
+    processBar->addAction(convolution);
+    processBar->addAction(hough);
     processBar->addAction(projectionAction);
 
     QDockWidget *dock = new QDockWidget(tr("Process"), this);
@@ -168,7 +183,10 @@ void MainWindow::setupActions()
     QToolBar *helpBar = addToolBar("&Help");
     helpBar->addAction(aboutAction);
 
-    statusBar(); //create statusbar
+    QStatusBar *s = statusBar(); //create statusbar
+    s->addPermanentWidget(m_coordinateLabel);
+    m_coordinateLabel->show();
+    m_coordinateLabel->setText("hello");
 }
 
 ImageWidget* MainWindow::activeImageWidget() const
@@ -260,7 +278,7 @@ void MainWindow::slotProjection()
         return;
     }
 
-    Munip::ProjectionData data = Munip::grayScaleHistogram(imgWidget->image());
+    Munip::ProjectionData data = Munip::horizontalProjection(imgWidget->image());
     Munip::ProjectionWidget *wid = new Munip::ProjectionWidget(data);
     QMdiSubWindow *sub = m_mdiArea->addSubWindow(wid);
     sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
@@ -282,6 +300,11 @@ void MainWindow::slotAboutMunip()
             "    Prof Shailaja S S - HOD of IS dept in PESIT"
             );
     QMessageBox::about(this, tr("About MuNIP"), aboutText);
+}
+
+void MainWindow::slotStatusMessage(const QString& msg)
+{
+    m_coordinateLabel->setText(msg);
 }
 
 void MainWindow::slotOnSubWindowActivate(QMdiSubWindow *)

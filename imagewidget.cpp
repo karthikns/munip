@@ -1,9 +1,12 @@
 #include "imagewidget.h"
+#include "mainwindow.h"
 
+#include <QDebug>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QStyleOptionGraphicsItem>
+#include <QWheelEvent>
 
 #include <cmath>
 
@@ -52,10 +55,65 @@ void ImageItem::paint(QPainter *painter, const QStyleOptionGraphicsItem* opt, QW
     painter->drawPixmap(rect, m_pixmap, rect);
 }
 
+const qreal RulerItem::Thickness = 10;
+
+RulerItem::RulerItem(const QRectF& constrainedRect, QGraphicsItem *parent) :
+    QGraphicsItem(parent),
+    m_constrainedRect(constrainedRect),
+    m_alpha(200)
+{
+    setFlags(ItemIsMovable);
+    setAcceptHoverEvents(true);
+}
+
+QRectF RulerItem::boundingRect() const
+{
+    QRectF r = m_constrainedRect;
+    r.setBottom(r.top() + RulerItem::Thickness);
+    return r;
+}
+
+void RulerItem::paint(QPainter *p, const QStyleOptionGraphicsItem* , QWidget *)
+{
+    QColor c(Qt::darkGreen);
+    c.setAlpha(m_alpha);
+    p->fillRect(boundingRect(), c);
+}
+
+QVariant RulerItem::itemChange(GraphicsItemChange change, const QVariant& value)
+{
+    if (change == ItemPositionChange) {
+        const QRectF constrainedRect = transform().map(m_constrainedRect).boundingRect();
+        QPointF p(x(), value.toPointF().y());
+        p.ry() = qMax(constrainedRect.top(), p.y());
+        p.ry() = qMin(constrainedRect.bottom()-RulerItem::Thickness, p.y());
+        return p;
+    }
+    return QGraphicsItem::itemChange(change, value);
+}
+
+void RulerItem::hoverEnterEvent(QGraphicsSceneHoverEvent *)
+{
+    m_alpha = 100;
+    update();
+}
+
+void RulerItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *)
+{
+    m_alpha = 200;
+    update();
+}
+
 ImageWidget::ImageWidget(const QImage& image, QWidget *parent) : QGraphicsView(parent)
 {
     init();
     m_imageItem->setImage(image);
+    m_ruler = new RulerItem(m_imageItem->sceneBoundingRect(), m_imageItem);
+    m_ruler->setZValue(10);
+    scene()->addItem(m_ruler);
+
+    m_boundaryItem = scene()->addRect(m_imageItem->sceneBoundingRect());
+    m_boundaryItem->setZValue(5);
 }
 
 ImageWidget::ImageWidget(const QString& fileName, QWidget *parent) : QGraphicsView(parent)
@@ -70,11 +128,11 @@ ImageWidget::ImageWidget(const QString& fileName, QWidget *parent) : QGraphicsVi
         QMessageBox::warning(0, tr("Couldn't load image"),
                              tr("Either file %1 does not exists or is not readable").arg(fileName));
     }
-}
-
-ImageWidget::ImageWidget(QWidget *parent) : QGraphicsView(parent)
-{
-    init();
+    m_ruler = new RulerItem(m_imageItem->sceneBoundingRect(), m_imageItem);
+    m_ruler->setZValue(10);
+    scene()->addItem(m_ruler);
+    m_boundaryItem = scene()->addRect(m_imageItem->sceneBoundingRect());
+    m_boundaryItem->setZValue(5);
 }
 
 void ImageWidget::init()
@@ -95,6 +153,12 @@ void ImageWidget::init()
     setScene(scene);
 
     setDragMode(ScrollHandDrag);
+
+    MainWindow *instance = MainWindow::instance();
+    if (instance) {
+        connect(this, SIGNAL(statusMessage(const QString&)),
+                instance, SLOT(slotStatusMessage(const QString&)));
+    }
 }
 
 ImageWidget::~ImageWidget()
@@ -170,18 +234,12 @@ void ImageWidget::slotToggleShowGrid()
 
 void ImageWidget::slotZoomIn()
 {
-    m_scale *= 2.0;
-    QTransform transform;
-    transform.scale(m_scale, m_scale);
-    m_imageItem->setTransform(transform);
+    setScale(m_scale * 2);
 }
 
 void ImageWidget::slotZoomOut()
 {
-    m_scale *= 0.5;
-    QTransform transform;
-    transform.scale(m_scale, m_scale);
-    m_imageItem->setTransform(transform);
+    setScale(m_scale * 0.5);
 }
 
 void ImageWidget::slotSave()
@@ -222,7 +280,7 @@ void ImageWidget::drawForeground(QPainter *painter, const QRectF& rect)
     }
 
     int gridWidth = int(m_scale);
-    if (gridWidth <= 4) {
+    if (gridWidth <= 2) {
         return;
     }
 
@@ -239,5 +297,50 @@ void ImageWidget::drawForeground(QPainter *painter, const QRectF& rect)
 
     for(int i = startY; i <= endY; i += gridWidth) {
         painter->drawLine(QLineF(rect.left(), i, rect.right(), i));
+    }
+}
+
+void ImageWidget::wheelEvent(QWheelEvent *event)
+{
+    if (event->orientation() == Qt::Vertical &&
+        event->modifiers() == Qt::ControlModifier) {
+
+        int numDegrees = event->delta() / 8;
+        int numSteps = numDegrees / 15;
+
+        qreal scale = m_scale;
+        if (numSteps > 0) {
+            while(numSteps--)
+                scale *= 2.;
+        }
+        else {
+            while(numSteps++)
+                scale /= 2.;
+        }
+        setScale(scale);
+    }
+    else {
+        QGraphicsView::wheelEvent(event);
+    }
+}
+
+void ImageWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    QPointF p = mapToScene(event->pos());
+    QString msg = QString("%1, %2").arg(p.x()).arg(p.y());
+    emit statusMessage(msg);
+    QGraphicsView::mouseMoveEvent(event);
+}
+
+void ImageWidget::setScale(qreal scale)
+{
+    if (scale != 0) {
+        m_scale = scale;
+        QTransform transform;
+        transform.scale(m_scale, m_scale);
+        m_imageItem->setTransform(transform);
+        m_boundaryItem->setTransform(transform);
+        setSceneRect(transform.map(m_imageItem->boundingRect()).boundingRect());
+
     }
 }

@@ -67,12 +67,12 @@ namespace Munip {
     {
         Q_ASSERT(image.format() == QImage::Format_Mono);
         ProjectionData data;
-        const uint Black = image.color(0) == 0xffffffff ? 1 : 0;
+        const int Black = image.color(0) == 0xffffffff ? 1 : 0;
 
         for(int y = 0; y < image.height(); ++y) {
             int sum = 0;
             for(int x = 0; x < image.width(); ++x) {
-                if (image.pixel(x, y) == Black) {
+                if (image.pixelIndex(x, y) == Black) {
                     ++sum;
                 }
             }

@@ -122,6 +122,10 @@ namespace Munip
             step = new SkewCorrection(originalImage, queue);
         else if (className == QByteArray("StaffLineRemoval"))
             step = new StaffLineRemoval(originalImage, queue);
+        else if (className == QByteArray("ConvolutionLineDetect"))
+            step = new ConvolutionLineDetect(originalImage, queue);
+        else if (className == QByteArray("HoughTransformation"))
+            step = new HoughTransformation(originalImage, queue);
         return step;
     }
 
@@ -448,5 +452,163 @@ namespace Munip
                         m_processedImage.setPixel(p , White);
                 }
         }
+    }
+
+    ConvolutionLineDetect::ConvolutionLineDetect(const QImage& originalImage, ProcessQueue *processQueue) :
+        ProcessStep(originalImage, processQueue)
+    {
+        const int act_kernel[3][3] = {
+            {-1, -1, -1},
+            {2, 2, 2},
+            {-1, -1, -1}
+        };
+
+        for(int i = 0; i < 3; i++)
+            for(int j = 0; j < 3; j++)
+                m_kernel[i][j] = act_kernel[i][j];
+
+        if (originalImage.format() != QImage::Format_Mono) {
+            m_processedImage = QImage(originalImage.width(), originalImage.height(), QImage::Format_Indexed8);
+            QVector<QRgb> table(256, 0);
+            for(int i = 0; i < 256; ++i)
+                table[i] = qRgb(i, i, i);
+            m_processedImage.setColorTable(table);
+            memset(m_processedImage.bits(), 0, m_processedImage.numBytes());
+        }
+    }
+
+    int ConvolutionLineDetect::val(int x, int y) const
+    {
+        return qGray(m_originalImage.pixel(x, y));
+    }
+
+    void ConvolutionLineDetect::process()
+    {
+        emit started();
+
+        for(int x = 0; x < m_originalImage.width() - 3; ++x) {
+            for(int y = 0; y < m_originalImage.height() - 3; ++y) {
+                convolute(x, y);
+            }
+        }
+
+        emit ended();
+    }
+
+    void ConvolutionLineDetect::convolute(int X, int Y)
+    {
+        int v = 0;
+        for(int x=X; x<X+3; ++x) {
+            for(int y=Y; y<Y+3; ++y) {
+                v += m_kernel[y-Y][x-X] * val(x, y);
+            }
+        }
+        if (v < 0)
+            v = 0;
+        if (v > 255)
+            v = 255;
+
+        if (m_processedImage.format() == QImage::Format_Mono) {
+            bool isWhite = v > 128;
+            const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+            const int Black = 1 - White;
+
+            m_processedImage.setPixel(X, Y, isWhite ? White : Black);
+        }
+        else {
+            m_processedImage.setPixel(X, Y, v);
+        }
+    }
+
+    HoughTransformation::HoughTransformation(const QImage& originalImage, ProcessQueue *queue) :
+        ProcessStep(originalImage, queue)
+    {
+        Q_ASSERT(originalImage.format() == QImage::Format_Mono);
+    }
+
+    typedef QPair<QPoint, int> Pair;
+    bool pairGreaterThan(const Pair& p1, const Pair& p2)
+    {
+        return p1.second > p2.second;
+    }
+
+    void HoughTransformation::process()
+    {
+        emit started();
+
+        const int Black = m_originalImage.color(0) == 0xffffffff ? 1 : 0;
+        const int White = 1 - Black;
+        const int w = m_processedImage.width();
+        const int h = m_processedImage.height();
+        const double pi_by_180 = M_PI/180;
+
+        QMap<double, double> cosThetaTable;
+        QMap<double, double> sinThetaTable;
+
+
+        for(double i = -95.; i <= 95.0; i += 0.5) {
+            cosThetaTable[i] = std::cos(pi_by_180 * i);
+            sinThetaTable[i] = std::sin(pi_by_180 * i);
+        }
+
+
+        QList<Pair> accumulator;
+
+        for(int x = 0; x < w; ++x) {
+            for(int y = 0; y < h; ++y) {
+                if (m_originalImage.pixelIndex(x, y) == White)
+                    continue;
+                for(double i = -95.0; i <= 95.0; i += 0.5) {
+                    double r = x * cosThetaTable[i] + y * sinThetaTable[i];
+                    r = qRound(r);
+                    QPoint point((int)r, int(i*10));
+
+                    bool found = false;
+                    for(int k = 0; k < accumulator.size(); ++k) {
+                        if (accumulator[k].first == point) {
+                            accumulator[k].second++;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                        accumulator.append(qMakePair(point, int(1)));
+                }
+            }
+        }
+
+        //qSort(accumulator.begin(), accumulator.end(), Munip::pairGreaterThan);
+
+        for(int i = 0; i < accumulator.size(); ++i) {
+            QPointF p = accumulator.at(i).first;
+            p.ry() /= 10;
+            qDebug() << p << " = " << accumulator.at(i).second;
+        }
+        // lines_list_t lines;
+        // uchar* binary_image = (uchar*)malloc(sizeof(uchar) * w * h * 2);
+        // uchar *start = binary_image;
+
+        // Q_ASSERT(binary_image);
+
+        // qDebug() << Q_FUNC_INFO << "Allocated";
+
+        // for(int x = 0; x < w; ++x) {
+        //     for(int y = 0; y < h; ++y) {
+        //         uchar val = m_processedImage.pixelIndex(x, y) == Black ? 0 : 1;
+        //         binary_image[y*w + x] = val;
+        //     }
+        // }
+
+        // qDebug() << Q_FUNC_INFO << "Filled the binary_image";
+        // kht(lines, binary_image, w, h);
+        // qDebug() << Q_FUNC_INFO << "Called kht";
+
+        // for(size_t i = 0; i < lines.size(); ++i) {
+        //     qDebug() << "Line(rho, theta) = " << "("
+        //              << lines[i].rho << ", " << lines[i].theta << ")";
+        // }
+
+        // free(start);
+        emit ended();
     }
 }

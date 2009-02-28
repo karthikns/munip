@@ -141,6 +141,29 @@ namespace Munip {
         QList<bool> m_isLine;
     };
 
+    class ConvolutionLineDetect : public ProcessStep
+    {
+        Q_OBJECT;
+    public:
+        ConvolutionLineDetect(const QImage& originalImage, ProcessQueue *processQueue = 0);
+        virtual void process();
+
+    private:
+        int val(int x, int y) const;
+        void convolute(int x, int y);
+
+        int m_kernel[3][3];
+    };
+
+    class HoughTransformation : public ProcessStep
+    {
+        Q_OBJECT;
+    public:
+        HoughTransformation(const QImage& originalImage, ProcessQueue *queue = 0);
+        virtual void process();
+
+    private:
+    };
 }
 
 #endif

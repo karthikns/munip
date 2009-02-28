@@ -4,6 +4,7 @@
 #include <QMainWindow>
 
 class ImageWidget;
+class QLabel;
 class QMdiArea;
 class QMdiSubWindow;
 
@@ -34,6 +35,8 @@ public slots:
 
     void slotAboutMunip();
 
+    void slotStatusMessage(const QString& status);
+
 private slots:
     void slotOnSubWindowActivate(QMdiSubWindow *);
 
@@ -43,6 +46,7 @@ private:
     QAction *m_showGridAction;
     QMdiArea *m_mdiArea;
 
+    QLabel *m_coordinateLabel;
     static MainWindow* m_instance;
 };
 

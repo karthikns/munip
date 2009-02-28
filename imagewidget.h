@@ -23,13 +23,32 @@ private:
     QPixmap m_pixmap;
 };
 
+class RulerItem : public QGraphicsItem
+{
+public:
+    RulerItem(const QRectF& constrainedRect, QGraphicsItem *parent = 0);
+
+    QRectF boundingRect() const;
+
+    void paint(QPainter *, const QStyleOptionGraphicsItem*, QWidget*);
+
+protected:
+    QVariant itemChange(GraphicsItemChange change, const QVariant& value);
+    void hoverEnterEvent(QGraphicsSceneHoverEvent *event);
+    void hoverLeaveEvent(QGraphicsSceneHoverEvent *event);
+
+private:
+    static const qreal Thickness;
+    QRectF m_constrainedRect;
+    int m_alpha;
+};
+
 class ImageWidget : public QGraphicsView
 {
 Q_OBJECT
 public:
     ImageWidget(const QImage& image, QWidget *parent = 0);
     ImageWidget(const QString& fileName, QWidget *parent = 0);
-    ImageWidget(QWidget *parent = 0);
     ~ImageWidget();
 
     bool showGrid() const;
@@ -46,7 +65,7 @@ public:
 
     void updateWindowTitle();
 
-public slots:
+public Q_SLOTS:
     void slotSetShowGrid(bool b);
     void slotToggleShowGrid();
 
@@ -56,11 +75,17 @@ public slots:
     void slotSave();
     void slotSaveAs();
 
+Q_SIGNALS:
+    void statusMessage(const QString& string);
+
 protected:
     void drawForeground(QPainter *painter, const QRectF& rect);
+    void wheelEvent(QWheelEvent *event);
+    void mouseMoveEvent(QMouseEvent *event);
 
 private:
     void init();
+    void setScale(qreal scale);
 
     ImageItem *m_imageItem;
     QString m_fileName;
@@ -69,6 +94,9 @@ private:
 
     int m_widgetID;
     ImageWidget *m_processorWidget;
+
+    RulerItem *m_ruler;
+    QGraphicsRectItem *m_boundaryItem;
 };
 
 #endif
