@@ -164,6 +164,14 @@ namespace Munip {
 
     private:
     };
+
+    class ImageRotation : public ProcessStep
+    {
+        Q_OBJECT;
+    public:
+        ImageRotation(const QImage& originalImage, ProcessQueue *processQueue = 0);
+        virtual void process();
+    };
 }
 
 #endif

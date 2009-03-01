@@ -146,6 +146,10 @@ void MainWindow::setupActions()
                                                   tr("&Hough transformation"), this);
     hough->setShortcut(tr("Ctrl+6"));
 
+    QAction *rotation = new Munip::ProcessStepAction("ImageRotation", QIcon(),
+                                                     tr("&Rotate image"), this);
+    rotation->setShortcut(tr("Ctrl+7"));
+
     QAction *projectionAction = new QAction(tr("&Projection"), this);
     projectionAction->setShortcut(tr("Ctrl+P"));
     projectionAction->setStatusTip(tr("Calculates horizontal projection of the image"));;
@@ -158,6 +162,7 @@ void MainWindow::setupActions()
     processMenu->addAction(staffLineRemoval);
     processMenu->addAction(convolution);
     processMenu->addAction(hough);
+    processMenu->addAction(rotation);
     processMenu->addAction(projectionAction);
 
     SideBar *processBar = new SideBar();
@@ -167,6 +172,7 @@ void MainWindow::setupActions()
     processBar->addAction(staffLineRemoval);
     processBar->addAction(convolution);
     processBar->addAction(hough);
+    processBar->addAction(rotation);
     processBar->addAction(projectionAction);
 
     QDockWidget *dock = new QDockWidget(tr("Process"), this);

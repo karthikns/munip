@@ -6,6 +6,7 @@
 
 #include <QAction>
 #include <QDebug>
+#include <QInputDialog>
 #include <QLabel>
 #include <QPainter>
 #include <QPen>
@@ -126,6 +127,8 @@ namespace Munip
             step = new ConvolutionLineDetect(originalImage, queue);
         else if (className == QByteArray("HoughTransformation"))
             step = new HoughTransformation(originalImage, queue);
+        else if (className == QByteArray("ImageRotation"))
+            step = new ImageRotation(originalImage, queue);
         return step;
     }
 
@@ -611,4 +614,52 @@ namespace Munip
         // free(start);
         emit ended();
     }
+
+    ImageRotation::ImageRotation(const QImage& image, ProcessQueue *queue) :
+        ProcessStep(image, queue)
+    {
+    }
+
+    void ImageRotation::process()
+    {
+        emit started();
+        QImage::Format destFormat = m_originalImage.format();
+        bool ok;
+        int angle = QInputDialog::getInt(0, tr("Angle"), tr("Enter rotation angle in degrees for image rotation"),
+                                         5, -45, 45, 1, &ok);
+        if (!ok) {
+            angle = 5;
+        }
+
+        QTransform transform;
+        transform.rotate(angle);
+        transform = m_originalImage.trueMatrix(transform, m_originalImage.width(), m_originalImage.height());
+
+        m_processedImage = m_processedImage.transformed(transform, Qt::SmoothTransformation);
+        if (destFormat == QImage::Format_Mono) {
+            m_processedImage = Munip::convertToMonochrome(m_processedImage, 240);
+        } else {
+            m_processedImage = m_processedImage.convertToFormat(destFormat);
+        }
+
+
+        // Calculate the black triangular areas as single polygon.
+        const QPolygonF oldImageTransformedRect = transform.map(QPolygonF(QRectF(m_originalImage.rect())));
+        const QPolygonF newImageRect = QPolygonF(QRectF(m_processedImage.rect()));
+        const QPolygonF remainingBlackTriangularAreas = newImageRect.subtracted(oldImageTransformedRect);
+
+        // Now simply fill the above obtained polygon with white to
+        // eliminate the black corner triangle.
+        //
+        // NOTE: Pen width = 2 ensures there is no faint line garbage
+        //       left behind.
+        QPainter painter(&m_processedImage);
+        painter.setPen(QPen(Qt::white, 2));
+        painter.setBrush(QBrush(Qt::white));
+        painter.drawPolygon(remainingBlackTriangularAreas);
+        painter.end();
+
+        emit ended();
+    }
 }
+
