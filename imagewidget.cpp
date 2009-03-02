@@ -63,7 +63,7 @@ RulerItem::RulerItem(const QRectF& constrainedRect, QGraphicsItem *parent) :
     m_alpha(200)
 {
     setFlags(ItemIsMovable);
-    setAcceptHoverEvents(true);
+    setAcceptsHoverEvents(true);
 }
 
 QRectF RulerItem::boundingRect() const
