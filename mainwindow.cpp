@@ -150,6 +150,10 @@ void MainWindow::setupActions()
                                                      tr("&Rotate image"), this);
     rotation->setShortcut(tr("Ctrl+7"));
 
+    QAction *runlength = new Munip::ProcessStepAction("RunlengthLineDetection", QIcon(),
+                                                     tr("Runlength Line detect"), this);
+    runlength->setShortcut(tr("Ctrl+8"));
+
     QAction *projectionAction = new QAction(tr("&Projection"), this);
     projectionAction->setShortcut(tr("Ctrl+P"));
     projectionAction->setStatusTip(tr("Calculates horizontal projection of the image"));;
@@ -163,6 +167,7 @@ void MainWindow::setupActions()
     processMenu->addAction(convolution);
     processMenu->addAction(hough);
     processMenu->addAction(rotation);
+    processMenu->addAction(runlength);
     processMenu->addAction(projectionAction);
 
     SideBar *processBar = new SideBar();
@@ -173,6 +178,7 @@ void MainWindow::setupActions()
     processBar->addAction(convolution);
     processBar->addAction(hough);
     processBar->addAction(rotation);
+    processBar->addAction(runlength);
     processBar->addAction(projectionAction);
 
     QDockWidget *dock = new QDockWidget(tr("Process"), this);

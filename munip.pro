@@ -15,7 +15,8 @@ HEADERS += imagewidget.h \
            projection.h \
            sidebar.h \
            staff.h \
-           tools.h
+           tools.h \
+           horizontalrunlengthimage.h
 SOURCES += imagewidget.cpp \
            main.cpp \
            mainwindow.cpp \
@@ -23,7 +24,8 @@ SOURCES += imagewidget.cpp \
            projection.cpp \
            sidebar.cpp \
            staff.cpp \
-           tools.cpp
+           tools.cpp \
+           horizontalrunlengthimage.cpp
 RESOURCES += munipresources.qrc
 
 MOC_DIR = .tmp

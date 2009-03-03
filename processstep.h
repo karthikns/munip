@@ -7,6 +7,7 @@
 #include <QPointer>
 
 class QIcon;
+class HorizontalRunlengthImage;
 
 namespace Munip {
 
@@ -174,6 +175,19 @@ namespace Munip {
     public:
         ImageRotation(const QImage& originalImage, ProcessQueue *processQueue = 0);
         virtual void process();
+    };
+
+    class RunlengthLineDetection : public ProcessStep
+    {
+        Q_OBJECT;
+    public:
+        RunlengthLineDetection(const QImage& originalImage, ProcessQueue *processQueue = 0);
+        virtual ~RunlengthLineDetection();
+
+        virtual void process();
+
+    private:
+        HorizontalRunlengthImage *m_horizontalRunlengthImage;
     };
 }
 

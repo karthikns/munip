@@ -1,6 +1,7 @@
 #include "processstep.h"
 
 #include "imagewidget.h"
+#include "horizontalrunlengthimage.h"
 #include "mainwindow.h"
 #include "tools.h"
 
@@ -131,6 +132,9 @@ namespace Munip
             step = new HoughTransformation(originalImage, queue);
         else if (className == QByteArray("ImageRotation"))
             step = new ImageRotation(originalImage, queue);
+        else if (className == QByteArray("RunlengthLineDetection"))
+            step = new RunlengthLineDetection(originalImage, queue);
+
         return step;
     }
 
@@ -216,7 +220,7 @@ namespace Munip
         // staff skew after following operation. Apart from that it also
         // has black triangular corners produced due to bounding rect
         // extentsion.
-        m_processedImage = m_processedImage.transformed(transform, Qt::FastTransformation);
+        m_processedImage = m_processedImage.transformed(transform, Qt::SmoothTransformation);
         m_processedImage = Munip::convertToMonochrome(m_processedImage, 240);
 
 
@@ -465,12 +469,14 @@ namespace Munip
 							QPoint p(x,y);
 							if(canBeRemoved(p))
 							{	m_processedImage.setPixel(x,y,White);
+                                if (0) {
 								QPoint p1(x,y-1);
 								QPoint p2(x,y+1);
 								if(canBeRemoved(p1))
 									m_processedImage.setPixel(x,y-1,White);
 								if(canBeRemoved(p2))
 									m_processedImage.setPixel(x,y+1,White);
+                                }
 							}
 							else if(m_processedImage.pixelIndex(x,y) == White)
 							{
@@ -690,6 +696,37 @@ namespace Munip
         painter.drawPolygon(remainingBlackTriangularAreas);
         painter.end();
 
+        emit ended();
+    }
+
+    RunlengthLineDetection::RunlengthLineDetection(const QImage& originalImage, ProcessQueue *queue) :
+        ProcessStep(originalImage, queue)
+    {
+        int Black = originalImage.colorTable().at(0) == 0xffffffff ? 1 : 0;
+        m_horizontalRunlengthImage = new HorizontalRunlengthImage(originalImage, Black);
+    }
+
+    RunlengthLineDetection::~RunlengthLineDetection()
+    {
+        delete m_horizontalRunlengthImage;
+    }
+
+    void RunlengthLineDetection::process()
+    {
+        emit started();
+        m_processedImage = QImage(m_originalImage.size(), QImage::Format_ARGB32);
+        m_processedImage.fill(0xffffffff);
+        for (int y=0; y<m_processedImage.height(); ++y) {
+            const QVector<LocationRunPair> &row = m_horizontalRunlengthImage->m_data[y];
+            for (int i=0; i<row.size(); ++i) {
+                if (row[i].run > 40) {
+                    QRgb color = qRgb(100, qrand()%255, qrand()%255);
+                    for (int j=row[i].x; j < row[i].x + row[i].run; ++j) {
+                        m_processedImage.setPixel(j, y, color);
+                    }
+                }
+            }
+        }
         emit ended();
     }
 }
