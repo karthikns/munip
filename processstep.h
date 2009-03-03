@@ -120,6 +120,7 @@ namespace Munip {
 
     private:
         QImage m_workImage;
+		int m_lineSliceSize;
         QList<double> m_skewList;
     };
 
@@ -139,6 +140,8 @@ namespace Munip {
     private:
         QList<QPoint> m_lineLocation;
         QList<bool> m_isLine;
+		int m_upperLimit;
+		double m_lineWidthLimit;
     };
 
     class ConvolutionLineDetect : public ProcessStep
