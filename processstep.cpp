@@ -416,15 +416,32 @@ namespace Munip
 							x++;
 							qDebug() <<Q_FUNC_INFO << x<< y;
 						}
+<<<<<<< .mine
+						int whiterun = 0,nextjump = 0,countabove = 0,countbelow = 0;
+						while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 5)
+=======
 						int whiterun = 0, nextjump = 0, countabove = 0, countbelow = 0;
 						while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 5 && count >= 160)
+>>>>>>> .r45
 						{
+<<<<<<< .mine
+							whiterun++;
+							if(count >= 160 && m_processedImage.pixelIndex(x,y+1) == Black)
+=======
 							whiterun++;
 							if(m_processedImage.pixelIndex(x,y+1) == Black)
+>>>>>>> .r45
 							{
 								count++;
 								countabove++;
 							}
+<<<<<<< .mine
+							else if(count >= 160 && m_processedImage.pixelIndex(x,y-1) == Black && !m_isLine[y-1])
+							{
+								count++;
+								countbelow++;
+							}
+=======
 							else if(m_processedImage.pixelIndex(x,y-1) == Black && !m_isLine[y-1])
 							{
 								count++;
@@ -434,12 +451,28 @@ namespace Munip
 								nextjump = 1;
 							else if(countabove && countbelow)
 								nextjump = -1;
+>>>>>>> .r45
 							x++;
 						}
+<<<<<<< .mine
+						
+						if((countabove > countbelow) && (countabove || countbelow))
+								nextjump = 1;
+						else if(countabove || countbelow)
+								nextjump = -1;
+
+						
+						if(whiterun>= 5 && nextjump && x < m_processedImage.width())
+						{	y += nextjump;
+							qDebug() <<Q_FUNC_INFO << countabove<<countbelow;
+						}	
+						else if(whiterun >= 5 || x >= m_processedImage.width())
+=======
 						if(whiterun>= 5 && nextjump && x < m_processedImage.width())
 							y += nextjump;
 							
 						else if(whiterun >= 5 || x >= m_processedImage.width())
+>>>>>>> .r45
 						{
 
 							if(count >= m_lineWidthLimit * width)
