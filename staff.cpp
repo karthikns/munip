@@ -13,12 +13,12 @@
 
 namespace Munip
 {
-    StaffLine::StaffLine(const QPoint& start, const QPoint& end, int staffID)
+    StaffLine::StaffLine(const QPoint& start, const QPoint& end, int thickness)
     {
         m_startPos = start;
         m_endPos = end;
-        m_staffID = staffID;
-        m_lineWidth = -1; // still to be set
+        m_lineWidth = thickness;
+		m_staffID = -1;	 // still to be set
     }
 
     StaffLine::~StaffLine()
@@ -72,6 +72,10 @@ namespace Munip
         m_startPos = vStart;
         m_endPos = vEnd;
     }
+	
+	Staff :: Staff()
+	{
+	}
 
     Staff::~Staff()
     {
@@ -109,6 +113,11 @@ namespace Munip
     {
         m_staffLines.append(sline);
     }
+	
+	void Staff :: addStaffLineList(QList<StaffLine> list)
+	{
+		m_staffLines = list;
+	}
 
     bool Staff::operator<(Staff& other)
     {

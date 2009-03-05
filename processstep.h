@@ -5,6 +5,7 @@
 #include <QQueue>
 #include <QPoint>
 #include <QPointer>
+#include "staff.h"
 
 class QIcon;
 class HorizontalRunlengthImage;
@@ -135,8 +136,10 @@ namespace Munip {
 
         void detectLines();
         bool endOfLine(QPoint& p, int&);
-        void removeLines();
+        void removeLine(QPoint& start,QPoint& end);
+		void removeStaffLines();
         bool canBeRemoved(QPoint& p);
+		QList<Staff> fillDataStructures();
 
     private:
         QList<QPoint> m_lineLocation;

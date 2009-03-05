@@ -1,4 +1,5 @@
 #include "processstep.h"
+#include "staff.h"
 
 #include "imagewidget.h"
 #include "horizontalrunlengthimage.h"
@@ -357,7 +358,7 @@ namespace Munip
         emit started();
 
         detectLines();
-        removeLines();
+        removeStaffLines();
 
         emit ended();
     }
@@ -416,21 +417,32 @@ namespace Munip
 						int whiterun = 0;
 						while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 5)
 						{
-							int above = 1;
-							while(m_processedImage.pixelIndex(x,y+above*pageSkew) == White && above < m_upperLimit)
-								above++;
-							if(above >= m_upperLimit)
-								whiterun++;
+							if(count >= 60)
+							{
+								int above = 1;
+								while(m_processedImage.pixelIndex(x,y+above*pageSkew) == White && above < m_upperLimit)
+									above++;
+								if(above >= m_upperLimit)
+									whiterun++;
+								else
+									count++;
+							}
 							else
-								count++;
+								if(m_processedImage.pixelIndex(x,y+1) == Black || m_processedImage.pixelIndex(x,y-1) == Black)
+									count++;
+								else
+									whiterun++;
 							x++;
 						}
 						if(whiterun >= 5 || x >= m_processedImage.width())
 						{
+							qDebug()<<Q_FUNC_INFO<<start<<count;
 
 							if(count >= m_lineWidthLimit * width)
 							{
 								QPoint end(x,y);
+								m_lineLocation.push_back(start);
+								m_lineLocation.push_back(end);
 								m_isLine[y] = 1;
 							}
 						}
@@ -440,6 +452,58 @@ namespace Munip
 		}
 
     }
+	QList<Staff> StaffLineRemoval :: fillDataStructures()
+	{
+		QList<StaffLine> staves;
+		QList<Staff> staffList;
+		int thickness = 0;
+		int countAddedLines = 0;
+		/*
+		Parallel StaffLines Functionality to be implemented
+		*/
+		for(int y = 0; y < m_processedImage.height();y++)
+			if(m_isLine[y])
+			{
+				//qDebug()<<Q_FUNC_INFO<<y;
+			}
+		for(int y = 0; y < m_processedImage.height(); y++)
+		{
+			if(m_isLine[y])
+			{
+				int temp = y;
+				QPoint start = m_lineLocation[0];
+				QPoint end = m_lineLocation[1];
+				
+				while(m_isLine[temp])
+				{	
+					temp++;
+					thickness++;
+					if( start.x() > m_lineLocation[0].x())
+						start.setX(m_lineLocation[0].x());
+					if(end.x() < m_lineLocation[1].x())
+						end.setX(m_lineLocation[1].x());
+
+					m_lineLocation.erase(m_lineLocation.begin());
+					m_lineLocation.erase(m_lineLocation.begin());
+					
+				}
+				y = temp;
+				StaffLine st(start,end,thickness);
+				thickness = 0;
+				staves.append(st);
+				countAddedLines++;
+				if(countAddedLines == 5)
+				{
+					Staff s(staves[0].startPos(),staves[4].startPos());
+					countAddedLines = 0;
+					s.addStaffLineList(staves);   
+					staffList.append(s);
+					staves.clear();
+				}
+			}
+		}
+		return staffList;
+	}
 
     bool StaffLineRemoval::canBeRemoved(QPoint& p)
     {
@@ -449,18 +513,86 @@ namespace Munip
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
         const int Black = 1 - White;
 
-        if(m_processedImage.pixelIndex(x,y+1) == Black && m_processedImage.pixelIndex(x,y-1) == Black)
+        if((m_processedImage.pixelIndex(x,y+1) == Black && !m_isLine[y+1])||(m_processedImage.pixelIndex(x,y-1) == Black && !m_isLine[y-1]))
             return false;
-        if(m_processedImage.pixelIndex(x+1,y+1) == Black && m_processedImage.pixelIndex(x-1,y-1) == Black)
+        if((m_processedImage.pixelIndex(x+1,y+1) == Black &&!m_isLine[y+1])||(m_processedImage.pixelIndex(x-1,y-1) == Black && !m_isLine[y-1]))
             return false;
-        if(m_processedImage.pixelIndex(x-1,y+1) == Black && m_processedImage.pixelIndex(x+1,y-1) == Black)
+        if((m_processedImage.pixelIndex(x-1,y+1) == Black &&!m_isLine[y+1])||(m_processedImage.pixelIndex(x+1,y-1) == Black && !m_isLine[y-1]))
             return false;
         return true;
     }
 
-    void StaffLineRemoval::removeLines()
+	void StaffLineRemoval :: removeStaffLines()
+	{
+		QList<Staff> pageStaffList = fillDataStructures();
+		for(int i = 0; i < pageStaffList.size(); i++)
+		{
+			QList<StaffLine> staves = pageStaffList[i].staffLines();
+			for(int j = 0; j < staves.size(); j++)
+			{
+				StaffLine staffline = staves[j];
+				QPoint s = staffline.startPos();
+				QPoint e = staffline.endPos();
+				//qDebug()<<Q_FUNC_INFO<<s<<e;
+				int t = staffline.lineWidth();
+				qDebug()<<t;
+				removeLine(s,e);
+				s.setY(s.y()+t-1);
+				e.setY(e.y()+t-1);
+				removeLine(s,e);
+				s = staffline.startPos();
+				e = staffline.endPos();
+				for(int k = 1; k < t-1; k++)
+				{
+					s.setY(s.y()+1);
+					e.setY(s.y()+1);
+					removeLine(s,e);
+				}
+				
+				
+			}
+			
+		}
+	}
+
+    void StaffLineRemoval::removeLine(QPoint& start,QPoint& end)
     {
+		
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+
+		m_upperLimit = abs(end.y() - start.y());
+
+		int y = start.y();
+        for(int x = start.x(); x <= end.x();x++)
+		{
+			QPoint p(x,y);
+			if(canBeRemoved(p))
+			{	
+					QPoint p1(x,y-1);
+					QPoint p2(x,y+1);
+					if(canBeRemoved(p1))
+						m_processedImage.setPixel(x,y-1,White);
+					if(canBeRemoved(p2))
+						m_processedImage.setPixel(x,y+1,White);
+								
+					m_processedImage.setPixel(x,y,White);
+			}
+			else if(m_processedImage.pixelIndex(x,y) == White)
+			{
+					int above = 1;
+					while(m_processedImage.pixelIndex(x,y+above*pageSkew) == White && above < m_upperLimit)
+						above++;
+					if(above < m_upperLimit)
+					{
+							QPoint p1(x,y+above*pageSkew);
+							if(canBeRemoved(p1))
+								m_processedImage.setPixel(p1.x(),p1.y(),White);
+								
+							
+					}
+			}
+		}
+
        for(int y = 0; y < m_processedImage.height()-1; y++)
 				{
 					if(m_isLine[y])
@@ -492,6 +624,7 @@ namespace Munip
 							}
 						}
 				}
+
     }
 
     ConvolutionLineDetect::ConvolutionLineDetect(const QImage& originalImage, ProcessQueue *processQueue) :

@@ -11,7 +11,7 @@ namespace Munip {
     class StaffLine
     {
     public:
-        StaffLine(const QPoint& start, const QPoint& end, int staffID);
+        StaffLine(const QPoint& start, const QPoint& end, int thickness);
         ~StaffLine();
 
         QPoint startPos() const;
@@ -41,6 +41,7 @@ namespace Munip {
     public:
         Staff(const QPoint& vStart, const QPoint& vEnd);
         ~Staff();
+		Staff();
 
         QPoint startPos() const;
         void setStartPos(const QPoint& point);
@@ -50,6 +51,8 @@ namespace Munip {
 
         QList<StaffLine> staffLines() const;
         void addStaffLine(const StaffLine& staffLine);
+		
+		void addStaffLineList(QList<StaffLine> list) ;
 
         bool operator<(Staff& other);
 
