@@ -15,6 +15,7 @@
 #include <QRgb>
 #include <QSet>
 #include <QVector>
+#include <iostream>
 
 #include <cmath>
 
@@ -413,34 +414,38 @@ namespace Munip
 						{
 							count++;
 							x++;
+							qDebug() <<Q_FUNC_INFO << x<< y;
 						}
-						int whiterun = 0;
-						while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 5)
+						int whiterun = 0, nextjump = 0, countabove = 0, countbelow = 0;
+						while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 5 && count >= 160)
 						{
-							if(count >= 60)
+							whiterun++;
+							if(m_processedImage.pixelIndex(x,y+1) == Black)
 							{
-								int above = 1;
-								while(m_processedImage.pixelIndex(x,y+above*pageSkew) == White && above < m_upperLimit)
-									above++;
-								if(above >= m_upperLimit)
-									whiterun++;
-								else
-									count++;
+								count++;
+								countabove++;
 							}
-							else
-								if(m_processedImage.pixelIndex(x,y+1) == Black || m_processedImage.pixelIndex(x,y-1) == Black)
-									count++;
-								else
-									whiterun++;
+							else if(m_processedImage.pixelIndex(x,y-1) == Black && !m_isLine[y-1])
+							{
+								count++;
+								countbelow++;
+							}
+							if(countabove> countbelow && countabove && countbelow)
+								nextjump = 1;
+							else if(countabove && countbelow)
+								nextjump = -1;
 							x++;
 						}
-						if(whiterun >= 5 || x >= m_processedImage.width())
+						if(whiterun>= 5 && nextjump && x < m_processedImage.width())
+							y += nextjump;
+							
+						else if(whiterun >= 5 || x >= m_processedImage.width())
 						{
-							qDebug()<<Q_FUNC_INFO<<start<<count;
 
 							if(count >= m_lineWidthLimit * width)
 							{
 								QPoint end(x,y);
+								qDebug()<<Q_FUNC_INFO<<start<<count;
 								m_lineLocation.push_back(start);
 								m_lineLocation.push_back(end);
 								m_isLine[y] = 1;
@@ -450,6 +455,7 @@ namespace Munip
 				}
 			}
 		}
+		qDebug() <<"Hi!!!";
 
     }
 	QList<Staff> StaffLineRemoval :: fillDataStructures()
@@ -461,11 +467,6 @@ namespace Munip
 		/*
 		Parallel StaffLines Functionality to be implemented
 		*/
-		for(int y = 0; y < m_processedImage.height();y++)
-			if(m_isLine[y])
-			{
-				//qDebug()<<Q_FUNC_INFO<<y;
-			}
 		for(int y = 0; y < m_processedImage.height(); y++)
 		{
 			if(m_isLine[y])
@@ -513,11 +514,11 @@ namespace Munip
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
         const int Black = 1 - White;
 
-        if((m_processedImage.pixelIndex(x,y+1) == Black && !m_isLine[y+1])||(m_processedImage.pixelIndex(x,y-1) == Black && !m_isLine[y-1]))
+        if((m_processedImage.pixelIndex(x,y+1) == Black && !m_isLine[y+1]) || m_processedImage.pixelIndex(x,y-1) == Black)
             return false;
-        if((m_processedImage.pixelIndex(x+1,y+1) == Black &&!m_isLine[y+1])||(m_processedImage.pixelIndex(x-1,y-1) == Black && !m_isLine[y-1]))
+        if((m_processedImage.pixelIndex(x+1,y+1) == Black &&!m_isLine[y+1]) || m_processedImage.pixelIndex(x-1,y-1) == Black)
             return false;
-        if((m_processedImage.pixelIndex(x-1,y+1) == Black &&!m_isLine[y+1])||(m_processedImage.pixelIndex(x+1,y-1) == Black && !m_isLine[y-1]))
+        if((m_processedImage.pixelIndex(x-1,y+1) == Black &&!m_isLine[y+1]) ||m_processedImage.pixelIndex(x+1,y-1) == Black)
             return false;
         return true;
     }
@@ -533,16 +534,9 @@ namespace Munip
 				StaffLine staffline = staves[j];
 				QPoint s = staffline.startPos();
 				QPoint e = staffline.endPos();
-				//qDebug()<<Q_FUNC_INFO<<s<<e;
 				int t = staffline.lineWidth();
-				qDebug()<<t;
 				removeLine(s,e);
-				s.setY(s.y()+t-1);
-				e.setY(e.y()+t-1);
-				removeLine(s,e);
-				s = staffline.startPos();
-				e = staffline.endPos();
-				for(int k = 1; k < t-1; k++)
+				for(int k = 1; k <= t-1; k++)
 				{
 					s.setY(s.y()+1);
 					e.setY(s.y()+1);
@@ -559,37 +553,52 @@ namespace Munip
     {
 		
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
-
+		const int Black = 1 - White;
 		m_upperLimit = abs(end.y() - start.y());
 
 		int y = start.y();
         for(int x = start.x(); x <= end.x();x++)
 		{
 			QPoint p(x,y);
-			if(canBeRemoved(p))
+			if(m_processedImage.pixelIndex(x,y) == Black && canBeRemoved(p))
 			{	
 					QPoint p1(x,y-1);
 					QPoint p2(x,y+1);
-					if(canBeRemoved(p1))
+					if(canBeRemoved(p1) && !m_isLine[y-1])
 						m_processedImage.setPixel(x,y-1,White);
-					if(canBeRemoved(p2))
+					if(canBeRemoved(p2) && !m_isLine[y+1])
 						m_processedImage.setPixel(x,y+1,White);
 								
 					m_processedImage.setPixel(x,y,White);
 			}
 			else if(m_processedImage.pixelIndex(x,y) == White)
 			{
-					int above = 1;
-					while(m_processedImage.pixelIndex(x,y+above*pageSkew) == White && above < m_upperLimit)
-						above++;
-					if(above < m_upperLimit)
-					{
-							QPoint p1(x,y+above*pageSkew);
-							if(canBeRemoved(p1))
-								m_processedImage.setPixel(p1.x(),p1.y(),White);
-								
-							
-					}
+						int whiterun = 0,nextjump = 0,countabove = 0,countbelow = 0;
+						while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 5)
+						{
+							whiterun++;
+							if(m_processedImage.pixelIndex(x,y+1) == Black && !m_isLine[y+1])
+							{
+								QPoint p1(x,y+1);
+								if(canBeRemoved(p1))
+									m_processedImage.setPixel(x,y+1,White);
+								countabove++;
+							}
+							else if(m_processedImage.pixelIndex(x,y-1) == Black && !m_isLine[y-1])
+							{
+								QPoint p1(x,y-1);
+								if(canBeRemoved(p1))
+									m_processedImage.setPixel(x,y+1,White);
+								countbelow++;
+							}
+							if(countabove> countbelow && countabove)
+								nextjump = 1;
+							else if(countabove && countbelow)
+								nextjump = -1;
+							x++;
+						}
+						if(whiterun>= 5 && nextjump && x < m_processedImage.width())
+							y += nextjump;
 			}
 		}
 
@@ -836,7 +845,7 @@ namespace Munip
         ProcessStep(originalImage, queue)
     {
         int Black = originalImage.colorTable().at(0) == 0xffffffff ? 1 : 0;
-        m_horizontalRunlengthImage = new HorizontalRunlengthImage(originalImage, Black);
+//        m_horizontalRunlengthImage = new HorizontalRunlengthImage(originalImage, Black);
     }
 
     RunlengthLineDetection::~RunlengthLineDetection()
