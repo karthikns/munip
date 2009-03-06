@@ -398,6 +398,7 @@ namespace Munip
 				}
 			}
 		}
+		qDebug()<<Q_FUNC_INFO<<p1.x()<<p2.x();
 		int width = p2.x() - p1.x();
 		for(int y = 0; y < m_processedImage.height(); y++)
 		{
@@ -413,9 +414,11 @@ namespace Munip
 					if(count >= m_lineWidthLimit * width)
 					{
 						QPoint end = p;
+						end.setY(start.y());
 						m_lineLocation.push_back(start);
 						m_lineLocation.push_back(end);
 						m_isLine[y] = 1;
+						qDebug()<<start<<end<<count<<width;
 					}
 					done = true;
 					
@@ -441,6 +444,7 @@ namespace Munip
 			{
 				count++;
 				x++;
+				p.setX(x);
 			}
 			int whiterun = 0;
 			while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 5 )
@@ -452,12 +456,14 @@ namespace Munip
 					countabove++;
 				}
 
-				else if(count >= 160 && m_processedImage.pixelIndex(x,y-1) == Black && !m_isLine[y-1])
+				else if(count >= 160 && m_processedImage.pixelIndex(x,y-1) == Black)
 				{
 					count++;
 					countbelow++;
 							
 				}
+				x++;
+				p.setX(x);
 			}
 			if(whiterun >= 5)
 				done = true;
@@ -470,12 +476,16 @@ namespace Munip
 		}
 			
 		if((countabove > countbelow) && (countabove || countbelow))	
-				nextjump = 1;
+		{		
+			nextjump = 1;
+		}
 		else if(countabove || countbelow)
-				nextjump = -1;
+		{		
+			nextjump = -1;
+		}
+			
 		if(nextjump && x < m_processedImage.width())
 		{
-				p.setX(x);
 				p.setY(y+nextjump);
 				followLine(p,count);
 		}
@@ -537,64 +547,9 @@ namespace Munip
 
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
         const int Black = 1 - White;
-		if( m_processedImage.pixelIndex(x,y-1) == Black)
-		{	QPoint p1(x,y-1);
-			if(m_isLine[y-1])
+		
+		if(m_processedImage.pixelIndex(x-1,y-1) == Black ||m_processedImage.pixelIndex(x,y-1) == Black || m_processedImage.pixelIndex(x+1,y-1) == Black)
 				return false;
-			if(m_processedImage.pixelIndex(p1.x(),p1.y()-1) == White && m_processedImage.pixelIndex(p1.x()-1,p1.y()-1) == White && m_processedImage.pixelIndex(p1.x()+1,p1.y()-1) == White)
-			{			m_processedImage.setPixel(x,y-1,White);
-						return true;
-			}
-			return false;
-			
-		}
-		if( m_processedImage.pixelIndex(x-1,y-1) == Black)
-		{	QPoint p1(x+1,y-1);
-			if(m_isLine[y-1])
-				return false;
-			if(m_processedImage.pixelIndex(p1.x(),p1.y()-1) == White && m_processedImage.pixelIndex(p1.x()-1,p1.y()-1) == White && m_processedImage.pixelIndex(p1.x()+1,p1.y()-1) == White)
-			{			m_processedImage.setPixel(x,y-1,White);
-						return true;
-			}
-			return false;
-		}
-		if(m_processedImage.pixelIndex(x+1,y-1) == Black)
-		{	QPoint p1(x+1,y-1);
-			if(m_isLine[y])
-				return false;
-			if(m_processedImage.pixelIndex(p1.x(),p1.y()-1) == White && m_processedImage.pixelIndex(p1.x()-1,p1.y()-1) == White && m_processedImage.pixelIndex(p1.x()+1,p1.y()-1) == White)
-			{			m_processedImage.setPixel(x,y-1,White);
-						return true;
-			}
-			return false;
-        }
-		if(m_processedImage.pixelIndex(x,y+1) == Black && !m_isLine[y+1])
-        {
-			QPoint p2(x,y+1);
-			if(m_processedImage.pixelIndex(p2.x(),p2.y()+1) == White && m_processedImage.pixelIndex(p2.x()-1,p2.y()+1) == White && m_processedImage.pixelIndex(p2.x()+1,p2.y()+1) == White)
-			{		m_processedImage.setPixel(x,y+1,White);
-					return true;
-			}		
-		    return false;
-        }
-		if(m_processedImage.pixelIndex(x+1,y+1) == Black &&!m_isLine[y+1])
-        { 
-			QPoint p2(x+1,y+1);
-			if(m_processedImage.pixelIndex(p2.x(),p2.y()+1) == White && m_processedImage.pixelIndex(p2.x()-1,p2.y()+1) == White && m_processedImage.pixelIndex(p2.x()+1,p2.y()+1) == White)
-			{		m_processedImage.setPixel(x,y+1,White);
-					return true;
-			}		
-           return false;
-        }
-		if(m_processedImage.pixelIndex(x-1,y+1) == Black &&!m_isLine[y+1])
-        { 
-			QPoint p2(x-1,y+1);
-			if(m_processedImage.pixelIndex(p2.x(),p2.y()+1) == White && m_processedImage.pixelIndex(p2.x()-1,p2.y()+1) == White && m_processedImage.pixelIndex(p2.x()+1,p2.y()+1) == White)
-			{		m_processedImage.setPixel(x,y+1,White);
-					return true;
-			}		
-		   return false;
-        }
 		return true;
     }
 
@@ -610,8 +565,13 @@ namespace Munip
 				QPoint s = staffline.startPos();
 				QPoint e = staffline.endPos();
 				int t = staffline.lineWidth();
-				removeLine(s,e);
-				for(int k = 1; k <= t-1; k++)
+				removeFirstLine(s,e);
+				s.setY(s.y()+t-1);
+				e.setY(s.y()+t-1);
+				removeLastLine(s,e);
+				s = staffline.startPos();
+				e = staffline.endPos();
+				for(int k = 1; k < t-1; k++)
 				{
 					s.setY(s.y()+1);
 					e.setY(s.y()+1);
@@ -623,6 +583,105 @@ namespace Munip
 			
 		}
 	}
+	void StaffLineRemoval :: removeFirstLine(QPoint& start,QPoint& end)
+	{
+		const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+		const int Black = 1 - White;
+		int y = start.y();
+        for(int x = start.x(); x <= end.x();x++)
+		{
+			if(m_processedImage.pixelIndex(x,y) == Black)
+			{
+				int temp = y-1;
+				
+				if(m_processedImage.pixelIndex(x,temp) == Black)
+				{
+					if(m_processedImage.pixelIndex(x-1,temp-1) == White && m_processedImage.pixelIndex(x,temp-1) == White && m_processedImage.pixelIndex(x+1,temp-1) == White)
+						m_processedImage.setPixel(x,temp,White);
+				}
+				if(m_processedImage.pixelIndex(x-1,temp) == White && m_processedImage.pixelIndex(x,temp) == White && m_processedImage.pixelIndex(x+1,temp) == White)
+						m_processedImage.setPixel(x,y,White);
+			}
+			else if(m_processedImage.pixelIndex(x,y) == White)
+			{
+						int whiterun = 0,nextjump = 0,countabove = 0,countbelow = 0;
+						while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 10)
+						{
+							whiterun++;
+							if(m_processedImage.pixelIndex(x,y+1) == Black)
+							{
+								countabove++;
+							}
+							else if(m_processedImage.pixelIndex(x,y-1) == Black )
+							{
+								countbelow++;
+							}
+							x++;
+						}
+						if(countabove > countbelow &&(countabove||countbelow))
+								nextjump = 1;
+						else if(countabove || countbelow)
+								nextjump = -1;	
+						
+						if(whiterun>= 10 && nextjump && x < m_processedImage.width())
+						{	
+							y += nextjump;
+						}
+			}
+			
+
+		}
+	}
+	void StaffLineRemoval :: removeLastLine(QPoint& start,QPoint& end)
+	{
+		const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+		const int Black = 1 - White;
+		int y = start.y();
+        for(int x = start.x(); x <= end.x();x++)
+		{
+			if(m_processedImage.pixelIndex(x,y) == Black)
+			{
+				int temp = y+1;
+				
+				if(m_processedImage.pixelIndex(x,temp) == Black)
+				{
+					if(m_processedImage.pixelIndex(x-1,temp+1) == White && m_processedImage.pixelIndex(x,temp+1) == White && m_processedImage.pixelIndex(x+1,temp+1) == White)
+						m_processedImage.setPixel(x,temp,White);
+				}
+				if(m_processedImage.pixelIndex(x-1,temp) == White && m_processedImage.pixelIndex(x,temp) == White && m_processedImage.pixelIndex(x+1,temp) == White)
+						m_processedImage.setPixel(x,y,White);
+			}
+			else if(m_processedImage.pixelIndex(x,y) == White)
+			{
+						int whiterun = 0,nextjump = 0,countabove = 0,countbelow = 0;
+						while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 10)
+						{
+							whiterun++;
+							if(m_processedImage.pixelIndex(x,y+1) == Black)
+							{
+								countabove++;
+							}
+							else if(m_processedImage.pixelIndex(x,y-1) == Black )
+							{
+								countbelow++;
+							}
+							x++;
+						}
+						if(countabove > countbelow &&(countabove||countbelow))
+								nextjump = 1;
+						else if(countabove || countbelow)
+								nextjump = -1;	
+						
+						if(whiterun>= 10 && nextjump && x < m_processedImage.width())
+						{	
+							y += nextjump;
+						}
+			}
+			
+
+		}
+	}
+
 
     void StaffLineRemoval::removeLine(QPoint& start,QPoint& end)
     {
@@ -635,81 +694,37 @@ namespace Munip
         for(int x = start.x(); x <= end.x();x++)
 		{
 			QPoint p(x,y);
-			if(y == 235)
-				qDebug() <<Q_FUNC_INFO<<p;
-			if(m_processedImage.pixelIndex(x,y) == Black && canBeRemoved(p))
-			{	
-					QPoint p1(x,y-1);
-					QPoint p2(x,y+1);
-					if(p2.y() == 236|| y == 235)
-						qDebug()<<"Hey!!!!!!!!!Wasssa";
-					
-								
+			if(m_processedImage.pixelIndex(x,y) == Black && canBeRemoved(p))							
 					m_processedImage.setPixel(x,y,White);
-			}
 			else if(m_processedImage.pixelIndex(x,y) == White)
 			{
 						int whiterun = 0,nextjump = 0,countabove = 0,countbelow = 0;
 						while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 5)
 						{
 							whiterun++;
-							if(m_processedImage.pixelIndex(x,y+1) == Black && !m_isLine[y+1])
+							if(m_processedImage.pixelIndex(x,y+1) == Black)
 							{
-								QPoint p1(x,y+1);
-								if(canBeRemoved(p1))
-									m_processedImage.setPixel(x,y+1,White);
 								countabove++;
 							}
-							else if(m_processedImage.pixelIndex(x,y-1) == Black && !m_isLine[y-1])
+							else if(m_processedImage.pixelIndex(x,y-1) == Black )
 							{
-								QPoint p1(x,y-1);
-								if(canBeRemoved(p1))
-									m_processedImage.setPixel(x,y+1,White);
 								countbelow++;
 							}
-							if(countabove> countbelow && countabove)
-								nextjump = 1;
-							else if(countabove && countbelow)
-								nextjump = -1;
 							x++;
 						}
+						if(countabove > countbelow &&(countabove||countbelow))
+								nextjump = 1;
+							else if(countabove || countbelow)
+								nextjump = -1;	
+						
 						if(whiterun>= 5 && nextjump && x < m_processedImage.width())
+						{	
 							y += nextjump;
+						}
 			}
 		}
 
-       for(int y = 0; y < m_processedImage.height()-1; y++)
-				{
-					if(m_isLine[y])
-						for(int x = 1; x < m_processedImage.width()-1;x++)
-						{
-							QPoint p(x,y);
-							if(canBeRemoved(p))
-							{	m_processedImage.setPixel(x,y,White);
-                                if (0) {
-								QPoint p1(x,y-1);
-								QPoint p2(x,y+1);
-								if(canBeRemoved(p1))
-									m_processedImage.setPixel(x,y-1,White);
-								if(canBeRemoved(p2))
-									m_processedImage.setPixel(x,y+1,White);
-                                }
-							}
-							else if(m_processedImage.pixelIndex(x,y) == White)
-							{
-								int above = 1;
-								while(m_processedImage.pixelIndex(x,y+above*pageSkew) == White && above < m_upperLimit)
-									above++;
-								if(above < m_upperLimit)
-								{
-										QPoint p1(x,y+above*pageSkew);
-										if(canBeRemoved(p1))
-											m_processedImage.setPixel(p1.x(),p1.y(),White);
-								}
-							}
-						}
-				}
-
+      
     }
 
     ConvolutionLineDetect::ConvolutionLineDetect(const QImage& originalImage, ProcessQueue *processQueue) :

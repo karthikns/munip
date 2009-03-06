@@ -141,6 +141,8 @@ namespace Munip {
         bool canBeRemoved(QPoint& p);
 		void followLine(QPoint& p,int& count);
 		QList<Staff> fillDataStructures();
+		void removeFirstLine(QPoint& start,QPoint& end);
+		void removeLastLine(QPoint& start,QPoint& end);
 
     private:
         QList<QPoint> m_lineLocation;
