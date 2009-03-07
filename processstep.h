@@ -147,6 +147,7 @@ namespace Munip {
     private:
         QList<QPoint> m_lineLocation;
         QList<bool> m_isLine;
+        QPixmap m_lineRemovedTracker;
 		int m_upperLimit;
 		double m_lineWidthLimit;
     };
@@ -193,6 +194,10 @@ namespace Munip {
         virtual void process();
 
     private:
+        void tryLine(int x, int y);
+        bool processed(int y, int i) const;
+
+        QVector<QVector<bool> > m_processedMarker;
         HorizontalRunlengthImage *m_horizontalRunlengthImage;
     };
 }

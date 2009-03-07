@@ -14,6 +14,7 @@
 #include <QPen>
 #include <QRgb>
 #include <QSet>
+#include <QStack>
 #include <QVector>
 #include <iostream>
 
@@ -360,6 +361,7 @@ namespace Munip
 
         detectLines();
         removeStaffLines();
+        m_processedImage = m_lineRemovedTracker.toImage();
 
         emit ended();
     }
@@ -498,6 +500,19 @@ namespace Munip
 		QList<Staff> staffList;
 		int thickness = 0;
 		int countAddedLines = 0;
+                
+                m_lineRemovedTracker = QPixmap(m_processedImage.size());
+                m_lineRemovedTracker.fill(QColor(Qt::white));
+                QPainter p(&m_lineRemovedTracker);
+#if 1
+                if (!m_lineLocation.isEmpty() && m_lineLocation.size()%2 != 0) {
+                    m_lineLocation.append(m_lineLocation[m_lineLocation.size()-1]);
+                }
+                for (int i=0; i<m_lineLocation.size(); i += 2) {
+                    p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
+                    p.drawLine(m_lineLocation[i], m_lineLocation[i+1]);
+                }
+#endif
 		/*
 		Parallel StaffLines Functionality to be implemented
 		*/
@@ -537,8 +552,22 @@ namespace Munip
 				}
 			}
 		}
+
+#if 0
+                for (int i=0; i<staffList.size(); ++i) {
+                    QList<StaffLine> staffLines = staffList[i].staffLines();
+                    p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
+
+                    for (int j=0; j<staffLines.size(); ++j) {
+                        p.drawLine(staffLines[j].startPos(), staffLines[j].endPos());
+                    }
+                }
+#endif
+
+                p.end();
+
 		return staffList;
-	}
+        }
 
     bool StaffLineRemoval::canBeRemoved(QPoint& p)
     {
@@ -936,7 +965,13 @@ namespace Munip
         ProcessStep(originalImage, queue)
     {
         int Black = originalImage.colorTable().at(0) == 0xffffffff ? 1 : 0;
-//        m_horizontalRunlengthImage = new HorizontalRunlengthImage(originalImage, Black);
+        m_horizontalRunlengthImage = new HorizontalRunlengthImage(originalImage, Black);
+
+        QVector<QVector<LocationRunPair> > &data = m_horizontalRunlengthImage->m_data;
+        m_processedMarker.resize(data.size());
+        for (int y=0; y<data.size(); ++y) {
+            m_processedMarker[y] = QVector<bool>(data[y].size(), false);
+        }
     }
 
     RunlengthLineDetection::~RunlengthLineDetection()
@@ -947,19 +982,73 @@ namespace Munip
     void RunlengthLineDetection::process()
     {
         emit started();
+
         m_processedImage = QImage(m_originalImage.size(), QImage::Format_ARGB32);
         m_processedImage.fill(0xffffffff);
-        for (int y=0; y<m_processedImage.height(); ++y) {
-            const QVector<LocationRunPair> &row = m_horizontalRunlengthImage->m_data[y];
-            for (int i=0; i<row.size(); ++i) {
-                if (row[i].run > 40) {
-                    QRgb color = qRgb(100, qrand()%255, qrand()%255);
-                    for (int j=row[i].x; j < row[i].x + row[i].run; ++j) {
-                        m_processedImage.setPixel(j, y, color);
-                    }
+
+        QVector<QVector<LocationRunPair> > &data = m_horizontalRunlengthImage->m_data;
+        for (int y=0; y<data.size(); ++y) {
+            for (int i=0; i<data[y].size(); ++i) {
+                if (!processed(y, i)) {
+                    tryLine(y, i);
                 }
             }
         }
+
         emit ended();
+    }
+
+    void RunlengthLineDetection::tryLine(int y, int i)
+    {
+        const LocationRunPair startPair = m_horizontalRunlengthImage->run(y, i);
+        const QPoint start(startPair.x, y);
+        const double ThresholdAngle = 2.0;
+
+        QStack<QLine> lineStack;
+        lineStack.push(QLine(startPair.x, y, startPair.x+startPair.run-1, y));
+
+        QPainter p(&m_processedImage);
+        p.setPen(QColor(qrand()%255, 100+qrand()%155, qrand()%255));
+
+        while (!lineStack.isEmpty()) {
+            QLine line = lineStack.pop();
+            int col = m_horizontalRunlengthImage->runForPixel(line.x1(), line.y1());
+            Q_ASSERT(col != -1);
+            m_processedMarker[line.y1()][col] = true;
+            p.drawLine(line);
+
+            int x = line.p2().x() + 1;
+            if (x >= m_originalImage.width()) {
+                continue;
+            }
+
+            int y_minus_1 = m_horizontalRunlengthImage->runForPixel(x, line.y1()-1);
+            int y_plus_1 = m_horizontalRunlengthImage->runForPixel(x, line.y1()+1);
+
+            if (y_minus_1 >= 0) {
+                LocationRunPair pair = m_horizontalRunlengthImage->run(line.y1()-1, y_minus_1);
+                QLine newLine(pair.x, line.y1()-1, pair.x+pair.run-1, line.y1()-1);
+
+                double theta = qAbs(QLineF(start, newLine.p2()).angle());
+                if (theta <= ThresholdAngle) {
+                    lineStack.push(newLine);
+                }
+            }
+
+            if (y_plus_1 >= 0) {
+                LocationRunPair pair = m_horizontalRunlengthImage->run(line.y1()+1, y_plus_1);
+                QLine newLine(pair.x, line.y1()+1, pair.x+pair.run-1, line.y1()+1);
+
+                double theta = qAbs(QLineF(start, newLine.p2()).angle());
+                if (theta <= ThresholdAngle) {
+                    lineStack.push(newLine);
+                }
+            }
+        }
+    }
+
+    bool RunlengthLineDetection::processed(int y, int i) const
+    {
+        return m_processedMarker[y][i];
     }
 }
