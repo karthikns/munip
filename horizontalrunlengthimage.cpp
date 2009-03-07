@@ -1,11 +1,13 @@
 #include "horizontalrunlengthimage.h"
 
+#include <QDebug>
 #include <QImage>
 
 HorizontalRunlengthImage::HorizontalRunlengthImage(const QImage& binaryImage,
                                                     int dataColorIndex) :
     m_dataColorIndex(dataColorIndex),
-    m_nonDataColorIndex(1 - dataColorIndex)
+    m_nonDataColorIndex(1 - dataColorIndex),
+    m_imageSize(binaryImage.size())
 {
     Q_ASSERT(binaryImage.format() == QImage::Format_Mono);
     m_data.resize(binaryImage.height());
@@ -31,21 +33,30 @@ HorizontalRunlengthImage::HorizontalRunlengthImage(const QImage& binaryImage,
 
 int HorizontalRunlengthImage::runLength(int y, int index) const
 {
+    Q_ASSERT(y >= 0 && y < m_imageSize.height());
+    Q_ASSERT(index >= 0 && index < m_data[y].size());
     return m_data[y][index].run;
 }
 
 int HorizontalRunlengthImage::runStart(int y, int index) const
 {
+    Q_ASSERT(y >= 0 && y < m_imageSize.height());
+    Q_ASSERT(index >= 0 && index < m_data[y].size());
     return m_data[y][index].x;
 }
 
 LocationRunPair HorizontalRunlengthImage::run(int y, int index) const
 {
+    qDebug() << Q_FUNC_INFO << y << index << m_data[y].size();
+    Q_ASSERT(y >= 0 && y < m_imageSize.height());
+    Q_ASSERT(index >= 0 && index < m_data[y].size());
     return m_data[y][index];
 }
 
-int HorizontalRunlengthImage::pixelIndex(int x, int y) const
+int HorizontalRunlengthImage::runForPixel(int x, int y) const
 {
+    Q_ASSERT(y >= 0 && y < m_imageSize.height());
+    Q_ASSERT(x >= 0 && x < m_imageSize.width());
     const QVector<LocationRunPair> &row = m_data[y];
     int l = 0, h = row.size() - 1, mid = 0;
     while (l < h) {
@@ -58,21 +69,34 @@ int HorizontalRunlengthImage::pixelIndex(int x, int y) const
         }
     }
 
-    if (row[mid].x == x) {
-        return m_dataColorIndex;
+
+    for (int i=mid-1; i <= mid+1; ++i) {
+        if (i < 0 || i >= row.size()) {
+            continue;
+        }
+
+        if (x >= row[i].x && x < row[i].x + row[i].run) {
+            return i;
+        }
     }
 
-    if (l-1 < 0) {
-        return m_nonDataColorIndex;
-    } else if (x < row[l-1].x + row[l-1].run) {
+    return -1;
+}
+
+int HorizontalRunlengthImage::pixelIndex(int x, int y) const
+{
+    Q_ASSERT(y >= 0 && y < m_imageSize.height());
+    Q_ASSERT(x >= 0 && x < m_imageSize.width());
+    if (runForPixel(x, y) != -1) {
         return m_dataColorIndex;
-    } else {
-        return m_nonDataColorIndex;
     }
+    return m_nonDataColorIndex;
 }
 
 bool HorizontalRunlengthImage::isData(int x, int y) const
 {
+    Q_ASSERT(y >= 0 && y < m_imageSize.height());
+    Q_ASSERT(x >= 0 && x < m_imageSize.width());
     return pixelIndex(x, y) == m_dataColorIndex;
 }
 

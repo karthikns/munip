@@ -2,6 +2,7 @@
 #define HORIZONTALRUNLENGTHIMAGE_H
 
 #include <QPair>
+#include <QSize>
 #include <QVector>
 
 class QImage;
@@ -39,12 +40,14 @@ struct HorizontalRunlengthImage
     int runStart(int y, int index) const;
     LocationRunPair run(int y, int index) const;
 
+    int runForPixel(int x, int y) const;
     int pixelIndex(int x, int y) const;
     bool isData(int x, int y) const;
 
     QVector<QVector<LocationRunPair> >  m_data;
     int m_dataColorIndex;
     int m_nonDataColorIndex;
+    QSize m_imageSize;
 };
 
 #endif
