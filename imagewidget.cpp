@@ -153,6 +153,7 @@ void ImageWidget::init()
     setScene(scene);
 
     setDragMode(ScrollHandDrag);
+    viewport()->setCursor(QCursor(Qt::ArrowCursor));
 
     MainWindow *instance = MainWindow::instance();
     if (instance) {
@@ -326,7 +327,9 @@ void ImageWidget::wheelEvent(QWheelEvent *event)
 
 void ImageWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    QPointF p = mapToScene(event->pos());
+    QPointF pf = mapToScene(event->pos());
+    pf = m_imageItem->mapFromScene(pf);
+    QPoint p(int(pf.x()), int(pf.y()));
     QString msg = QString("%1, %2").arg(p.x()).arg(p.y());
     emit statusMessage(msg);
     QGraphicsView::mouseMoveEvent(event);
