@@ -24,6 +24,15 @@ namespace Munip
 {
     int pageSkew;
 
+    double normalizedLineTheta(const QLineF& line)
+    {
+        double angle = line.angle();
+        while (angle < 0.0) angle += 360.0;
+        while (angle > 360.0) angle -= 360.0;
+        if (angle > 180.0) angle -= 360.0;
+        return angle < 0.0 ? -angle : angle;
+    }
+
     ProcessStep::ProcessStep(const QImage& originalImage, ProcessQueue *processQueue) :
         m_originalImage(originalImage),
         m_processedImage(originalImage),
@@ -984,8 +993,9 @@ namespace Munip
         emit started();
 
         m_processedImage = QImage(m_originalImage.size(), QImage::Format_ARGB32);
-        m_processedImage.fill(0xffffffff);
+        m_processedImage.fill(qRgb(0, 0, 0));
 
+#if 0
         QVector<QVector<LocationRunPair> > &data = m_horizontalRunlengthImage->m_data;
         for (int y=0; y<data.size(); ++y) {
             for (int i=0; i<data[y].size(); ++i) {
@@ -994,7 +1004,16 @@ namespace Munip
                 }
             }
         }
-
+#endif
+        for (int x = 0; x < m_processedImage.width(); ++x) {
+            for (int y = 0; y < m_processedImage.height(); ++y) {
+                int i = m_horizontalRunlengthImage->runForPixel(x, y);
+                //qDebug() << Q_FUNC_INFO << y << i;
+                if (i != -1 && !processed(y, i)) {
+                    tryLine(y, i);
+                }
+            }
+        }
         emit ended();
     }
 
@@ -1010,40 +1029,53 @@ namespace Munip
         QPainter p(&m_processedImage);
         p.setPen(QColor(qrand()%255, 100+qrand()%155, qrand()%255));
 
+        QPoint end = start;
         while (!lineStack.isEmpty()) {
             QLine line = lineStack.pop();
+            qDebug() << line;
             int col = m_horizontalRunlengthImage->runForPixel(line.x1(), line.y1());
+            qDebug() << "\tFound run";
             Q_ASSERT(col != -1);
             m_processedMarker[line.y1()][col] = true;
-            p.drawLine(line);
+            //p.drawLine(line);
+            end = line.p2();
 
             int x = line.p2().x() + 1;
             if (x >= m_originalImage.width()) {
                 continue;
             }
 
-            int y_minus_1 = m_horizontalRunlengthImage->runForPixel(x, line.y1()-1);
-            int y_plus_1 = m_horizontalRunlengthImage->runForPixel(x, line.y1()+1);
+            int y_minus_1 = line.y1() > 0 ?
+                m_horizontalRunlengthImage->runForPixel(x, line.y1()-1) :
+                -1;
 
-            if (y_minus_1 >= 0) {
+            int y_plus_1 = line.y1() < m_horizontalRunlengthImage->m_imageSize.height() - 1?
+                m_horizontalRunlengthImage->runForPixel(x, line.y1()+1) :
+                -1;
+
+            if (y_minus_1 >= 0 && !processed(line.y1()-1, y_minus_1)) {
                 LocationRunPair pair = m_horizontalRunlengthImage->run(line.y1()-1, y_minus_1);
                 QLine newLine(pair.x, line.y1()-1, pair.x+pair.run-1, line.y1()-1);
 
-                double theta = qAbs(QLineF(start, newLine.p2()).angle());
+                double theta = normalizedLineTheta(QLineF(start, newLine.p2()));
                 if (theta <= ThresholdAngle) {
                     lineStack.push(newLine);
                 }
             }
 
-            if (y_plus_1 >= 0) {
+            if (y_plus_1 >= 0 && !processed(line.y1()+1, y_plus_1)) {
                 LocationRunPair pair = m_horizontalRunlengthImage->run(line.y1()+1, y_plus_1);
                 QLine newLine(pair.x, line.y1()+1, pair.x+pair.run-1, line.y1()+1);
 
-                double theta = qAbs(QLineF(start, newLine.p2()).angle());
+                double theta = normalizedLineTheta(QLineF(start, newLine.p2()));
                 if (theta <= ThresholdAngle) {
                     lineStack.push(newLine);
                 }
             }
+        }
+
+        if (qAbs(end.x() - start.x()) > 10) {
+            p.drawLine(start, end);
         }
     }
 
