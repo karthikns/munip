@@ -47,7 +47,6 @@ int HorizontalRunlengthImage::runStart(int y, int index) const
 
 LocationRunPair HorizontalRunlengthImage::run(int y, int index) const
 {
-    qDebug() << Q_FUNC_INFO << y << index << m_data[y].size();
     Q_ASSERT(y >= 0 && y < m_imageSize.height());
     Q_ASSERT(index >= 0 && index < m_data[y].size());
     return m_data[y][index];
@@ -60,6 +59,7 @@ int HorizontalRunlengthImage::runForPixel(int x, int y) const
     const QVector<LocationRunPair> &row = m_data[y];
     int l = 0, h = row.size() - 1, mid = 0;
     while (l < h) {
+        mid = (l + h) / 2;
         if (row[mid].x == x) {
             break;
         } else if (x < row[mid].x) {
@@ -69,8 +69,8 @@ int HorizontalRunlengthImage::runForPixel(int x, int y) const
         }
     }
 
-
-    for (int i=mid-1; i <= mid+1; ++i) {
+    int i = -1;
+    for (i=mid-1; i <= mid+1; ++i) {
         if (i < 0 || i >= row.size()) {
             continue;
         }
