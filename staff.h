@@ -5,8 +5,6 @@
 #include <QList>
 
 namespace Munip {
-    // Forwared declarations
-    class Page;
 
     class StaffLine
     {

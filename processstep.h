@@ -13,7 +13,6 @@ class HorizontalRunlengthImage;
 namespace Munip {
 
     // Forwared declarations
-    class Page;
     class ProcessQueue;
 
     /**
