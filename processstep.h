@@ -122,7 +122,8 @@ namespace Munip {
 
     private:
         QImage m_workImage;
-		int m_lineSliceSize;
+        const int m_lineSliceSize;
+        const float m_skewPrecision;
         QList<double> m_skewList;
     };
 

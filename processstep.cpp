@@ -205,17 +205,19 @@ namespace Munip
 
     SkewCorrection::SkewCorrection(const QImage& originalImage, ProcessQueue *queue) :
         ProcessStep(originalImage, queue),
-        m_workImage(originalImage)
+        m_workImage(originalImage),
+        m_lineSliceSize((int)originalImage.width()*0.05),
+        m_skewPrecision(0.3f)
     {
         Q_ASSERT(m_originalImage.format() == QImage::Format_Mono);
-		m_lineSliceSize = 80;
+                //m_lineSliceSize = (int)originalImage.width()*0.05;
     }
 
     void SkewCorrection::process()
     {
         emit started();
         double theta = std::atan(detectSkew());
-        if(theta == 0.0) {
+        if(theta <= m_skewPrecision) {
             emit ended();
             return;
         }
