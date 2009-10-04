@@ -134,29 +134,17 @@ void MainWindow::setupActions()
                                                               tr("Correct &Skew"), this);
     correctSkewAction->setShortcut(tr("Ctrl+3"));
 
+    QAction *staffLineDetect = new Munip::ProcessStepAction("StaffLineDetect", QIcon(),
+                                                             tr("&Detect Staff lines"), this);
+    staffLineDetect->setShortcut(tr("Ctrl+4"));
+
     QAction *staffLineRemoval = new Munip::ProcessStepAction("StaffLineRemoval", QIcon(),
                                                              tr("&Remove Staff lines"), this);
-    staffLineRemoval->setShortcut(tr("Ctrl+4"));
-
-    QAction *convolution = new Munip::ProcessStepAction("ConvolutionLineDetect", QIcon(),
-                                                             tr("&Convolution"), this);
     staffLineRemoval->setShortcut(tr("Ctrl+5"));
-
-    QAction *hough = new Munip::ProcessStepAction("HoughTransformation", QIcon(),
-                                                  tr("&Hough transformation"), this);
-    hough->setShortcut(tr("Ctrl+6"));
 
     QAction *rotation = new Munip::ProcessStepAction("ImageRotation", QIcon(),
                                                      tr("&Rotate image"), this);
-    rotation->setShortcut(tr("Ctrl+7"));
-
-    QAction *runlength = new Munip::ProcessStepAction("RunlengthLineDetection", QIcon(),
-                                                     tr("Runlength Line detect"), this);
-    runlength->setShortcut(tr("Ctrl+8"));
-
-    QAction *staffLineDetect = new Munip::ProcessStepAction("StaffLineDetect", QIcon(),
-                                                             tr("&Detect Staff lines"), this);
-    staffLineDetect->setShortcut(tr("Ctrl+9"));
+    rotation->setShortcut(tr("Ctrl+6"));
 
     QAction *projectionAction = new QAction(tr("&Projection"), this);
     projectionAction->setShortcut(tr("Ctrl+P"));
@@ -167,25 +155,19 @@ void MainWindow::setupActions()
     processMenu->addAction(toGrayScaleAction);
     processMenu->addAction(toMonochromeAction);
     processMenu->addAction(correctSkewAction);
-    processMenu->addAction(staffLineRemoval);
-    processMenu->addAction(convolution);
-    processMenu->addAction(hough);
-    processMenu->addAction(rotation);
-    processMenu->addAction(runlength);
-    processMenu->addAction(projectionAction);
     processMenu->addAction(staffLineDetect);
+    processMenu->addAction(staffLineRemoval);
+    processMenu->addAction(rotation);
+    processMenu->addAction(projectionAction);
 
     SideBar *processBar = new SideBar();
     processBar->addAction(toGrayScaleAction);
     processBar->addAction(toMonochromeAction);
     processBar->addAction(correctSkewAction);
-    processBar->addAction(staffLineRemoval);
-    processBar->addAction(convolution);
-    processBar->addAction(hough);
-    processBar->addAction(rotation);
-    processBar->addAction(runlength);
-    processBar->addAction(projectionAction);
     processBar->addAction(staffLineDetect);
+    processBar->addAction(staffLineRemoval);
+    processBar->addAction(rotation);
+    processBar->addAction(projectionAction);
 
     QDockWidget *dock = new QDockWidget(tr("Process"), this);
     dock->setWidget(processBar);

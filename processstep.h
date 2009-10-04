@@ -127,6 +127,27 @@ namespace Munip {
         QList<double> m_skewList;
     };
 
+    class StaffLineDetect : public ProcessStep
+    {
+        Q_OBJECT;
+    public:
+        StaffLineDetect(const QImage& originalImage, ProcessQueue *processQueue = 0);
+
+        virtual void process();
+
+        bool checkDiscontinuity(int countWhite );
+        bool isLine(int countBlack );
+        bool isStaff( int countStaffLines );
+        void detectLines();
+        void constructStaff();
+        void removeLines();
+        void drawStaff(Staff& s);
+
+    private:
+        QVector<StaffLine> m_lineList;
+        QPixmap m_lineRemovedTracker;
+    };
+
     class StaffLineRemoval : public ProcessStep
     {
         Q_OBJECT;
@@ -138,67 +159,21 @@ namespace Munip {
         void detectLines();
         bool endOfLine(QPoint& p, int&);
         void removeLine(QPoint& start,QPoint& end);
-		void removeStaffLines();
+        void removeStaffLines();
         bool canBeRemoved(QPoint& p);
-		void followLine(QPoint& p,int& count);
-                QVector<Staff> fillDataStructures();
-		void removeFirstLine(QPoint& start,QPoint& end);
-		void removeLastLine(QPoint& start,QPoint& end);
+        void followLine(QPoint& p,int& count);
+        QVector<Staff> fillDataStructures();
+        void removeFirstLine(QPoint& start,QPoint& end);
+        void removeLastLine(QPoint& start,QPoint& end);
 
     private:
         QList<QPoint> m_lineLocation;
         QList<bool> m_isLine;
         QPixmap m_lineRemovedTracker;
-		int m_upperLimit;
-		double m_lineWidthLimit;
+        int m_upperLimit;
+        double m_lineWidthLimit;
     };
 
-    class StaffLineDetect : public ProcessStep
-    {
-        Q_OBJECT;
-        public:
-            StaffLineDetect(const QImage& originalImage, ProcessQueue *processQueue = 0);
-
-            virtual void process();
-
-            bool checkDiscontinuity(int countWhite );
-            bool isLine(int countBlack );
-            bool isStaff( int countStaffLines );
-            void detectLines();
-            void constructStaff();
-            void removeLines();
-            void drawStaff(Staff& s);
-
-        private:
-            QVector<StaffLine> m_lineList;
-            QPixmap m_lineRemovedTracker;
-        };
-
-
-
-    class ConvolutionLineDetect : public ProcessStep
-    {
-        Q_OBJECT;
-    public:
-        ConvolutionLineDetect(const QImage& originalImage, ProcessQueue *processQueue = 0);
-        virtual void process();
-
-    private:
-        int val(int x, int y) const;
-        void convolute(int x, int y);
-
-        int m_kernel[3][3];
-    };
-
-    class HoughTransformation : public ProcessStep
-    {
-        Q_OBJECT;
-    public:
-        HoughTransformation(const QImage& originalImage, ProcessQueue *queue = 0);
-        virtual void process();
-
-    private:
-    };
 
     class ImageRotation : public ProcessStep
     {
@@ -207,23 +182,7 @@ namespace Munip {
         ImageRotation(const QImage& originalImage, ProcessQueue *processQueue = 0);
         virtual void process();
     };
-
-    class RunlengthLineDetection : public ProcessStep
-    {
-        Q_OBJECT;
-    public:
-        RunlengthLineDetection(const QImage& originalImage, ProcessQueue *processQueue = 0);
-        virtual ~RunlengthLineDetection();
-
-        virtual void process();
-
-    private:
-        void tryLine(int x, int y);
-        bool processed(int y, int i) const;
-
-        QVector<QVector<bool> > m_processedMarker;
-        HorizontalRunlengthImage *m_horizontalRunlengthImage;
-    };
 }
 
 #endif
+

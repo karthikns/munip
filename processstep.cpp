@@ -131,24 +131,19 @@ namespace Munip
     ProcessStep* ProcessStepFactory::create(const QByteArray& className, const QImage& originalImage, ProcessQueue *queue)
     {
         ProcessStep *step = 0;
+
         if (className == QByteArray("GrayScaleConversion"))
             step = new GrayScaleConversion(originalImage, queue);
         else if (className == QByteArray("MonoChromeConversion"))
             step = new MonoChromeConversion(originalImage, queue);
         else if (className == QByteArray("SkewCorrection"))
             step = new SkewCorrection(originalImage, queue);
-        else if (className == QByteArray("StaffLineRemoval"))
-            step = new StaffLineRemoval(originalImage, queue);
         else if (className == QByteArray("StaffLineDetect"))
             step = new StaffLineDetect(originalImage, queue);
-        else if (className == QByteArray("ConvolutionLineDetect"))
-            step = new ConvolutionLineDetect(originalImage, queue);
-        else if (className == QByteArray("HoughTransformation"))
-            step = new HoughTransformation(originalImage, queue);
+        else if (className == QByteArray("StaffLineRemoval"))
+            step = new StaffLineRemoval(originalImage, queue);
         else if (className == QByteArray("ImageRotation"))
             step = new ImageRotation(originalImage, queue);
-        else if (className == QByteArray("RunlengthLineDetection"))
-            step = new RunlengthLineDetection(originalImage, queue);
 
         return step;
     }
@@ -357,428 +352,18 @@ namespace Munip
         return slope;
     }
 
-    StaffLineRemoval::StaffLineRemoval(const QImage& originalImage, ProcessQueue *queue) :
-        ProcessStep(originalImage, queue)
-    {
-        for(int y = 0; y < m_processedImage.height(); y++)
-            m_isLine.append(false);
-		m_upperLimit = 5;
-		m_lineWidthLimit = 0.4;
-
-        Q_ASSERT(originalImage.format() == QImage::Format_Mono);
-    }
-
-    void StaffLineRemoval::process()
-    {
-        emit started();
-
-        detectLines();
-        removeStaffLines();
-        m_processedImage = m_lineRemovedTracker.toImage();
-
-        emit ended();
-    }
-
-
-    void StaffLineRemoval::detectLines()
-    {
-        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
-        const int Black = 1 - White;
-        bool done = false;
-        QPoint p1,p2;
-		for(int x = 0; x < m_processedImage.width() && !done; x++)
-		{
-			for(int y = 0; y < m_processedImage.height() && !done; y++)
-			{
-				if(m_processedImage.pixelIndex(x,y) == Black)
-				{
-					p1.setX(x);
-					p1.setY(y);
-					done = 1;
-				}
-			}
-		}
-
-		done = false;
-
-		for(int x = m_processedImage.width()-1; x > 0 && !done; x--)
-		{
-			for(int y = m_processedImage.height() -1; y > 0 && !done; y--)
-			{
-				if(m_processedImage.pixelIndex(x,y) == Black)
-				{
-					p2.setX(x);
-					p2.setY(y);
-					done = true;
-				}
-			}
-		}
-		qDebug()<<Q_FUNC_INFO<<p1.x()<<p2.x();
-		int width = p2.x() - p1.x();
-		for(int y = 0; y < m_processedImage.height(); y++)
-		{
-			bool done = false;
-			for(int x = 0; x < m_processedImage.width() && !done; x++)
-			{
-				if(m_processedImage.pixelIndex(x,y) == Black)
-				{
-					QPoint start(x,y);
-					int count = 0;
-					QPoint p = start;
-					followLine(p,count);
-					if(count >= m_lineWidthLimit * width)
-					{
-						QPoint end = p;
-						end.setY(start.y());
-						m_lineLocation.push_back(start);
-						m_lineLocation.push_back(end);
-						m_isLine[y] = 1;
-						qDebug()<<start<<end<<count<<width;
-					}
-					done = true;
-					
-				}
-			}
-		}
-		qDebug() <<"Hi!!!";
-
-    }
-	void StaffLineRemoval :: followLine(QPoint& p,int& count)
-	{
-		
-		const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
-        const int Black = 1 - White;
-
-		bool done = false;
-		int x = p.x();
-		int y = p.y();
-		int  nextjump = 0, countabove = 0, countbelow = 0;
-		while(!done && x < m_processedImage.width())
-		{
-			while(x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == Black)
-			{
-				count++;
-				x++;
-				p.setX(x);
-			}
-			int whiterun = 0;
-			while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 5 )
-			{
-				whiterun++;
-				if(count >= 160 && m_processedImage.pixelIndex(x,y+1) == Black)
-				{
-					count++;
-					countabove++;
-				}
-
-				else if(count >= 160 && m_processedImage.pixelIndex(x,y-1) == Black)
-				{
-					count++;
-					countbelow++;
-							
-				}
-				x++;
-				p.setX(x);
-			}
-			if(whiterun >= 5)
-				done = true;
-			else
-			{
-				countabove = 0;
-				countbelow = 0;
-			}
-
-		}
-			
-		if((countabove > countbelow) && (countabove || countbelow))	
-		{		
-			nextjump = 1;
-		}
-		else if(countabove || countbelow)
-		{		
-			nextjump = -1;
-		}
-			
-		if(nextjump && x < m_processedImage.width())
-		{
-				p.setY(y+nextjump);
-				followLine(p,count);
-		}
-
-	}
-			
-        QVector<Staff> StaffLineRemoval :: fillDataStructures()
-	{
-                QVector<StaffLine> staves;
-                QVector<Staff> staffList;
-		int thickness = 0;
-		int countAddedLines = 0;
-                
-                m_lineRemovedTracker = QPixmap(m_processedImage.size());
-                m_lineRemovedTracker.fill(QColor(Qt::white));
-                QPainter p(&m_lineRemovedTracker);
-#if 1
-                if (!m_lineLocation.isEmpty() && m_lineLocation.size()%2 != 0) {
-                    m_lineLocation.append(m_lineLocation[m_lineLocation.size()-1]);
-                }
-                for (int i=0; i<m_lineLocation.size(); i += 2) {
-                    p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
-                    p.drawLine(m_lineLocation[i], m_lineLocation[i+1]);
-                }
-#endif
-		/*
-		Parallel StaffLines Functionality to be implemented
-		*/
-		for(int y = 0; y < m_processedImage.height(); y++)
-		{
-			if(m_isLine[y])
-			{
-				int temp = y;
-				QPoint start = m_lineLocation[0];
-				QPoint end = m_lineLocation[1];
-				
-				while(m_isLine[temp])
-				{	
-					temp++;
-					thickness++;
-					if( start.x() > m_lineLocation[0].x())
-						start.setX(m_lineLocation[0].x());
-					if(end.x() < m_lineLocation[1].x())
-						end.setX(m_lineLocation[1].x());
-
-					m_lineLocation.erase(m_lineLocation.begin());
-					m_lineLocation.erase(m_lineLocation.begin());
-					
-				}
-				y = temp;
-				StaffLine st(start,end,thickness);
-				thickness = 0;
-				staves.append(st);
-				countAddedLines++;
-				if(countAddedLines == 5)
-				{
-					Staff s(staves[0].startPos(),staves[4].startPos());
-					countAddedLines = 0;
-					s.addStaffLineList(staves);   
-					staffList.append(s);
-					staves.clear();
-				}
-			}
-		}
-
-#if 0
-                for (int i=0; i<staffList.size(); ++i) {
-                    QList<StaffLine> staffLines = staffList[i].staffLines();
-                    p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
-
-                    for (int j=0; j<staffLines.size(); ++j) {
-                        p.drawLine(staffLines[j].startPos(), staffLines[j].endPos());
-                    }
-                }
-#endif
-
-                p.end();
-
-		return staffList;
-        }
-
-    bool StaffLineRemoval::canBeRemoved(QPoint& p)
-    {
-        int x = p.x();
-        int y = p.y();
-
-        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
-        const int Black = 1 - White;
-		
-		if(m_processedImage.pixelIndex(x-1,y-1) == Black ||m_processedImage.pixelIndex(x,y-1) == Black || m_processedImage.pixelIndex(x+1,y-1) == Black)
-				return false;
-		return true;
-    }
-
-	void StaffLineRemoval :: removeStaffLines()
-	{
-                QVector<Staff> pageStaffList = fillDataStructures();
-		for(int i = 0; i < pageStaffList.size(); i++)
-		{
-                        QVector<StaffLine> staves = pageStaffList[i].staffLines();
-			for(int j = 0; j < staves.size(); j++)
-			{
-				StaffLine staffline = staves[j];
-				QPoint s = staffline.startPos();
-				QPoint e = staffline.endPos();
-				int t = staffline.lineWidth();
-				removeFirstLine(s,e);
-				s.setY(s.y()+t-1);
-				e.setY(s.y()+t-1);
-				removeLastLine(s,e);
-				s = staffline.startPos();
-				e = staffline.endPos();
-				for(int k = 1; k < t-1; k++)
-				{
-					s.setY(s.y()+1);
-					e.setY(s.y()+1);
-					removeLine(s,e);
-				}
-				
-				
-			}
-			
-		}
-	}
-	void StaffLineRemoval :: removeFirstLine(QPoint& start,QPoint& end)
-	{
-		const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
-		const int Black = 1 - White;
-		int y = start.y();
-        for(int x = start.x(); x <= end.x();x++)
-		{
-			if(m_processedImage.pixelIndex(x,y) == Black)
-			{
-				int temp = y-1;
-				
-				if(m_processedImage.pixelIndex(x,temp) == Black)
-				{
-					if(m_processedImage.pixelIndex(x-1,temp-1) == White && m_processedImage.pixelIndex(x,temp-1) == White && m_processedImage.pixelIndex(x+1,temp-1) == White)
-						m_processedImage.setPixel(x,temp,White);
-				}
-				if(m_processedImage.pixelIndex(x-1,temp) == White && m_processedImage.pixelIndex(x,temp) == White && m_processedImage.pixelIndex(x+1,temp) == White)
-						m_processedImage.setPixel(x,y,White);
-			}
-			else if(m_processedImage.pixelIndex(x,y) == White)
-			{
-						int whiterun = 0,nextjump = 0,countabove = 0,countbelow = 0;
-						while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 10)
-						{
-							whiterun++;
-							if(m_processedImage.pixelIndex(x,y+1) == Black)
-							{
-								countabove++;
-							}
-							else if(m_processedImage.pixelIndex(x,y-1) == Black )
-							{
-								countbelow++;
-							}
-							x++;
-						}
-						if(countabove > countbelow &&(countabove||countbelow))
-								nextjump = 1;
-						else if(countabove || countbelow)
-								nextjump = -1;	
-						
-						if(whiterun>= 10 && nextjump && x < m_processedImage.width())
-						{	
-							y += nextjump;
-						}
-			}
-			
-
-		}
-	}
-	void StaffLineRemoval :: removeLastLine(QPoint& start,QPoint& end)
-	{
-		const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
-		const int Black = 1 - White;
-		int y = start.y();
-        for(int x = start.x(); x <= end.x();x++)
-		{
-			if(m_processedImage.pixelIndex(x,y) == Black)
-			{
-				int temp = y+1;
-				
-				if(m_processedImage.pixelIndex(x,temp) == Black)
-				{
-					if(m_processedImage.pixelIndex(x-1,temp+1) == White && m_processedImage.pixelIndex(x,temp+1) == White && m_processedImage.pixelIndex(x+1,temp+1) == White)
-						m_processedImage.setPixel(x,temp,White);
-				}
-				if(m_processedImage.pixelIndex(x-1,temp) == White && m_processedImage.pixelIndex(x,temp) == White && m_processedImage.pixelIndex(x+1,temp) == White)
-						m_processedImage.setPixel(x,y,White);
-			}
-			else if(m_processedImage.pixelIndex(x,y) == White)
-			{
-						int whiterun = 0,nextjump = 0,countabove = 0,countbelow = 0;
-						while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 10)
-						{
-							whiterun++;
-							if(m_processedImage.pixelIndex(x,y+1) == Black)
-							{
-								countabove++;
-							}
-							else if(m_processedImage.pixelIndex(x,y-1) == Black )
-							{
-								countbelow++;
-							}
-							x++;
-						}
-						if(countabove > countbelow &&(countabove||countbelow))
-								nextjump = 1;
-						else if(countabove || countbelow)
-								nextjump = -1;	
-						
-						if(whiterun>= 10 && nextjump && x < m_processedImage.width())
-						{	
-							y += nextjump;
-						}
-			}
-			
-
-		}
-	}
-
-
-    void StaffLineRemoval::removeLine(QPoint& start,QPoint& end)
-    {
-		
-        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
-		const int Black = 1 - White;
-		m_upperLimit = abs(end.y() - start.y());
-
-		int y = start.y();
-        for(int x = start.x(); x <= end.x();x++)
-		{
-			QPoint p(x,y);
-			if(m_processedImage.pixelIndex(x,y) == Black && canBeRemoved(p))							
-					m_processedImage.setPixel(x,y,White);
-			else if(m_processedImage.pixelIndex(x,y) == White)
-			{
-						int whiterun = 0,nextjump = 0,countabove = 0,countbelow = 0;
-						while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 5)
-						{
-							whiterun++;
-							if(m_processedImage.pixelIndex(x,y+1) == Black)
-							{
-								countabove++;
-							}
-							else if(m_processedImage.pixelIndex(x,y-1) == Black )
-							{
-								countbelow++;
-							}
-							x++;
-						}
-						if(countabove > countbelow &&(countabove||countbelow))
-								nextjump = 1;
-							else if(countabove || countbelow)
-								nextjump = -1;	
-						
-						if(whiterun>= 5 && nextjump && x < m_processedImage.width())
-						{	
-							y += nextjump;
-						}
-			}
-		}
-
-      
-    }
     //TODO Put the constructor and other basic stuff in
 
-     StaffLineDetect::StaffLineDetect(const QImage& originalImage, ProcessQueue *queue) :
+    StaffLineDetect::StaffLineDetect(const QImage& originalImage, ProcessQueue *queue) :
         ProcessStep(originalImage, queue)
     {
         Q_ASSERT(originalImage.format() == QImage::Format_Mono);
     }
 
-    void StaffLineDetect ::process()
+    void StaffLineDetect::process()
     {
         emit started();
+
         m_lineRemovedTracker = QPixmap(m_processedImage.size());
         m_lineRemovedTracker.fill(QColor(Qt::white));
         detectLines();
@@ -788,7 +373,8 @@ namespace Munip
 
         emit ended();
     }
-     bool StaffLineDetect ::checkDiscontinuity(int countWhite )
+
+    bool StaffLineDetect::checkDiscontinuity(int countWhite )
     {
         if( m_processedImage.width() <= 500 && countWhite >= 5 )
             return true;
@@ -797,14 +383,14 @@ namespace Munip
         return false;
     }
 
-    bool StaffLineDetect :: isLine( int countBlack )
+    bool StaffLineDetect::isLine( int countBlack )
     {
         if( countBlack >= (int) (0.1*m_processedImage.width()) )
             return true;
         return false;
     }
 
-    bool StaffLineDetect :: isStaff( int countStaffLines )
+    bool StaffLineDetect::isStaff( int countStaffLines )
     {
         if( countStaffLines == 5 ) //TODO Put this in DataWarehouse
             return true;
@@ -812,7 +398,7 @@ namespace Munip
     }
 
 
-    void StaffLineDetect ::detectLines()
+    void StaffLineDetect::detectLines()
     {
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
         const int Black = 1 - White;
@@ -849,7 +435,7 @@ namespace Munip
 
 
                 if( ( m_lineList.size() == 0 && isLine(countBlack) ) || ( isLine(countBlack) &&  !m_lineList[m_lineList.size()-1].aggregate(line) ) )
-                     m_lineList.push_back(line);
+                    m_lineList.push_back(line);
 
                 countBlack = 0;
                 countWhite = 0;
@@ -863,7 +449,7 @@ namespace Munip
             qDebug() << Q_FUNC_INFO<< m_lineList[i].startPos() << m_lineList[i].endPos() << m_lineList[i].lineWidth() ;
     }
 
-    void StaffLineDetect ::constructStaff()
+    void StaffLineDetect::constructStaff()
     {
         Staff s;
         int distance,d;
@@ -880,17 +466,17 @@ namespace Munip
                         distance = s.distance(1);
                         break;
                 default: s.addStaffLine( m_lineList[i] );
-                         d = s.distance(count+1);
+                         d = s.distance(count);
                          if( d >= (int) 0.8* distance )
                          {
                              if( d > distance )
                                  distance = d;
-                            count++;
-                            if( isStaff( count ) )
-                            {
-                                //DataWarehouse ::instance() ->appendStaff( s );
-                                drawStaff(s);
-                            }
+                             count++;
+                             if( isStaff( count ) )
+                             {
+                                 //DataWarehouse::instance() ->appendStaff( s );
+                                 drawStaff(s);
+                             }
 
                          }
                          else
@@ -903,7 +489,7 @@ namespace Munip
         }
     }
 
-    void StaffLineDetect :: drawStaff( Staff& s )
+    void StaffLineDetect::drawStaff( Staff& s )
     {
 
 
@@ -911,162 +497,419 @@ namespace Munip
 
     }
 
-    ConvolutionLineDetect::ConvolutionLineDetect(const QImage& originalImage, ProcessQueue *processQueue) :
-        ProcessStep(originalImage, processQueue)
+
+
+    StaffLineRemoval::StaffLineRemoval(const QImage& originalImage, ProcessQueue *queue) :
+        ProcessStep(originalImage, queue)
     {
-        const int act_kernel[3][3] = {
-            {-1, -1, -1},
-            {2, 2, 2},
-            {-1, -1, -1}
-        };
+        for(int y = 0; y < m_processedImage.height(); y++)
+            m_isLine.append(false);
+        m_upperLimit = 5;
+        m_lineWidthLimit = 0.4;
 
-        for(int i = 0; i < 3; i++)
-            for(int j = 0; j < 3; j++)
-                m_kernel[i][j] = act_kernel[i][j];
-
-        if (originalImage.format() != QImage::Format_Mono) {
-            m_processedImage = QImage(originalImage.width(), originalImage.height(), QImage::Format_Indexed8);
-            QVector<QRgb> table(256, 0);
-            for(int i = 0; i < 256; ++i)
-                table[i] = qRgb(i, i, i);
-            m_processedImage.setColorTable(table);
-            memset(m_processedImage.bits(), 0, m_processedImage.numBytes());
-        }
+        Q_ASSERT(originalImage.format() == QImage::Format_Mono);
     }
 
-    int ConvolutionLineDetect::val(int x, int y) const
-    {
-        return qGray(m_originalImage.pixel(x, y));
-    }
-
-    void ConvolutionLineDetect::process()
+    void StaffLineRemoval::process()
     {
         emit started();
 
-        for(int x = 0; x < m_originalImage.width() - 3; ++x) {
-            for(int y = 0; y < m_originalImage.height() - 3; ++y) {
-                convolute(x, y);
-            }
-        }
+        detectLines();
+        removeStaffLines();
+        m_processedImage = m_lineRemovedTracker.toImage();
 
         emit ended();
     }
 
-    void ConvolutionLineDetect::convolute(int X, int Y)
+
+    void StaffLineRemoval::detectLines()
     {
-        int v = 0;
-        for(int x=X; x<X+3; ++x) {
-            for(int y=Y; y<Y+3; ++y) {
-                v += m_kernel[y-Y][x-X] * val(x, y);
-            }
-        }
-        if (v < 0)
-            v = 0;
-        if (v > 255)
-            v = 255;
-
-        if (m_processedImage.format() == QImage::Format_Mono) {
-            bool isWhite = v > 128;
-            const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
-            const int Black = 1 - White;
-
-            m_processedImage.setPixel(X, Y, isWhite ? White : Black);
-        }
-        else {
-            m_processedImage.setPixel(X, Y, v);
-        }
-    }
-
-    HoughTransformation::HoughTransformation(const QImage& originalImage, ProcessQueue *queue) :
-        ProcessStep(originalImage, queue)
-    {
-        Q_ASSERT(originalImage.format() == QImage::Format_Mono);
-    }
-
-    typedef QPair<QPoint, int> Pair;
-    bool pairGreaterThan(const Pair& p1, const Pair& p2)
-    {
-        return p1.second > p2.second;
-    }
-
-    void HoughTransformation::process()
-    {
-        emit started();
-
-        const int Black = m_originalImage.color(0) == 0xffffffff ? 1 : 0;
-        const int White = 1 - Black;
-        const int w = m_processedImage.width();
-        const int h = m_processedImage.height();
-        const double pi_by_180 = M_PI/180;
-
-        QMap<double, double> cosThetaTable;
-        QMap<double, double> sinThetaTable;
-
-
-        for(double i = -95.; i <= 95.0; i += 0.5) {
-            cosThetaTable[i] = std::cos(pi_by_180 * i);
-            sinThetaTable[i] = std::sin(pi_by_180 * i);
-        }
-
-
-        QList<Pair> accumulator;
-
-        for(int x = 0; x < w; ++x) {
-            for(int y = 0; y < h; ++y) {
-                if (m_originalImage.pixelIndex(x, y) == White)
-                    continue;
-                for(double i = -95.0; i <= 95.0; i += 0.5) {
-                    double r = x * cosThetaTable[i] + y * sinThetaTable[i];
-                    r = qRound(r);
-                    QPoint point((int)r, int(i*10));
-
-                    bool found = false;
-                    for(int k = 0; k < accumulator.size(); ++k) {
-                        if (accumulator[k].first == point) {
-                            accumulator[k].second++;
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found)
-                        accumulator.append(qMakePair(point, int(1)));
+        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
+        bool done = false;
+        QPoint p1,p2;
+        for(int x = 0; x < m_processedImage.width() && !done; x++)
+        {
+            for(int y = 0; y < m_processedImage.height() && !done; y++)
+            {
+                if(m_processedImage.pixelIndex(x,y) == Black)
+                {
+                    p1.setX(x);
+                    p1.setY(y);
+                    done = 1;
                 }
             }
         }
 
-        //qSort(accumulator.begin(), accumulator.end(), Munip::pairGreaterThan);
+        done = false;
 
-        for(int i = 0; i < accumulator.size(); ++i) {
-            QPointF p = accumulator.at(i).first;
-            p.ry() /= 10;
-            qDebug() << p << " = " << accumulator.at(i).second;
+        for(int x = m_processedImage.width()-1; x > 0 && !done; x--)
+        {
+            for(int y = m_processedImage.height() -1; y > 0 && !done; y--)
+            {
+                if(m_processedImage.pixelIndex(x,y) == Black)
+                {
+                    p2.setX(x);
+                    p2.setY(y);
+                    done = true;
+                }
+            }
         }
-        // lines_list_t lines;
-        // uchar* binary_image = (uchar*)malloc(sizeof(uchar) * w * h * 2);
-        // uchar *start = binary_image;
+        qDebug()<<Q_FUNC_INFO<<p1.x()<<p2.x();
+        int width = p2.x() - p1.x();
+        for(int y = 0; y < m_processedImage.height(); y++)
+        {
+            bool done = false;
+            for(int x = 0; x < m_processedImage.width() && !done; x++)
+            {
+                if(m_processedImage.pixelIndex(x,y) == Black)
+                {
+                    QPoint start(x,y);
+                    int count = 0;
+                    QPoint p = start;
+                    followLine(p,count);
+                    if(count >= m_lineWidthLimit * width)
+                    {
+                        QPoint end = p;
+                        end.setY(start.y());
+                        m_lineLocation.push_back(start);
+                        m_lineLocation.push_back(end);
+                        m_isLine[y] = 1;
+                        qDebug()<<start<<end<<count<<width;
+                    }
+                    done = true;
 
-        // Q_ASSERT(binary_image);
+                }
+            }
+        }
+    }
 
-        // qDebug() << Q_FUNC_INFO << "Allocated";
+    void StaffLineRemoval::followLine(QPoint& p,int& count)
+    {
 
-        // for(int x = 0; x < w; ++x) {
-        //     for(int y = 0; y < h; ++y) {
-        //         uchar val = m_processedImage.pixelIndex(x, y) == Black ? 0 : 1;
-        //         binary_image[y*w + x] = val;
-        //     }
-        // }
+        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
 
-        // qDebug() << Q_FUNC_INFO << "Filled the binary_image";
-        // kht(lines, binary_image, w, h);
-        // qDebug() << Q_FUNC_INFO << "Called kht";
+        bool done = false;
+        int x = p.x();
+        int y = p.y();
+        int  nextjump = 0, countabove = 0, countbelow = 0;
+        while(!done && x < m_processedImage.width())
+        {
+            while(x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == Black)
+            {
+                count++;
+                x++;
+                p.setX(x);
+            }
+            int whiterun = 0;
+            while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 5 )
+            {
+                whiterun++;
+                if(count >= 160 && m_processedImage.pixelIndex(x,y+1) == Black)
+                {
+                    count++;
+                    countabove++;
+                }
 
-        // for(size_t i = 0; i < lines.size(); ++i) {
-        //     qDebug() << "Line(rho, theta) = " << "("
-        //              << lines[i].rho << ", " << lines[i].theta << ")";
-        // }
+                else if(count >= 160 && m_processedImage.pixelIndex(x,y-1) == Black)
+                {
+                    count++;
+                    countbelow++;
 
-        // free(start);
-        emit ended();
+                }
+                x++;
+                p.setX(x);
+            }
+            if(whiterun >= 5)
+                done = true;
+            else
+            {
+                countabove = 0;
+                countbelow = 0;
+            }
+
+        }
+
+        if((countabove > countbelow) && (countabove || countbelow))
+        {
+            nextjump = 1;
+        }
+        else if(countabove || countbelow)
+        {
+            nextjump = -1;
+        }
+
+        if(nextjump && x < m_processedImage.width())
+        {
+            p.setY(y+nextjump);
+            followLine(p,count);
+        }
+
+    }
+
+    QVector<Staff> StaffLineRemoval::fillDataStructures()
+    {
+        QVector<StaffLine> staves;
+        QVector<Staff> staffList;
+        int thickness = 0;
+        int countAddedLines = 0;
+
+        m_lineRemovedTracker = QPixmap(m_processedImage.size());
+        m_lineRemovedTracker.fill(QColor(Qt::white));
+        QPainter p(&m_lineRemovedTracker);
+#if 1
+        if (!m_lineLocation.isEmpty() && m_lineLocation.size()%2 != 0) {
+            m_lineLocation.append(m_lineLocation[m_lineLocation.size()-1]);
+        }
+        for (int i=0; i<m_lineLocation.size(); i += 2) {
+            p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
+            p.drawLine(m_lineLocation[i], m_lineLocation[i+1]);
+        }
+#endif
+        /*
+           Parallel StaffLines Functionality to be implemented
+           */
+        for(int y = 0; y < m_processedImage.height(); y++)
+        {
+            if(m_isLine[y])
+            {
+                int temp = y;
+                QPoint start = m_lineLocation[0];
+                QPoint end = m_lineLocation[1];
+
+                while(m_isLine[temp])
+                {
+                    temp++;
+                    thickness++;
+                    if( start.x() > m_lineLocation[0].x())
+                        start.setX(m_lineLocation[0].x());
+                    if(end.x() < m_lineLocation[1].x())
+                        end.setX(m_lineLocation[1].x());
+
+                    m_lineLocation.erase(m_lineLocation.begin());
+                    m_lineLocation.erase(m_lineLocation.begin());
+
+                }
+                y = temp;
+                StaffLine st(start,end,thickness);
+                thickness = 0;
+                staves.append(st);
+                countAddedLines++;
+                if(countAddedLines == 5)
+                {
+                    Staff s(staves[0].startPos(),staves[4].startPos());
+                    countAddedLines = 0;
+                    s.addStaffLineList(staves);
+                    staffList.append(s);
+                    staves.clear();
+                }
+            }
+        }
+
+#if 0
+        for (int i=0; i<staffList.size(); ++i) {
+            QList<StaffLine> staffLines = staffList[i].staffLines();
+            p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
+
+            for (int j=0; j<staffLines.size(); ++j) {
+                p.drawLine(staffLines[j].startPos(), staffLines[j].endPos());
+            }
+        }
+#endif
+
+        p.end();
+
+        return staffList;
+    }
+
+    bool StaffLineRemoval::canBeRemoved(QPoint& p)
+    {
+        int x = p.x();
+        int y = p.y();
+
+        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
+
+        if(m_processedImage.pixelIndex(x-1,y-1) == Black ||m_processedImage.pixelIndex(x,y-1) == Black || m_processedImage.pixelIndex(x+1,y-1) == Black)
+            return false;
+        return true;
+    }
+
+    void StaffLineRemoval::removeStaffLines()
+    {
+        QVector<Staff> pageStaffList = fillDataStructures();
+        for(int i = 0; i < pageStaffList.size(); i++)
+        {
+            QVector<StaffLine> staves = pageStaffList[i].staffLines();
+            for(int j = 0; j < staves.size(); j++)
+            {
+                StaffLine staffline = staves[j];
+                QPoint s = staffline.startPos();
+                QPoint e = staffline.endPos();
+                int t = staffline.lineWidth();
+                removeFirstLine(s,e);
+                s.setY(s.y()+t-1);
+                e.setY(s.y()+t-1);
+                removeLastLine(s,e);
+                s = staffline.startPos();
+                e = staffline.endPos();
+                for(int k = 1; k < t-1; k++)
+                {
+                    s.setY(s.y()+1);
+                    e.setY(s.y()+1);
+                    removeLine(s,e);
+                }
+
+
+            }
+
+        }
+    }
+
+    void StaffLineRemoval::removeFirstLine(QPoint& start,QPoint& end)
+    {
+        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
+        int y = start.y();
+        for(int x = start.x(); x <= end.x();x++)
+        {
+            if(m_processedImage.pixelIndex(x,y) == Black)
+            {
+                int temp = y-1;
+
+                if(m_processedImage.pixelIndex(x,temp) == Black)
+                {
+                    if(m_processedImage.pixelIndex(x-1,temp-1) == White && m_processedImage.pixelIndex(x,temp-1) == White && m_processedImage.pixelIndex(x+1,temp-1) == White)
+                        m_processedImage.setPixel(x,temp,White);
+                }
+                if(m_processedImage.pixelIndex(x-1,temp) == White && m_processedImage.pixelIndex(x,temp) == White && m_processedImage.pixelIndex(x+1,temp) == White)
+                    m_processedImage.setPixel(x,y,White);
+            }
+            else if(m_processedImage.pixelIndex(x,y) == White)
+            {
+                int whiterun = 0,nextjump = 0,countabove = 0,countbelow = 0;
+                while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 10)
+                {
+                    whiterun++;
+                    if(m_processedImage.pixelIndex(x,y+1) == Black)
+                    {
+                        countabove++;
+                    }
+                    else if(m_processedImage.pixelIndex(x,y-1) == Black )
+                    {
+                        countbelow++;
+                    }
+                    x++;
+                }
+                if(countabove > countbelow &&(countabove||countbelow))
+                    nextjump = 1;
+                else if(countabove || countbelow)
+                    nextjump = -1;
+
+                if(whiterun>= 10 && nextjump && x < m_processedImage.width())
+                {
+                    y += nextjump;
+                }
+            }
+
+
+        }
+    }
+
+    void StaffLineRemoval::removeLastLine(QPoint& start,QPoint& end)
+    {
+        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
+        int y = start.y();
+        for(int x = start.x(); x <= end.x();x++)
+        {
+            if(m_processedImage.pixelIndex(x,y) == Black)
+            {
+                int temp = y+1;
+
+                if(m_processedImage.pixelIndex(x,temp) == Black)
+                {
+                    if(m_processedImage.pixelIndex(x-1,temp+1) == White && m_processedImage.pixelIndex(x,temp+1) == White && m_processedImage.pixelIndex(x+1,temp+1) == White)
+                        m_processedImage.setPixel(x,temp,White);
+                }
+                if(m_processedImage.pixelIndex(x-1,temp) == White && m_processedImage.pixelIndex(x,temp) == White && m_processedImage.pixelIndex(x+1,temp) == White)
+                    m_processedImage.setPixel(x,y,White);
+            }
+            else if(m_processedImage.pixelIndex(x,y) == White)
+            {
+                int whiterun = 0,nextjump = 0,countabove = 0,countbelow = 0;
+                while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 10)
+                {
+                    whiterun++;
+                    if(m_processedImage.pixelIndex(x,y+1) == Black)
+                    {
+                        countabove++;
+                    }
+                    else if(m_processedImage.pixelIndex(x,y-1) == Black )
+                    {
+                        countbelow++;
+                    }
+                    x++;
+                }
+                if(countabove > countbelow &&(countabove||countbelow))
+                    nextjump = 1;
+                else if(countabove || countbelow)
+                    nextjump = -1;
+
+                if(whiterun>= 10 && nextjump && x < m_processedImage.width())
+                {
+                    y += nextjump;
+                }
+            }
+
+
+        }
+    }
+
+
+    void StaffLineRemoval::removeLine(QPoint& start,QPoint& end)
+    {
+
+        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
+        m_upperLimit = abs(end.y() - start.y());
+
+        int y = start.y();
+        for(int x = start.x(); x <= end.x();x++)
+        {
+            QPoint p(x,y);
+            if(m_processedImage.pixelIndex(x,y) == Black && canBeRemoved(p))
+                m_processedImage.setPixel(x,y,White);
+            else if(m_processedImage.pixelIndex(x,y) == White)
+            {
+                int whiterun = 0,nextjump = 0,countabove = 0,countbelow = 0;
+                while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White && whiterun < 5)
+                {
+                    whiterun++;
+                    if(m_processedImage.pixelIndex(x,y+1) == Black)
+                    {
+                        countabove++;
+                    }
+                    else if(m_processedImage.pixelIndex(x,y-1) == Black )
+                    {
+                        countbelow++;
+                    }
+                    x++;
+                }
+                if(countabove > countbelow &&(countabove||countbelow))
+                    nextjump = 1;
+                else if(countabove || countbelow)
+                    nextjump = -1;
+
+                if(whiterun>= 5 && nextjump && x < m_processedImage.width())
+                {
+                    y += nextjump;
+                }
+            }
+        }
+
+
     }
 
     ImageRotation::ImageRotation(const QImage& image, ProcessQueue *queue) :
@@ -1114,119 +957,5 @@ namespace Munip
         painter.end();
 
         emit ended();
-    }
-
-    RunlengthLineDetection::RunlengthLineDetection(const QImage& originalImage, ProcessQueue *queue) :
-        ProcessStep(originalImage, queue)
-    {
-        int Black = originalImage.colorTable().at(0) == 0xffffffff ? 1 : 0;
-        m_horizontalRunlengthImage = new HorizontalRunlengthImage(originalImage, Black);
-
-        QVector<QVector<LocationRunPair> > &data = m_horizontalRunlengthImage->m_data;
-        m_processedMarker.resize(data.size());
-        for (int y=0; y<data.size(); ++y) {
-            m_processedMarker[y] = QVector<bool>(data[y].size(), false);
-        }
-    }
-
-    RunlengthLineDetection::~RunlengthLineDetection()
-    {
-        delete m_horizontalRunlengthImage;
-    }
-
-    void RunlengthLineDetection::process()
-    {
-        emit started();
-
-        m_processedImage = QImage(m_originalImage.size(), QImage::Format_ARGB32);
-        m_processedImage.fill(qRgb(0, 0, 0));
-
-#if 0
-        QVector<QVector<LocationRunPair> > &data = m_horizontalRunlengthImage->m_data;
-        for (int y=0; y<data.size(); ++y) {
-            for (int i=0; i<data[y].size(); ++i) {
-                if (!processed(y, i)) {
-                    tryLine(y, i);
-                }
-            }
-        }
-#endif
-        for (int x = 0; x < m_processedImage.width(); ++x) {
-            for (int y = 0; y < m_processedImage.height(); ++y) {
-                int i = m_horizontalRunlengthImage->runForPixel(x, y);
-                //qDebug() << Q_FUNC_INFO << y << i;
-                if (i != -1 && !processed(y, i)) {
-                    tryLine(y, i);
-                }
-            }
-        }
-        emit ended();
-    }
-
-    void RunlengthLineDetection::tryLine(int y, int i)
-    {
-        const LocationRunPair startPair = m_horizontalRunlengthImage->run(y, i);
-        const QPoint start(startPair.x, y);
-        const double ThresholdAngle = 2.0;
-
-        QStack<QLine> lineStack;
-        lineStack.push(QLine(startPair.x, y, startPair.x+startPair.run-1, y));
-
-        QPainter p(&m_processedImage);
-        p.setPen(QColor(qrand()%255, 100+qrand()%155, qrand()%255));
-
-        QPoint end = start;
-        while (!lineStack.isEmpty()) {
-            QLine line = lineStack.pop();
-            qDebug() << line;
-            int col = m_horizontalRunlengthImage->runForPixel(line.x1(), line.y1());
-            qDebug() << "\tFound run";
-            Q_ASSERT(col != -1);
-            m_processedMarker[line.y1()][col] = true;
-            //p.drawLine(line);
-            end = line.p2();
-
-            int x = line.p2().x() + 1;
-            if (x >= m_originalImage.width()) {
-                continue;
-            }
-
-            int y_minus_1 = line.y1() > 0 ?
-                m_horizontalRunlengthImage->runForPixel(x, line.y1()-1) :
-                -1;
-
-            int y_plus_1 = line.y1() < m_horizontalRunlengthImage->m_imageSize.height() - 1?
-                m_horizontalRunlengthImage->runForPixel(x, line.y1()+1) :
-                -1;
-
-            if (y_minus_1 >= 0 && !processed(line.y1()-1, y_minus_1)) {
-                LocationRunPair pair = m_horizontalRunlengthImage->run(line.y1()-1, y_minus_1);
-                QLine newLine(pair.x, line.y1()-1, pair.x+pair.run-1, line.y1()-1);
-
-                double theta = normalizedLineTheta(QLineF(start, newLine.p2()));
-                if (theta <= ThresholdAngle) {
-                    lineStack.push(newLine);
-                }
-            }
-
-            if (y_plus_1 >= 0 && !processed(line.y1()+1, y_plus_1)) {
-                LocationRunPair pair = m_horizontalRunlengthImage->run(line.y1()+1, y_plus_1);
-                QLine newLine(pair.x, line.y1()+1, pair.x+pair.run-1, line.y1()+1);
-
-                double theta = normalizedLineTheta(QLineF(start, newLine.p2()));
-                if (theta <= ThresholdAngle) {
-                    lineStack.push(newLine);
-                }
-            }
-        }
-
-        if (qAbs(end.x() - start.x()) > 10) {
-            p.drawLine(start, end);
-        }
-    }
-
-    bool RunlengthLineDetection::processed(int y, int i) const
-    {
-        return m_processedMarker[y][i];
     }
 }

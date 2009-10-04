@@ -209,6 +209,7 @@ namespace Munip
 
     int Staff ::distance( int index )
     {
+        qDebug() << Q_FUNC_INFO << " " << index << m_staffLines.size();
         if( index == 0 || index > 5 )  // TODO must be extensible
             return -1;
         int distance = m_staffLines[index].endPos().y() - m_staffLines[index-1].endPos().y();
