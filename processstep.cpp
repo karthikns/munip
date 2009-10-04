@@ -5,6 +5,7 @@
 #include "horizontalrunlengthimage.h"
 #include "mainwindow.h"
 #include "tools.h"
+#include "DataWarehouse.h"
 
 #include <QAction>
 #include <QDebug>
@@ -138,6 +139,8 @@ namespace Munip
             step = new SkewCorrection(originalImage, queue);
         else if (className == QByteArray("StaffLineRemoval"))
             step = new StaffLineRemoval(originalImage, queue);
+        else if (className == QByteArray("StaffLineDetect"))
+            step = new StaffLineDetect(originalImage, queue);
         else if (className == QByteArray("ConvolutionLineDetect"))
             step = new ConvolutionLineDetect(originalImage, queue);
         else if (className == QByteArray("HoughTransformation"))
@@ -206,8 +209,7 @@ namespace Munip
     SkewCorrection::SkewCorrection(const QImage& originalImage, ProcessQueue *queue) :
         ProcessStep(originalImage, queue),
         m_workImage(originalImage),
-        m_lineSliceSize((int)originalImage.width()*0.05),
-        m_skewPrecision(0.3f)
+        m_lineSliceSize((int)originalImage.width()*0.05)
     {
         Q_ASSERT(m_originalImage.format() == QImage::Format_Mono);
                 //m_lineSliceSize = (int)originalImage.width()*0.05;
@@ -217,7 +219,7 @@ namespace Munip
     {
         emit started();
         double theta = std::atan(detectSkew());
-        if(theta <= m_skewPrecision) {
+        if(theta <= 0.0) {
             emit ended();
             return;
         }
@@ -505,10 +507,10 @@ namespace Munip
 
 	}
 			
-	QList<Staff> StaffLineRemoval :: fillDataStructures()
+        QVector<Staff> StaffLineRemoval :: fillDataStructures()
 	{
-		QList<StaffLine> staves;
-		QList<Staff> staffList;
+                QVector<StaffLine> staves;
+                QVector<Staff> staffList;
 		int thickness = 0;
 		int countAddedLines = 0;
                 
@@ -595,10 +597,10 @@ namespace Munip
 
 	void StaffLineRemoval :: removeStaffLines()
 	{
-		QList<Staff> pageStaffList = fillDataStructures();
+                QVector<Staff> pageStaffList = fillDataStructures();
 		for(int i = 0; i < pageStaffList.size(); i++)
 		{
-			QList<StaffLine> staves = pageStaffList[i].staffLines();
+                        QVector<StaffLine> staves = pageStaffList[i].staffLines();
 			for(int j = 0; j < staves.size(); j++)
 			{
 				StaffLine staffline = staves[j];
@@ -765,6 +767,148 @@ namespace Munip
 		}
 
       
+    }
+    //TODO Put the constructor and other basic stuff in
+
+     StaffLineDetect::StaffLineDetect(const QImage& originalImage, ProcessQueue *queue) :
+        ProcessStep(originalImage, queue)
+    {
+        Q_ASSERT(originalImage.format() == QImage::Format_Mono);
+    }
+
+    void StaffLineDetect ::process()
+    {
+        emit started();
+        m_lineRemovedTracker = QPixmap(m_processedImage.size());
+        m_lineRemovedTracker.fill(QColor(Qt::white));
+        detectLines();
+        constructStaff();
+
+        m_processedImage = m_lineRemovedTracker.toImage();
+
+        emit ended();
+    }
+     bool StaffLineDetect ::checkDiscontinuity(int countWhite )
+    {
+        if( m_processedImage.width() <= 500 && countWhite >= 5 )
+            return true;
+        if( m_processedImage.width() > 500 && countWhite >= (int) 0.005*m_processedImage.width() )
+            return true;
+        return false;
+    }
+
+    bool StaffLineDetect :: isLine( int countBlack )
+    {
+        if( countBlack >= (int) (0.1*m_processedImage.width()) )
+            return true;
+        return false;
+    }
+
+    bool StaffLineDetect :: isStaff( int countStaffLines )
+    {
+        if( countStaffLines == 5 ) //TODO Put this in DataWarehouse
+            return true;
+        return false;
+    }
+
+
+    void StaffLineDetect ::detectLines()
+    {
+        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
+        int countBlack = 0,countWhite = 0;
+        QPoint start,end;
+        QPainter p(&m_lineRemovedTracker);
+
+        for(int y = 0; y < m_processedImage.height(); y++)
+        {
+            int x = 0;
+            while(x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White )
+                x++;
+
+            start = QPoint(x,y);
+            while( x < m_processedImage.width() )
+            {
+                while(x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == Black )
+                {
+                    countBlack++;
+                    x++;
+                }
+                while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White )
+                {
+                    countWhite++;
+                    x++;
+                }
+                end = QPoint(x-countWhite,y);
+                StaffLine line( start,end,1);
+                if( isLine(countBlack) )
+                {
+                    p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
+                    p.drawLine(start,end);
+                }
+
+
+                if( ( m_lineList.size() == 0 && isLine(countBlack) ) || ( isLine(countBlack) &&  !m_lineList[m_lineList.size()-1].aggregate(line) ) )
+                     m_lineList.push_back(line);
+
+                countBlack = 0;
+                countWhite = 0;
+                start = QPoint(x,y);
+
+            }
+
+
+        }
+        for(int i = 0; i < m_lineList.size();i++)
+            qDebug() << Q_FUNC_INFO<< m_lineList[i].startPos() << m_lineList[i].endPos() << m_lineList[i].lineWidth() ;
+    }
+
+    void StaffLineDetect ::constructStaff()
+    {
+        Staff s;
+        int distance,d;
+        int count = 0;
+        for(int i = 0; i < m_lineList.size();i++)
+        {
+            switch(count)
+            {
+                case 0: s.addStaffLine( m_lineList[i] );
+                        count++;
+                        break;
+                case 1: s.addStaffLine( m_lineList[i] );
+                        count++;
+                        distance = s.distance(1);
+                        break;
+                default: s.addStaffLine( m_lineList[i] );
+                         d = s.distance(count+1);
+                         if( d >= (int) 0.8* distance )
+                         {
+                             if( d > distance )
+                                 distance = d;
+                            count++;
+                            if( isStaff( count ) )
+                            {
+                                //DataWarehouse ::instance() ->appendStaff( s );
+                                drawStaff(s);
+                            }
+
+                         }
+                         else
+                         {
+                             s.clear();
+                             count = 1;
+                             s.addStaffLine( m_lineList[i]);
+                         }
+            }
+        }
+    }
+
+    void StaffLineDetect :: drawStaff( Staff& s )
+    {
+
+
+
+
     }
 
     ConvolutionLineDetect::ConvolutionLineDetect(const QImage& originalImage, ProcessQueue *processQueue) :

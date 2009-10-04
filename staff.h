@@ -2,14 +2,17 @@
 #define STAFF_H
 
 #include <QPoint>
-#include <QList>
+#include <QVector>
 
 namespace Munip {
+    // Forwared declarations
+    class Page;
 
     class StaffLine
     {
     public:
         StaffLine(const QPoint& start, const QPoint& end, int thickness);
+        StaffLine();
         ~StaffLine();
 
         QPoint startPos() const;
@@ -23,6 +26,9 @@ namespace Munip {
 
         int lineWidth() const;
         void setLineWidth(int wid);
+
+        bool aggregate( StaffLine &line );
+
 
     private:
         QPoint m_startPos;
@@ -39,7 +45,7 @@ namespace Munip {
     public:
         Staff(const QPoint& vStart, const QPoint& vEnd);
         ~Staff();
-		Staff();
+        Staff();
 
         QPoint startPos() const;
         void setStartPos(const QPoint& point);
@@ -47,15 +53,18 @@ namespace Munip {
         QPoint endPos() const;
         void setEndPos(const QPoint& point);
 
-        QList<StaffLine> staffLines() const;
+        QVector<StaffLine> staffLines() const;
         void addStaffLine(const StaffLine& staffLine);
 		
-		void addStaffLineList(QList<StaffLine> list) ;
+        void addStaffLineList(QVector<StaffLine> list) ;
 
         bool operator<(Staff& other);
 
+        void clear();
+
+        int distance( int index);
     private:
-        QList<StaffLine> m_staffLines;
+        QVector<StaffLine> m_staffLines;
         QPoint m_startPos;
         QPoint m_endPos;
 

@@ -30,7 +30,7 @@ namespace Munip {
             float m_pageSkew;
             float m_pageSkewPrecision;
             uint m_lineSize;
-            QList<Staff> m_staves;
+            QList<Staff> m_staffList;
      };
 }
 #endif

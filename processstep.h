@@ -13,6 +13,7 @@ class HorizontalRunlengthImage;
 namespace Munip {
 
     // Forwared declarations
+    class Page;
     class ProcessQueue;
 
     /**
@@ -122,7 +123,7 @@ namespace Munip {
     private:
         QImage m_workImage;
         const int m_lineSliceSize;
-        const float m_skewPrecision;
+        //const float m_skewPrecision;
         QList<double> m_skewList;
     };
 
@@ -140,7 +141,7 @@ namespace Munip {
 		void removeStaffLines();
         bool canBeRemoved(QPoint& p);
 		void followLine(QPoint& p,int& count);
-		QList<Staff> fillDataStructures();
+                QVector<Staff> fillDataStructures();
 		void removeFirstLine(QPoint& start,QPoint& end);
 		void removeLastLine(QPoint& start,QPoint& end);
 
@@ -151,6 +152,29 @@ namespace Munip {
 		int m_upperLimit;
 		double m_lineWidthLimit;
     };
+
+    class StaffLineDetect : public ProcessStep
+    {
+        Q_OBJECT;
+        public:
+            StaffLineDetect(const QImage& originalImage, ProcessQueue *processQueue = 0);
+
+            virtual void process();
+
+            bool checkDiscontinuity(int countWhite );
+            bool isLine(int countBlack );
+            bool isStaff( int countStaffLines );
+            void detectLines();
+            void constructStaff();
+            void removeLines();
+            void drawStaff(Staff& s);
+
+        private:
+            QVector<StaffLine> m_lineList;
+            QPixmap m_lineRemovedTracker;
+        };
+
+
 
     class ConvolutionLineDetect : public ProcessStep
     {

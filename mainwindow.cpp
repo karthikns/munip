@@ -154,6 +154,10 @@ void MainWindow::setupActions()
                                                      tr("Runlength Line detect"), this);
     runlength->setShortcut(tr("Ctrl+8"));
 
+    QAction *staffLineDetect = new Munip::ProcessStepAction("StaffLineDetect", QIcon(),
+                                                             tr("&Detect Staff lines"), this);
+    staffLineDetect->setShortcut(tr("Ctrl+9"));
+
     QAction *projectionAction = new QAction(tr("&Projection"), this);
     projectionAction->setShortcut(tr("Ctrl+P"));
     projectionAction->setStatusTip(tr("Calculates horizontal projection of the image"));;
@@ -169,6 +173,7 @@ void MainWindow::setupActions()
     processMenu->addAction(rotation);
     processMenu->addAction(runlength);
     processMenu->addAction(projectionAction);
+    processMenu->addAction(staffLineDetect);
 
     SideBar *processBar = new SideBar();
     processBar->addAction(toGrayScaleAction);
@@ -180,6 +185,7 @@ void MainWindow::setupActions()
     processBar->addAction(rotation);
     processBar->addAction(runlength);
     processBar->addAction(projectionAction);
+    processBar->addAction(staffLineDetect);
 
     QDockWidget *dock = new QDockWidget(tr("Process"), this);
     dock->setWidget(processBar);

@@ -61,10 +61,10 @@ QPair<uint,uint> DataWarehouse :: resolution() const
 
 QList<Staff> DataWarehouse :: staffList() const
 {
-    return m_staves;
+    return m_staffList;
 }
 
 void DataWarehouse :: appendStaff( Staff staff )
 {
-    m_staves.append(staff);
+    m_staffList.append(staff);
 }
