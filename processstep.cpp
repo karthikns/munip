@@ -204,17 +204,17 @@ namespace Munip
     SkewCorrection::SkewCorrection(const QImage& originalImage, ProcessQueue *queue) :
         ProcessStep(originalImage, queue),
         m_workImage(originalImage),
-        m_lineSliceSize((int)originalImage.width()*0.05)
+        m_lineSliceSize(20)//(int)originalImage.width()*0.05)
     {
         Q_ASSERT(m_originalImage.format() == QImage::Format_Mono);
-                //m_lineSliceSize = (int)originalImage.width()*0.05;
+        //m_lineSliceSize = (int)originalImage.width()*0.05;
     }
 
     void SkewCorrection::process()
     {
         emit started();
         double theta = std::atan(detectSkew());
-        if(theta <= 0.0) {
+        if(theta == 0.0) {
             emit ended();
             return;
         }
@@ -273,24 +273,26 @@ namespace Munip
         foreach(double skew, m_skewList)
             qDebug() << skew;
 
+        qDebug()<< "Display the list";
         int i = 0, n = m_skewList.size();
         int modefrequency = 0;
         int maxstartindex = -1, maxendindex = -1;
         while( i <= n-1)
         {
-            int runlength = 1;
-            double t = m_skewList[i];
-            int runvalue = (int) (t * 100);
-            while( i + runlength <= n-1 && (int)(m_skewList[i+runlength]*100) == runvalue)
-                runlength++;
-            if(runlength > modefrequency)
-            {
-                modefrequency = runlength;
-                maxstartindex = i;
-                maxendindex = i + runlength;
-            }
-            i += runlength;
+                int runlength = 1;
+                double t = m_skewList[i];
+                int runvalue = (int) (t * 100);
+                while( i + runlength <= n-1 && (int)(m_skewList[i+runlength]*100) == runvalue)
+                    runlength++;
+                if(runlength > modefrequency)
+                {
+                    modefrequency = runlength;
+                    maxstartindex = i;
+                    maxendindex = i + runlength;
+                }
+                i += runlength;
         }
+
         double skew = 0;
         for(int i = maxstartindex; i<= maxendindex;i++)
             skew += m_skewList[i];
@@ -314,11 +316,13 @@ namespace Munip
         const int White = 1 - Black;
 
         m_workImage.setPixel(x, y, White);
-        if(points.size() == m_lineSliceSize)
+        if(m_workImage.pixelIndex(x+1,y) == White && m_workImage.pixelIndex(x+1,y+1) == White && m_workImage.pixelIndex(x+1,y-1) == White && points.size() >= m_lineSliceSize )
         {
-            double skew;
-            m_skewList.push_back((skew = findSkew(points)));
-            points.clear();
+
+              double skew;
+              m_skewList.push_back((skew = findSkew(points)));
+              points.pop_back();
+
         }
         if(m_workImage.pixelIndex(x+1, y+1) == Black &&
            x+1 < m_workImage.width() &&
@@ -431,6 +435,8 @@ namespace Munip
                 {
                     p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
                     p.drawLine(start,end);
+                    for(int i = start.x(); i <= end.x(); i++)
+                        m_processedImage.setPixel(QPoint(i,start.y()), White );
                 }
 
 
@@ -932,7 +938,7 @@ namespace Munip
         transform.rotate(angle);
         transform = m_originalImage.trueMatrix(transform, m_originalImage.width(), m_originalImage.height());
 
-        m_processedImage = m_processedImage.transformed(transform, Qt::SmoothTransformation);
+        m_processedImage = m_processedImage.transformed(transform, Qt::FastTransformation);
         if (destFormat == QImage::Format_Mono) {
             m_processedImage = Munip::convertToMonochrome(m_processedImage, 240);
         } else {
