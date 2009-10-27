@@ -464,6 +464,7 @@ namespace Munip
 
     void StaffLineDetect::findPaths()
     {
+        int y = 1212;
 
        for(int y = 0; y <= m_processedImage.height(); y++)
           for(int i = 0; i < m_segments[y].size(); i++)
@@ -478,6 +479,8 @@ namespace Munip
            paths.push_back(p);
 
         qSort( paths.begin(),paths.end(),lessThan );
+        for(int i = 0; i < paths.size(); i++)
+            qDebug()<<paths[i].startPos()<<paths[i].endPos()<<paths[i].weight()<<paths[i].destinationPos()<<paths[i].connectedComponentID();
 
         // Now construct the lines from optimal segments
 
@@ -506,8 +509,11 @@ namespace Munip
             i+=k;
         }
         qSort(m_lineList.begin(),m_lineList.end(),lessThan3);
+
         for(int i = 0; i < m_lineList.size(); i++)
-            qDebug() << m_lineList[i].startPos() << m_lineList[i].endPos();
+                    qDebug() << m_lineList[i].startPos() << m_lineList[i].endPos();
+                //m_lineList[i].displaySegments();
+           // }
 
          drawDetectedLines();
 
@@ -522,9 +528,15 @@ namespace Munip
         {
            Segment t = m_lookUpTable.value(segment);
            if( t.isValid())
-                segment.setDestinationPos(t.destinationPos());
-
-           segment.setConnectedComponentID(t.connectedComponentID());
+           {    segment.setDestinationPos(t.destinationPos());
+                segment.setConnectedComponentID(t.connectedComponentID());
+           }
+           else
+           {
+               QHash<Segment,Segment> ::iterator i;
+               i = m_lookUpTable.find(segment);
+               segment = *i;
+           }
            return segment;
         }
 

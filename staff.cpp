@@ -183,6 +183,11 @@ namespace Munip
         return( m_startPos == line.startPos() && m_endPos == line.endPos() );
     }
 */
+    void StaffLine ::displaySegments()
+    {
+        for(int i= 0; i < m_segmentList.size(); i++)
+                  qDebug()<<m_segmentList[i].startPos()<<m_segmentList[i].endPos()<<m_segmentList[i].destinationPos();
+    }
     Staff::Staff(const QPoint& vStart, const QPoint& vEnd)
     {
         m_startPos = vStart;

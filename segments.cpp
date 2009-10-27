@@ -139,4 +139,5 @@ namespace Munip
     {
         return !(m_startPos == QPoint(-1,-1) || m_endPos == QPoint(-1,-1));
     }
+
 }

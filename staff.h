@@ -46,6 +46,8 @@ namespace Munip {
 
         bool isValid() const;
 
+        void displaySegments();
+
         //bool operator<(StaffLine line);
         //bool operator==(StaffLine line);
 
