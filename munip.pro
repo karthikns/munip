@@ -3,10 +3,11 @@
 ######################################################################
 
 TEMPLATE = app
-TARGET = 
+TARGET = munip
 DEPENDPATH += .
 INCLUDEPATH += .
 
+CONFIG += debug console
 # Input
 HEADERS += DataWarehouse.h \
            horizontalrunlengthimage.h \
@@ -30,3 +31,8 @@ SOURCES += DataWarehouse.cpp \
            staff.cpp \
            tools.cpp
 RESOURCES += munipresources.qrc
+
+MOC_DIR = .tmp
+UI_DIR = .tmp
+RCC_DIR = .tmp
+OBJECTS_DIR = .tmp
