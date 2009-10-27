@@ -4,11 +4,19 @@
 #include <QAction>
 #include <QQueue>
 #include <QPoint>
+#include <QHash>
 #include <QPointer>
+#include <QVariant>
 #include "staff.h"
+#include "segments.h"
 
 class QIcon;
 class HorizontalRunlengthImage;
+
+inline uint qHash( const QPoint &point)
+    {
+        return(point.x()^point.y());
+    }
 
 namespace Munip {
 
@@ -16,7 +24,12 @@ namespace Munip {
     class Page;
     class ProcessQueue;
 
-    /**
+    inline uint qHash( const Munip ::Segment &line )
+    {
+        return(line.startPos().x()^line.endPos().y());
+    }
+
+     /**
      * This base class represents a process step like skew
      * detection. It provides access to the original as well as
      * processed image.
@@ -139,13 +152,26 @@ namespace Munip {
         bool isLine(int countBlack );
         bool isStaff( int countStaffLines );
         void detectLines();
+        Segment findMaxPath(Segment segment);
         void constructStaff();
         void removeLines();
         void drawStaff(Staff& s);
 
     private:
         QVector<StaffLine> m_lineList;
+        QVector<Segment> m_maxPaths;
         QPixmap m_lineRemovedTracker;
+        QVector<Segment> m_segments[5000];
+        QHash<Segment,Segment> m_lookUpTable;
+        int  m_connectedComponentID;
+
+        StaffLine maxPath(StaffLine line1,StaffLine line2);
+        void findPaths();
+        void drawDetectedLines();
+        QVector<StaffLine> getConnectedSegments(StaffLine &line);
+        bool isConnected(StaffLine& line1,StaffLine& line2);
+
+
     };
 
     class StaffLineRemoval : public ProcessStep

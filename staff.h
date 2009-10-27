@@ -3,10 +3,17 @@
 
 #include <QPoint>
 #include <QVector>
+#include <QHash>
+
+#include "segments.h"
+
+class StaffLine;
+
 
 namespace Munip {
     // Forwared declarations
-    class Page;
+
+    class StaffLine;
 
     class StaffLine
     {
@@ -21,21 +28,34 @@ namespace Munip {
         QPoint endPos() const;
         void setEndPos(const QPoint& point);
 
-        int staffID() const;
-        void setStaffID(int);
+        int staffLineID() const;
+        void setStaffLineID(int);
 
         int lineWidth() const;
         void setLineWidth(int wid);
 
         bool aggregate( StaffLine &line );
 
+        bool contains( const Segment &segment);
+
+
+        int length();
+
+        void addSegment(const Segment& segment);
+        QVector<Segment> segments() const;
+
+        bool isValid() const;
+
+        //bool operator<(StaffLine line);
+        //bool operator==(StaffLine line);
+
 
     private:
         QPoint m_startPos;
         QPoint m_endPos;
         int m_lineWidth; // width between the current line and the next. -1 if last line
-        int m_staffID; // The Staff Number To Which The Line Belongs
-
+        int m_staffLineID; // The Staff Number To Which The Line Belongs
+        QVector<Segment> m_segmentList;
         // int error; //Contains The Error Code incase of Parallax
         // int paralax;
     };
@@ -70,5 +90,4 @@ namespace Munip {
 
     };
 }
-
 #endif

@@ -11,14 +11,16 @@
 #include <QVector>
 #include <cmath>
 
+
 namespace Munip
 {
+
     StaffLine::StaffLine(const QPoint& start, const QPoint& end, int thickness)
     {
         m_startPos = start;
         m_endPos = end;
         m_lineWidth = thickness;
-		m_staffID = -1;	 // still to be set
+        m_staffLineID = -1;	 // still to be set
     }
 
     StaffLine :: StaffLine()
@@ -50,14 +52,14 @@ namespace Munip
         m_endPos = point;
     }
 
-    int StaffLine::staffID() const
+    int StaffLine::staffLineID() const
     {
-        return m_staffID;
+        return m_staffLineID;
     }
 
-    void StaffLine::setStaffID(int id)
+    void StaffLine::setStaffLineID(int id)
     {
-        m_staffID = id;
+        m_staffLineID = id;
     }
 
     int StaffLine::lineWidth() const
@@ -70,34 +72,36 @@ namespace Munip
         m_lineWidth = wid;
     }
 
+    int StaffLine :: length()
+    {
+        return (m_endPos.x() - m_startPos.x());
+    }
+
+    bool StaffLine ::contains(const Segment &segment)
+    {
+       for(int i = 0; i < m_segmentList.size();i++)
+           if( m_segmentList[i] == segment)
+               return true;
+       return false;
+    }
     bool StaffLine :: aggregate(StaffLine &line )
     {
         //TODO how can u aggregate a line at (i,0) to line above it ;)
         if( line.startPos().y() < m_startPos.y() || line.endPos().y() < m_endPos.y() )
-        {
-
             return false;
-        }
+
 
         if( line.startPos().y() - (m_startPos.y()+m_lineWidth-1) > 1 )
-        {
-
             return false;
-        }
+
 
         if( line.startPos().x() > m_endPos.x()+1 || line.endPos().x() < m_startPos.x() -1 )
-        {
-
             return false;
-        }
 
-        //qDebug() <<"The line in list"<< m_startPos << m_endPos <<m_lineWidth;
-        //qDebug() <<"The external line "<< line.startPos() << line.endPos() <<line.lineWidth();
 
         if( line.startPos().y() == m_startPos.y() )
         {
             m_endPos.setX(line.endPos().x());
-            //qDebug() <<Q_FUNC_INFO <<" condition 1";
             return true;
         }
 
@@ -105,7 +109,6 @@ namespace Munip
         {
             if( !(m_startPos.y() + m_lineWidth -1 == line.startPos().y() ) )
                 m_lineWidth++;
-            //qDebug() <<Q_FUNC_INFO <<" condition 2";
              return true;
         }
 
@@ -114,9 +117,9 @@ namespace Munip
              if( !(m_startPos.y() + m_lineWidth -1 == line.startPos().y()) )
                 m_lineWidth++;
 
-             m_startPos.setX(line.startPos().x());
-             m_endPos.setX(line.endPos().x());
-             //qDebug() <<Q_FUNC_INFO <<" condition 3";
+             //m_startPos.setX(line.startPos().x());
+             //m_endPos.setX(line.endPos().x());
+             m_endPos = line.endPos();
              return true;
          }
 
@@ -124,8 +127,8 @@ namespace Munip
         {
              if( !(startPos().y() + m_lineWidth -1 == line.startPos().y()) )
                 m_lineWidth++;
-             m_endPos.setX(line.endPos().x());
-             //qDebug() <<Q_FUNC_INFO <<" condition 4";
+             //m_endPos.setX(line.endPos().x());
+             m_endPos = line.endPos();
              return true;
         }
 
@@ -134,8 +137,7 @@ namespace Munip
              if( !(startPos().y() + m_lineWidth -1 == line.startPos().y()) )
                 m_lineWidth++;
 
-             m_startPos.setX(line.startPos().x());
-             //qDebug() <<Q_FUNC_INFO <<" condition 5";
+             //m_startPos.setX(line.startPos().x());
              return true;
         }
 
@@ -143,8 +145,44 @@ namespace Munip
 
     }
 
+    /*
+    bool StaffLine :: operator< (StaffLine line )
+    {
+        if( (m_endPos.x() - m_startPos.x()) < (line.endPos().x()-line.startPos().x()) )
+            return true;
+        return false;
+    }
+    */
 
+    void StaffLine::addSegment(const Segment &segment)
+    {
+        if(segment.isValid())
+        {
+            m_segmentList.push_back(segment);
+            if( segment.startPos().x() < m_startPos.x() )
+                m_startPos.setX(segment.startPos().x());
+            if( segment.endPos().x() > m_endPos.x() )
+                m_endPos.setX(segment.endPos().x());
+        }
 
+    }
+
+    QVector<Segment> StaffLine::segments() const
+    {
+        return m_segmentList;
+    }
+
+    bool StaffLine ::isValid() const
+    {
+        return !( m_startPos == QPoint(-1,-1) || m_endPos == QPoint(-1,-1) || m_lineWidth == -1);
+    }
+
+/*
+    bool StaffLine ::operator ==(StaffLine line )
+    {
+        return( m_startPos == line.startPos() && m_endPos == line.endPos() );
+    }
+*/
     Staff::Staff(const QPoint& vStart, const QPoint& vEnd)
     {
         m_startPos = vStart;

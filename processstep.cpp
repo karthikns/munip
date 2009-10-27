@@ -34,6 +34,24 @@ namespace Munip
         return angle < 0.0 ? -angle : angle;
     }
 
+     bool lessThan(Segment &line1,Segment &line2)
+    {
+
+        return line1.weight()<line2.weight();
+    }
+
+    bool lessThan1(Segment &line1,Segment &line2)
+    {
+         return (line1.connectedComponentID() < line2.connectedComponentID())||( (line1.connectedComponentID() == line2.connectedComponentID() ) && (line1.weight() > line2.weight() ) );
+
+    }
+
+    bool lessThan3(StaffLine &line1,StaffLine &line2)
+    {
+         return line1.startPos().y() < line2.startPos().y();
+    }
+
+    
     ProcessStep::ProcessStep(const QImage& originalImage, ProcessQueue *processQueue) :
         m_originalImage(originalImage),
         m_processedImage(originalImage),
@@ -362,6 +380,7 @@ namespace Munip
         ProcessStep(originalImage, queue)
     {
         Q_ASSERT(originalImage.format() == QImage::Format_Mono);
+        m_connectedComponentID = 1;
     }
 
     void StaffLineDetect::process()
@@ -371,7 +390,7 @@ namespace Munip
         m_lineRemovedTracker = QPixmap(m_processedImage.size());
         m_lineRemovedTracker.fill(QColor(Qt::white));
         detectLines();
-        constructStaff();
+        //constructStaff();
 
         m_processedImage = m_lineRemovedTracker.toImage();
 
@@ -408,7 +427,6 @@ namespace Munip
         const int Black = 1 - White;
         int countBlack = 0,countWhite = 0;
         QPoint start,end;
-        QPainter p(&m_lineRemovedTracker);
 
         for(int y = 0; y < m_processedImage.height(); y++)
         {
@@ -417,45 +435,127 @@ namespace Munip
                 x++;
 
             start = QPoint(x,y);
+            bool flag = false;
             while( x < m_processedImage.width() )
             {
-                while(x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == Black )
-                {
-                    countBlack++;
-                    x++;
-                }
-                while( x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White )
-                {
-                    countWhite++;
-                    x++;
-                }
-                end = QPoint(x-countWhite,y);
-                StaffLine line( start,end,1);
-                if( isLine(countBlack) )
-                {
-                    p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
-                    p.drawLine(start,end);
-                    for(int i = start.x(); i <= end.x(); i++)
-                        m_processedImage.setPixel(QPoint(i,start.y()), White );
-                }
-
-
-                if( ( m_lineList.size() == 0 && isLine(countBlack) ) || ( isLine(countBlack) &&  !m_lineList[m_lineList.size()-1].aggregate(line) ) )
-                    m_lineList.push_back(line);
-
-                countBlack = 0;
                 countWhite = 0;
+                while(x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == Black )
+                        x++;
+
+                while( x+countWhite < m_processedImage.width() && m_processedImage.pixelIndex(x+countWhite,y) == White )
+                        countWhite++;
+                if(checkDiscontinuity(countWhite))
+                    end = QPoint(x-1,y);
+                else
+                    end = QPoint(x+countWhite,y);
+
+                x+= countWhite;
+
+                Segment segment = Segment(start,end);
+                m_segments[y].push_back(segment);
+
+
                 start = QPoint(x,y);
-
             }
-
-
         }
-        for(int i = 0; i < m_lineList.size();i++)
-            qDebug() << Q_FUNC_INFO<< m_lineList[i].startPos() << m_lineList[i].endPos() << m_lineList[i].lineWidth() ;
+       findPaths();
+
     }
 
-    void StaffLineDetect::constructStaff()
+    void StaffLineDetect::findPaths()
+    {
+
+       for(int y = 0; y <= m_processedImage.height(); y++)
+          for(int i = 0; i < m_segments[y].size(); i++)
+          {
+               findMaxPath(m_segments[y][i]);
+               m_connectedComponentID++;
+          }
+
+        QList<Segment> segmentList = m_lookUpTable.uniqueKeys();
+        QVector<Segment> paths;
+        foreach(Segment p,segmentList)
+           paths.push_back(p);
+
+        qSort( paths.begin(),paths.end(),lessThan );
+
+        // Now construct the lines from optimal segments
+
+        const int size = paths.size();
+        int i = size -1;
+        Segment maxWeightPath = paths[size-1];
+        qSort( paths.begin(),paths.end(),lessThan1);
+        i = 0;
+
+        while( i < paths.size() )
+        {
+            int k = 1;
+            if( paths[i].weight() >= (int)(0.9*maxWeightPath.weight()))
+            {
+                int ID = paths[i].connectedComponentID();
+                StaffLine line(paths[i].startPos(),paths[i].endPos(),1);
+                line.addSegment(paths[i]);
+                while(i+k < paths.size() && paths[i+k].connectedComponentID() == ID )
+                {
+                    line.addSegment(paths[i+k]);
+                    k++;
+                }
+
+                m_lineList.push_back(line);
+            }
+            i+=k;
+        }
+        qSort(m_lineList.begin(),m_lineList.end(),lessThan3);
+        for(int i = 0; i < m_lineList.size(); i++)
+            qDebug() << m_lineList[i].startPos() << m_lineList[i].endPos();
+
+         drawDetectedLines();
+
+    }
+
+    Segment StaffLineDetect::findMaxPath(Segment segment)
+    {
+       if( segment.startPos() == QPoint(-1,-1))
+            return segment;
+
+       if( m_lookUpTable.contains(segment) )
+        {
+           Segment t = m_lookUpTable.value(segment);
+           if( t.isValid())
+                segment.setDestinationPos(t.destinationPos());
+
+           segment.setConnectedComponentID(t.connectedComponentID());
+           return segment;
+        }
+
+        QVector<Segment> segments;
+        segments.push_back(segment.getSegment(QPoint(segment.endPos().x()+1,segment.endPos().y()+1),m_segments[segment.endPos().y()+1]));
+        segments.push_back(segment.getSegment(QPoint(segment.endPos().x()+1,segment.endPos().y()-1),m_segments[segment.endPos().y()-1]));
+
+        Segment path = findMaxPath(segments[0]);
+
+        int i = 1;
+        while( i < segments.size() )
+        {
+            path = path.maxPath(findMaxPath(segments[i]));
+            i++;
+        }
+
+       if( path.startPos() != QPoint(-1,-1) && path.endPos() != QPoint(-1,-1) )
+        {
+           segment.setDestinationPos(path.destinationPos());
+           segment.setConnectedComponentID(path.connectedComponentID());
+        }
+       else
+           segment.setConnectedComponentID(m_connectedComponentID);
+
+        m_lookUpTable.insert(segment,path);
+        return segment;
+    }
+
+
+
+       void StaffLineDetect::constructStaff()
     {
         Staff s;
         int distance,d;
@@ -502,6 +602,27 @@ namespace Munip
 
 
     }
+
+
+
+
+    void StaffLineDetect ::drawDetectedLines()
+    {
+         QPainter p(&m_lineRemovedTracker);
+
+         int i = 0;
+
+         while( i< m_lineList.size() )
+         {
+             p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
+             p.drawLine(m_lineList[i].startPos(),m_lineList[i].endPos());
+             i++;
+         }
+
+     }
+
+
+
 
 
 
