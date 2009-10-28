@@ -408,9 +408,9 @@ namespace Munip
 
             start = QPoint(x,y);
             bool flag = false;
+            countWhite = 0;
             while( x < m_processedImage.width() )
             {
-                countWhite = 0;
                 while(x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == Black )
                         x++;
 
@@ -418,8 +418,9 @@ namespace Munip
                         countWhite++;
                 if(checkDiscontinuity(countWhite))
                     end = QPoint(x-1,y);
-                else
-                    end = QPoint(x+countWhite,y);
+                else {
+                    continue;
+                }
 
                 x+= countWhite;
 
@@ -427,6 +428,7 @@ namespace Munip
                 m_segments[y].push_back(segment);
 
 
+                countWhite = 0;
                 start = QPoint(x,y);
             }
         }
@@ -457,6 +459,7 @@ namespace Munip
         // Now construct the lines from optimal segments
 
         const int size = paths.size();
+        qDebug() << Q_FUNC_INFO << " Size = " << size;
         int i = size -1;
         Segment maxWeightPath = paths[size-1];
         qSort( paths.begin(),paths.end(),segmentSortByConnectedComponentID);
@@ -493,8 +496,10 @@ namespace Munip
 
     Segment StaffLineDetect::findMaxPath(Segment segment)
     {
-       if( segment.startPos() == QPoint(-1,-1))
+       if( !segment.isValid()) {
             return segment;
+       }
+       qDebug() << Q_FUNC_INFO << segment.startPos() << segment.endPos();
 
        if( m_lookUpTable.contains(segment) )
         {
@@ -507,8 +512,43 @@ namespace Munip
         }
 
         QVector<Segment> segments;
+        /*
         segments.push_back(segment.getSegment(QPoint(segment.endPos().x()+1,segment.endPos().y()+1),m_segments[segment.endPos().y()+1]));
         segments.push_back(segment.getSegment(QPoint(segment.endPos().x()+1,segment.endPos().y()-1),m_segments[segment.endPos().y()-1]));
+        */
+        const int yPlus1 = segment.endPos().y() + 1;
+        const QVector<Segment> yPlus1Segments = m_segments[yPlus1];
+        const int yMinus1 = segment.endPos().y() - 1;
+        const QVector<Segment> yMinus1Segments = m_segments[yMinus1];
+        const int startX = segment.endPos().x() + 1;
+
+        const int White = m_originalImage.color(0) == 0xffffffff ? 0 : 1;
+        const QPoint InvalidPoint(-1, -1);
+        Segment seg(InvalidPoint, InvalidPoint);
+        if (yPlus1 < m_processedImage.height()) {
+            for (int whiteCount = 0; !checkDiscontinuity(whiteCount); ++whiteCount) {
+                if ((startX + whiteCount) >= m_processedImage.width()) break;
+                if (m_originalImage.pixelIndex(startX + whiteCount, yPlus1) == White) {
+                    continue;
+                }
+                seg = segment.getSegment(QPoint(startX + whiteCount, yPlus1), yPlus1Segments);
+                if (seg.isValid()) break;
+            }
+        }
+        segments.push_back(seg);
+
+        seg = Segment(InvalidPoint, InvalidPoint); // invalidate
+        if (yMinus1 >= 0) {
+            for (int whiteCount = 0; !checkDiscontinuity(whiteCount); ++whiteCount) {
+                if ((startX + whiteCount) >= m_processedImage.width()) break;
+                if (m_originalImage.pixelIndex(startX + whiteCount, yMinus1) == White) {
+                    continue;
+                }
+                seg = segment.getSegment(QPoint(startX + whiteCount, yMinus1), yMinus1Segments);
+                if (seg.isValid()) break;
+            }
+        }
+        segments.push_back(seg);
 
         Segment path = findMaxPath(segments[0]);
 
@@ -520,7 +560,7 @@ namespace Munip
         }
 
 
-       if( path.startPos() != QPoint(-1,-1) && path.endPos() != QPoint(-1,-1) )
+       if( path.isValid())
         {
            segment.setDestinationPos(path.destinationPos());
            segment.setConnectedComponentID(path.connectedComponentID());

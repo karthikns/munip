@@ -57,5 +57,9 @@ inline bool operator==(const Munip::Segment& line1,const Munip::Segment& line2)
     {
         return (line1.startPos()==line2.startPos() && line1.endPos()==line2.endPos());
     }
+inline bool operator!=(const Munip::Segment& line1,const Munip::Segment& line2)
+    {
+        return !(line1 == line2);
+    }
 
 #endif // SEGMENTS_H

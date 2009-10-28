@@ -6,7 +6,6 @@ namespace Munip
 
     Segment ::Segment()
     {
-
     }
 
     Segment ::Segment(const QPoint& start,const QPoint& end)
@@ -133,7 +132,8 @@ namespace Munip
 
     bool Segment ::isValid() const
     {
-        return !(m_startPos == QPoint(-1,-1) || m_endPos == QPoint(-1,-1));
+        return m_startPos.x() >= 0 && m_startPos.y() >= 0 &&
+            m_endPos.x() >=0 && m_endPos.y() >= 0;
     }
 
 }
