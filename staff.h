@@ -48,6 +48,8 @@ namespace Munip {
 
         void displaySegments();
 
+        void sortSegments();
+
         //bool operator<(StaffLine line);
         //bool operator==(StaffLine line);
 

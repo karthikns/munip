@@ -25,34 +25,7 @@ namespace Munip
 {
     int pageSkew;
 
-    double normalizedLineTheta(const QLineF& line)
-    {
-        double angle = line.angle();
-        while (angle < 0.0) angle += 360.0;
-        while (angle > 360.0) angle -= 360.0;
-        if (angle > 180.0) angle -= 360.0;
-        return angle < 0.0 ? -angle : angle;
-    }
-
-     bool lessThan(Segment &line1,Segment &line2)
-    {
-
-        return line1.weight()<line2.weight();
-    }
-
-    bool lessThan1(Segment &line1,Segment &line2)
-    {
-         return (line1.connectedComponentID() < line2.connectedComponentID())||( (line1.connectedComponentID() == line2.connectedComponentID() ) && (line1.weight() > line2.weight() ) );
-
-    }
-
-    bool lessThan3(StaffLine &line1,StaffLine &line2)
-    {
-         return line1.startPos().y() < line2.startPos().y();
-    }
-
-    
-    ProcessStep::ProcessStep(const QImage& originalImage, ProcessQueue *processQueue) :
+        ProcessStep::ProcessStep(const QImage& originalImage, ProcessQueue *processQueue) :
         m_originalImage(originalImage),
         m_processedImage(originalImage),
         m_processQueue(processQueue),
@@ -478,7 +451,7 @@ namespace Munip
         foreach(Segment p,segmentList)
            paths.push_back(p);
 
-        qSort( paths.begin(),paths.end(),lessThan );
+        qSort( paths.begin(),paths.end(),segmentSortByWeight );
         for(int i = 0; i < paths.size(); i++)
             qDebug()<<paths[i].startPos()<<paths[i].endPos()<<m_lookUpTable.value(paths[i]).startPos()<<m_lookUpTable.value(paths[i]).endPos()<<paths[i].destinationPos();
 
@@ -487,7 +460,7 @@ namespace Munip
         const int size = paths.size();
         int i = size -1;
         Segment maxWeightPath = paths[size-1];
-        qSort( paths.begin(),paths.end(),lessThan1);
+        qSort( paths.begin(),paths.end(),segmentSortByConnectedComponentID);
         i = 0;
 
         while( i < paths.size() )
@@ -508,7 +481,7 @@ namespace Munip
             }
             i+=k;
         }
-        qSort(m_lineList.begin(),m_lineList.end(),lessThan3);
+        qSort(m_lineList.begin(),m_lineList.end(),staffLineSort);
 
         for(int i = 0; i < m_lineList.size(); i++)
                     qDebug() << m_lineList[i].startPos() << m_lineList[i].endPos();
@@ -537,11 +510,6 @@ namespace Munip
         QVector<Segment> segments;
         segments.push_back(segment.getSegment(QPoint(segment.endPos().x()+1,segment.endPos().y()+1),m_segments[segment.endPos().y()+1]));
         segments.push_back(segment.getSegment(QPoint(segment.endPos().x()+1,segment.endPos().y()-1),m_segments[segment.endPos().y()-1]));
-        if( segment.startPos() == QPoint(39,152)||segment.startPos() == QPoint(26,153))
-        {
-            for(int i = 0; i < segments.size();i++)
-                qDebug()<<segments[i].startPos()<<segments[i].endPos()<<segments[i].connectedComponentID()<<segments[i].destinationPos();
-        }
 
         Segment path = findMaxPath(segments[0]);
 

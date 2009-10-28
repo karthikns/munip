@@ -91,4 +91,29 @@ namespace Munip
         double lambda = (-b + std::sqrt(D))/(2*a);
         return lambda;
     }
+
+    bool segmentSortByWeight(Segment &s1,Segment &s2)
+    {
+         return s2.weight()<s2.weight();
+    }
+
+    bool segmentSortByConnectedComponentID(Segment &s1,Segment &s2)
+    {
+        return (s1.connectedComponentID() < s2.connectedComponentID())||( (s1.connectedComponentID() == s2.connectedComponentID() ) && (s1.weight() > s2.weight() ) );
+
+    }
+
+    bool staffLineSort(StaffLine &line1,StaffLine &line2)
+    {
+        return line1.startPos().y() < line2.startPos().y();
+    }
+
+     double normalizedLineTheta(const QLineF& line)
+    {
+        double angle = line.angle();
+        while (angle < 0.0) angle += 360.0;
+        while (angle > 360.0) angle -= 360.0;
+        if (angle > 180.0) angle -= 360.0;
+        return angle < 0.0 ? -angle : angle;
+    }
 }

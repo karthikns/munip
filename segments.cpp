@@ -14,7 +14,6 @@ namespace Munip
         m_startPos = start;
         m_endPos = end;
         m_destinationPos = end;
-        m_weight = end.x() - start.x()+1;
         m_connectedComponentID = -1;
 
     }
@@ -41,11 +40,6 @@ namespace Munip
     QPoint Segment ::endPos() const
     {
         return m_endPos;
-    }
-
-    void Segment ::setWeight(int weight)
-    {
-        m_weight = weight;
     }
 
     int Segment ::weight() const

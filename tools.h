@@ -1,6 +1,9 @@
 #ifndef TOOLS_H
 #define TOOLS_H
 
+#include "segments.h"
+#include "staff.h"
+
 #include <QImage>
 
 namespace Munip
@@ -19,6 +22,13 @@ namespace Munip
     QPointF meanOfPoints(const QList<QPoint>& pixels);
     QList<double> covariance(const QList<QPoint>& blackPixels, QPointF mean);
     double highestEigenValue(const QList<double> &matrix);
+
+
+    bool segmentSortByWeight(Segment &s1,Segment &s2);
+    bool segmentSortByConnectedComponentID(Segment &s1,Segment &s2);
+    bool staffLineSort(StaffLine &line1,StaffLine &line2);
+
+    double normalizedLineTheta(const QLineF& line);
 }
 
 #endif

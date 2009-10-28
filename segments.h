@@ -24,7 +24,6 @@ namespace Munip
         void setEndPos(QPoint &pos);
         QPoint endPos() const;
 
-        void setWeight( int weight );
         int weight() const;
 
         void setConnectedComponentID(const int id);
@@ -48,8 +47,6 @@ namespace Munip
         QPoint m_endPos;
         int m_connectedComponentID;
         QPoint m_destinationPos;
-        int m_weight;
-
 
         bool isConnected(const Segment &segment);
 

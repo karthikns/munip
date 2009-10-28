@@ -13,10 +13,6 @@
 class QIcon;
 class HorizontalRunlengthImage;
 
-inline uint qHash( const QPoint &point)
-    {
-        return(point.x()^point.y());
-    }
 
 namespace Munip {
 
