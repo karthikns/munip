@@ -108,8 +108,10 @@ namespace Munip
         int i = 0;
         while(i < size && !(position.x() >= list[i].startPos().x() && position.x() <= list[i].endPos().x() ) )
             i++;
+
         if( i == size )
             return Segment(QPoint(-1,-1),QPoint(-1,-1));
+
         return list[i];
     }
 

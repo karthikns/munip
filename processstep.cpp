@@ -464,9 +464,9 @@ namespace Munip
 
     void StaffLineDetect::findPaths()
     {
-        int y = 1212;
 
-       for(int y = 0; y <= m_processedImage.height(); y++)
+
+       for(int y = 0; y <m_processedImage.height() ; y++)
           for(int i = 0; i < m_segments[y].size(); i++)
           {
                findMaxPath(m_segments[y][i]);
@@ -480,7 +480,7 @@ namespace Munip
 
         qSort( paths.begin(),paths.end(),lessThan );
         for(int i = 0; i < paths.size(); i++)
-            qDebug()<<paths[i].startPos()<<paths[i].endPos()<<paths[i].weight()<<paths[i].destinationPos()<<paths[i].connectedComponentID();
+            qDebug()<<paths[i].startPos()<<paths[i].endPos()<<m_lookUpTable.value(paths[i]).startPos()<<m_lookUpTable.value(paths[i]).endPos()<<paths[i].destinationPos();
 
         // Now construct the lines from optimal segments
 
@@ -526,23 +526,22 @@ namespace Munip
 
        if( m_lookUpTable.contains(segment) )
         {
-           Segment t = m_lookUpTable.value(segment);
-           if( t.isValid())
-           {    segment.setDestinationPos(t.destinationPos());
-                segment.setConnectedComponentID(t.connectedComponentID());
-           }
-           else
-           {
-               QHash<Segment,Segment> ::iterator i;
-               i = m_lookUpTable.find(segment);
-               segment = *i;
-           }
+
+           QHash<Segment,Segment> ::iterator i;
+           i = m_lookUpTable.find(segment);
+           segment = i.key();
+
            return segment;
         }
 
         QVector<Segment> segments;
         segments.push_back(segment.getSegment(QPoint(segment.endPos().x()+1,segment.endPos().y()+1),m_segments[segment.endPos().y()+1]));
         segments.push_back(segment.getSegment(QPoint(segment.endPos().x()+1,segment.endPos().y()-1),m_segments[segment.endPos().y()-1]));
+        if( segment.startPos() == QPoint(39,152)||segment.startPos() == QPoint(26,153))
+        {
+            for(int i = 0; i < segments.size();i++)
+                qDebug()<<segments[i].startPos()<<segments[i].endPos()<<segments[i].connectedComponentID()<<segments[i].destinationPos();
+        }
 
         Segment path = findMaxPath(segments[0]);
 
@@ -552,6 +551,7 @@ namespace Munip
             path = path.maxPath(findMaxPath(segments[i]));
             i++;
         }
+
 
        if( path.startPos() != QPoint(-1,-1) && path.endPos() != QPoint(-1,-1) )
         {

@@ -165,14 +165,9 @@ namespace Munip {
         QHash<Segment,Segment> m_lookUpTable;
         int  m_connectedComponentID;
 
-        StaffLine maxPath(StaffLine line1,StaffLine line2);
         void findPaths();
         void drawDetectedLines();
-        QVector<StaffLine> getConnectedSegments(StaffLine &line);
-        bool isConnected(StaffLine& line1,StaffLine& line2);
-
-
-    };
+   };
 
     class StaffLineRemoval : public ProcessStep
     {
