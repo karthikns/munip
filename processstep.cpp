@@ -373,7 +373,7 @@ namespace Munip
     {
         if( m_processedImage.width() <= 500 && countWhite >= 5 )
             return true;
-        if( m_processedImage.width() > 500 && countWhite >= (int) 0.005*m_processedImage.width() )
+        if( m_processedImage.width() > 500 && countWhite >= (int) (0.005*m_processedImage.width()) )
             return true;
         return false;
     }
@@ -419,6 +419,7 @@ namespace Munip
                 if(checkDiscontinuity(countWhite))
                     end = QPoint(x-1,y);
                 else {
+                    x += countWhite;
                     continue;
                 }
 
