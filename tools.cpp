@@ -94,13 +94,18 @@ namespace Munip
 
     bool segmentSortByWeight(Segment &s1,Segment &s2)
     {
-         return s2.weight()<s2.weight();
+         return s1.weight()<s2.weight();
     }
 
     bool segmentSortByConnectedComponentID(Segment &s1,Segment &s2)
     {
         return (s1.connectedComponentID() < s2.connectedComponentID())||( (s1.connectedComponentID() == s2.connectedComponentID() ) && (s1.weight() > s2.weight() ) );
 
+    }
+
+    bool segmentSortByPosition(Segment &s1,Segment &s2)
+    {
+        return ((s1.startPos().y() < s2.startPos().y())||((s1.startPos().y() == s2.startPos().y()) && (s1.startPos().x() < s2.startPos().x())));
     }
 
     bool staffLineSort(StaffLine &line1,StaffLine &line2)

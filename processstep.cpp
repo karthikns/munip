@@ -347,8 +347,6 @@ namespace Munip
         return slope;
     }
 
-    //TODO Put the constructor and other basic stuff in
-
     StaffLineDetect::StaffLineDetect(const QImage& originalImage, ProcessQueue *queue) :
         ProcessStep(originalImage, queue)
     {
@@ -363,6 +361,7 @@ namespace Munip
         m_lineRemovedTracker = QPixmap(m_processedImage.size());
         m_lineRemovedTracker.fill(QColor(Qt::white));
         detectLines();
+        //removeStaffLines();
         //constructStaff();
 
         m_processedImage = m_lineRemovedTracker.toImage();

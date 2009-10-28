@@ -145,15 +145,6 @@ namespace Munip
 
     }
 
-    /*
-    bool StaffLine :: operator< (StaffLine line )
-    {
-        if( (m_endPos.x() - m_startPos.x()) < (line.endPos().x()-line.startPos().x()) )
-            return true;
-        return false;
-    }
-    */
-
     void StaffLine::addSegment(const Segment &segment)
     {
         if(segment.isValid())
@@ -177,17 +168,17 @@ namespace Munip
         return !( m_startPos == QPoint(-1,-1) || m_endPos == QPoint(-1,-1) || m_lineWidth == -1);
     }
 
-/*
-    bool StaffLine ::operator ==(StaffLine line )
-    {
-        return( m_startPos == line.startPos() && m_endPos == line.endPos() );
-    }
-*/
     void StaffLine ::displaySegments()
     {
         for(int i= 0; i < m_segmentList.size(); i++)
                   qDebug()<<m_segmentList[i].startPos()<<m_segmentList[i].endPos()<<m_segmentList[i].destinationPos();
     }
+
+    void StaffLine ::sortSegments()
+    {
+        qSort(m_segmentList.begin(),m_segmentList.end(),segmentSortByPosition);
+    }
+
     Staff::Staff(const QPoint& vStart, const QPoint& vEnd)
     {
         m_startPos = vStart;
