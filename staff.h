@@ -2,6 +2,7 @@
 #define STAFF_H
 
 #include <QPoint>
+#include <QRect>
 #include <QVector>
 #include <QHash>
 
@@ -22,6 +23,8 @@ namespace Munip {
         StaffLine();
         ~StaffLine();
 
+        void constructBoundingRect();
+
         QPoint startPos() const;
         void setStartPos(const QPoint& point);
 
@@ -34,7 +37,13 @@ namespace Munip {
         int lineWidth() const;
         void setLineWidth(int wid);
 
+        void setMinPosition(const QPoint &minPos);
+        void setMaxPosition(const QPoint &maxPos);
+        QRect boundingBox() const;
+
         bool aggregate( StaffLine &line );
+
+        bool isAdjacent(const StaffLine &line);
 
         bool contains( const Segment &segment);
 
@@ -42,6 +51,7 @@ namespace Munip {
         int length();
 
         void addSegment(const Segment& segment);
+        void addSegmentList(QVector<Segment> &segmentList);
         QVector<Segment> segments() const;
 
         bool isValid() const;
@@ -60,6 +70,7 @@ namespace Munip {
         int m_lineWidth; // width between the current line and the next. -1 if last line
         int m_staffLineID; // The Staff Number To Which The Line Belongs
         QVector<Segment> m_segmentList;
+        QRect m_boundingBox;
         // int error; //Contains The Error Code incase of Parallax
         // int paralax;
     };

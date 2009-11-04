@@ -21,6 +21,7 @@ namespace Munip
         m_endPos = end;
         m_lineWidth = thickness;
         m_staffLineID = -1;	 // still to be set
+        constructBoundingRect();
     }
 
     StaffLine :: StaffLine()
@@ -30,6 +31,17 @@ namespace Munip
     StaffLine::~StaffLine()
     {
 
+    }
+
+    void StaffLine::constructBoundingRect()
+    {
+        QPoint minPoint,maxPoint;
+        minPoint.setX(qMin(m_startPos.x(),m_endPos.x()));
+        minPoint.setY(qMin(m_startPos.y(),m_endPos.y()));
+        maxPoint.setX(qMax(m_startPos.x(),m_endPos.x()));
+        maxPoint.setY(qMax(m_startPos.y(),m_endPos.y()));
+        m_boundingBox.setTopLeft(minPoint);
+        m_boundingBox.setBottomRight(maxPoint);
     }
 
     QPoint StaffLine::startPos() const
@@ -72,6 +84,21 @@ namespace Munip
         m_lineWidth = wid;
     }
 
+    void StaffLine::setMaxPosition(const QPoint &maxPos)
+    {
+        m_boundingBox.setBottomRight(maxPos);
+    }
+
+    void StaffLine::setMinPosition(const QPoint &minPos)
+    {
+        m_boundingBox.setTopLeft(minPos);
+    }
+
+    QRect StaffLine::boundingBox() const
+    {
+        return m_boundingBox;
+    }
+
     int StaffLine :: length()
     {
         return (m_endPos.x() - m_startPos.x());
@@ -84,8 +111,26 @@ namespace Munip
                return true;
        return false;
     }
+
+    bool StaffLine::isAdjacent(const StaffLine &line)
+    {
+        return qAbs(m_boundingBox.bottom() -
+                line.boundingBox().top()) == 1;
+    }
+
     bool StaffLine :: aggregate(StaffLine &line )
     {
+
+        if( !isAdjacent(line) )
+            return false;
+
+        qDebug()<<Q_FUNC_INFO<<m_boundingBox<<line.boundingBox();
+        QVector<Segment> lineSegments = line.segments();
+        addSegmentList(lineSegments);
+        m_boundingBox|=line.boundingBox();
+        return true;
+
+        /*
         //TODO how can u aggregate a line at (i,0) to line above it ;)
         if( line.startPos().y() < m_startPos.y() || line.endPos().y() < m_endPos.y() )
             return false;
@@ -140,8 +185,7 @@ namespace Munip
              //m_startPos.setX(line.startPos().x());
              return true;
         }
-
-        return false;
+        */
 
     }
 
@@ -154,8 +198,23 @@ namespace Munip
                 m_startPos.setX(segment.startPos().x());
             if( segment.endPos().x() > m_endPos.x() )
                 m_endPos.setX(segment.endPos().x());
+            //m_boundingBox |= QRect(segment.startPos(), segment.endPos());
         }
 
+    }
+
+    void StaffLine::addSegmentList(QVector<Segment> &segmentList)
+    {
+        foreach(Segment s,segmentList)
+           if(s.isValid())
+           {
+                m_segmentList.push_back(s);
+                if( s.startPos().x() < m_startPos.x() )
+                    m_startPos.setX(s.startPos().x());
+                if( s.endPos().x() > m_endPos.x() )
+                    m_endPos.setX(s.endPos().x());
+                //m_boundingBox |= QRect(s.startPos(), s.endPos());
+           }
     }
 
     QVector<Segment> StaffLine::segments() const

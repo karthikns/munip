@@ -205,6 +205,8 @@ namespace Munip
     {
         emit started();
         double theta = std::atan(detectSkew());
+        qDebug() << Q_FUNC_INFO << theta
+                 << theta*(180.0/M_PI) << endl;
         if(theta == 0.0) {
             emit ended();
             return;
@@ -222,7 +224,7 @@ namespace Munip
         // staff skew after following operation. Apart from that it also
         // has black triangular corners produced due to bounding rect
         // extentsion.
-        m_processedImage = m_processedImage.transformed(transform, Qt::SmoothTransformation);
+        m_processedImage = m_processedImage.transformed(transform, Qt::FastTransformation);
         m_processedImage = Munip::convertToMonochrome(m_processedImage, 240);
 
 
@@ -472,22 +474,22 @@ namespace Munip
             if( paths[i].weight() >= (int)(0.9*maxWeightPath.weight()))
             {
                 int ID = paths[i].connectedComponentID();
-                StaffLine line(paths[i].startPos(),paths[i].endPos(),1);
+                StaffLine line(paths[i].startPos(),paths[i].destinationPos(),1);
                 line.addSegment(paths[i]);
                 while(i+k < paths.size() && paths[i+k].connectedComponentID() == ID )
                 {
                     line.addSegment(paths[i+k]);
                     k++;
                 }
-
-                m_lineList.push_back(line);
+                if(m_lineList.isEmpty()||!m_lineList.last().aggregate(line))
+                    m_lineList.push_back(line);
             }
             i+=k;
         }
         qSort(m_lineList.begin(),m_lineList.end(),staffLineSort);
 
         for(int i = 0; i < m_lineList.size(); i++)
-                    qDebug() << m_lineList[i].startPos() << m_lineList[i].endPos();
+                    qDebug() <<Q_FUNC_INFO<< m_lineList[i].startPos() << m_lineList[i].endPos()<<m_lineList[i].boundingBox();
                 //m_lineList[i].displaySegments();
            // }
 
@@ -500,7 +502,7 @@ namespace Munip
        if( !segment.isValid()) {
             return segment;
        }
-       qDebug() << Q_FUNC_INFO << segment.startPos() << segment.endPos();
+       //qDebug() << Q_FUNC_INFO << segment.startPos() << segment.endPos();
 
        if( m_lookUpTable.contains(segment) )
         {
@@ -634,8 +636,10 @@ namespace Munip
 
          while( i< m_lineList.size() )
          {
-             p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
-             p.drawLine(m_lineList[i].startPos(),m_lineList[i].endPos());
+              p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
+             //foreach(Segment s,m_lineList[i].segments())
+
+                p.drawLine(m_lineList[i].startPos(),m_lineList[i].endPos());
              i++;
          }
 
@@ -1069,7 +1073,7 @@ namespace Munip
         emit started();
         QImage::Format destFormat = m_originalImage.format();
         bool ok;
-        int angle = QInputDialog::getInteger(0, tr("Angle"), tr("Enter rotation angle in degrees for image rotation"),
+        qreal angle = QInputDialog::getDouble(0, tr("Angle"), tr("Enter rotation angle in degrees for image rotation"),
                                          5, -45, 45, 1, &ok);
         if (!ok) {
             angle = 5;
