@@ -459,15 +459,23 @@ namespace Munip
         for(int i = 0; i < paths.size(); i++)
             qDebug()<<paths[i].startPos()<<paths[i].endPos()<<m_lookUpTable.value(paths[i]).startPos()<<m_lookUpTable.value(paths[i]).endPos()<<paths[i].destinationPos();
 
+        Segment maxWeightPath = paths[0];
+
+        //prune the segments to find the ones with maximum weight
+        int i = 0;
+        while( i < paths.size() && paths[i].weight() >= (int)(0.98*maxWeightPath.weight() ) )
+            i++;
+
+        paths.remove(i,paths.size()-i);
+
         // Now construct the lines from optimal segments
 
         const int size = paths.size();
         qDebug() << Q_FUNC_INFO << " Size = " << size;
-        int i = size -1;
-        Segment maxWeightPath = paths[size-1];
-        qSort( paths.begin(),paths.end(),segmentSortByConnectedComponentID);
-        i = 0;
 
+        qSort( paths.begin(),paths.end(),segmentSortByConnectedComponentID);
+
+        i = 0;
         while( i < paths.size() )
         {
             int k = 1;
@@ -481,7 +489,7 @@ namespace Munip
                     line.addSegment(paths[i+k]);
                     k++;
                 }
-                if(m_lineList.isEmpty()||!m_lineList.last().aggregate(line))
+                //if(m_lineList.isEmpty()||!m_lineList.last().aggregate(line))
                     m_lineList.push_back(line);
             }
             i+=k;
@@ -637,9 +645,15 @@ namespace Munip
          while( i< m_lineList.size() )
          {
               p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
-             //foreach(Segment s,m_lineList[i].segments())
+             foreach(Segment s,m_lineList[i].segments())
 
-                p.drawLine(m_lineList[i].startPos(),m_lineList[i].endPos());
+                 while(s.isValid())
+                 {
+
+               // p.drawLine(m_lineList[i].startPos(),m_lineList[i].endPos());
+                    p.drawLine(s.startPos(),s.endPos());
+                    s = m_lookUpTable.value(s);
+                }
              i++;
          }
 
@@ -1083,7 +1097,7 @@ namespace Munip
         transform.rotate(angle);
         transform = m_originalImage.trueMatrix(transform, m_originalImage.width(), m_originalImage.height());
 
-        m_processedImage = m_processedImage.transformed(transform, Qt::FastTransformation);
+        m_processedImage = m_processedImage.transformed(transform, Qt::SmoothTransformation);
         if (destFormat == QImage::Format_Mono) {
             m_processedImage = Munip::convertToMonochrome(m_processedImage, 240);
         } else {

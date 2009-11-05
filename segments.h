@@ -32,6 +32,9 @@ namespace Munip
         void setDestinationPos(const QPoint &position);
         QPoint destinationPos() const;
 
+        void setNextSegment(const Segment &segment);
+        Segment nextSegment() const;
+
         int length() const;
 
         bool isValid() const;

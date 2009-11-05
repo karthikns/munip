@@ -19,6 +19,7 @@ namespace Munip
 
     Segment ::~Segment()
     {
+
     }
 
     void Segment ::setStartPos(QPoint &pos)
@@ -116,7 +117,7 @@ namespace Munip
             return segment;
         if( segment.startPos() == QPoint(-1,-1) )
             return *this;
-        if( weight() > segment.weight() )
+        if(weight() > segment.weight() )
             return *this;
         return segment;
     }

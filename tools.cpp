@@ -94,7 +94,7 @@ namespace Munip
 
     bool segmentSortByWeight(Segment &s1,Segment &s2)
     {
-         return s1.weight()<s2.weight();
+         return s1.weight()>s2.weight();
     }
 
     bool segmentSortByConnectedComponentID(Segment &s1,Segment &s2)
