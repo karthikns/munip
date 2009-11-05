@@ -366,7 +366,7 @@ namespace Munip
         //removeStaffLines();
         //constructStaff();
 
-        m_processedImage = m_lineRemovedTracker.toImage();
+        //m_processedImage = m_lineRemovedTracker.toImage();
 
         emit ended();
     }
@@ -478,15 +478,21 @@ namespace Munip
         i = 0;
         while( i < paths.size() )
         {
-            int k = 1;
+            int k = 0;
             if( paths[i].weight() >= (int)(0.9*maxWeightPath.weight()))
             {
                 int ID = paths[i].connectedComponentID();
                 StaffLine line(paths[i].startPos(),paths[i].destinationPos(),1);
-                line.addSegment(paths[i]);
+
                 while(i+k < paths.size() && paths[i+k].connectedComponentID() == ID )
                 {
                     line.addSegment(paths[i+k]);
+                    Segment s = m_lookUpTable.value(paths[i+k]);
+                    while(s.isValid())
+                    {
+                        line.addSegment(s);
+                        s = m_lookUpTable.value(s);
+                    }
                     k++;
                 }
                 //if(m_lineList.isEmpty()||!m_lineList.last().aggregate(line))
@@ -501,8 +507,8 @@ namespace Munip
                 //m_lineList[i].displaySegments();
            // }
 
-         drawDetectedLines();
-
+         //drawDetectedLines();
+         removeLines();
     }
 
     Segment StaffLineDetect::findMaxPath(Segment segment)
@@ -646,18 +652,63 @@ namespace Munip
          {
               p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
              foreach(Segment s,m_lineList[i].segments())
-
-                 while(s.isValid())
-                 {
-
                // p.drawLine(m_lineList[i].startPos(),m_lineList[i].endPos());
                     p.drawLine(s.startPos(),s.endPos());
-                    s = m_lookUpTable.value(s);
-                }
-             i++;
+
+            i++;
          }
 
      }
+
+    void StaffLineDetect ::removeLines()
+    {
+        for(int i = 0; i < m_lineList.size();i++)
+        {
+            m_lineList[i].sortSegments();
+            QVector<Segment> segmentList = m_lineList[i].segments();
+            for(int j = 0; j < segmentList.size();j++ )
+                 removeSegment(segmentList[j]);
+        }
+    }
+
+    bool StaffLineDetect ::canBeRemoved(int x,int y)
+    {
+        QPoint pos = QPoint(x,y);
+        const int Black = m_processedImage.color(0) == 0xffffffff ? 1 : 0;
+        const int White = 1 - Black;
+        if(pos.y()-1 > 0 && m_processedImage.pixelIndex(pos.x()-1,pos.y()-1) == White && m_processedImage.pixelIndex(pos.x(),pos.y()-1) == White && m_processedImage.pixelIndex(pos.x()+1,pos.y()-1) == White)
+            return true;
+        if(pos.y()+1 < m_processedImage.height() && m_processedImage.pixelIndex(pos.x()-1,pos.y()+1) == White && m_processedImage.pixelIndex(pos.x(),pos.y()+1) == White && m_processedImage.pixelIndex(pos.x()+1,pos.y()+1) == White)
+            return true;
+        return false;
+    }
+
+    bool StaffLineDetect::removeSegment(Segment &s)
+    {
+         const int Black = m_processedImage.color(0) == 0xffffffff ? 1 : 0;
+         const int White = 1 - Black;
+
+        for(int x = s.startPos().x(); x <= s.endPos().x(); x++)
+            if(canBeRemoved(x,s.endPos().y()))
+                    m_processedImage.setPixel(x,s.endPos().y(),White);
+
+        const int yPlus1 = s.endPos().y() + 1;
+        QVector<Segment> yPlus1Segments = m_segments[yPlus1];
+        const int yMinus1 = s.endPos().y() - 1;
+        QVector<Segment> yMinus1Segments = m_segments[yMinus1];
+
+        QVector<Segment> segments = s.getConnectedSegments(yPlus1Segments);
+        segments += s.getConnectedSegments(yMinus1Segments);
+        for(int i = 0; i < segments.size(); i++)
+           if(segments[i].isValid())
+                for(int x = segments[i].startPos().x(); x<=segments[i].endPos().x();x++)
+                    if(canBeRemoved(x,segments[i].endPos().y()))
+                        m_processedImage.setPixel(x,s.endPos().y(),White);
+
+        return true;
+
+    }
+
 
 
 

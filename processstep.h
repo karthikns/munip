@@ -163,6 +163,15 @@ namespace Munip {
 
         void findPaths();
         void drawDetectedLines();
+
+        //TODO:
+        /* Some methods which i felt need to be bound
+         to the processedImage Object*/
+
+        bool removeSegment(Segment &s);
+        bool canBeRemoved(int x,int y);
+
+
    };
 
     class StaffLineRemoval : public ProcessStep

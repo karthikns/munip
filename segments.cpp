@@ -72,7 +72,7 @@ namespace Munip
         return m_connectedComponentID;
     }
 
-    QVector<Segment> Segment ::getConnectedSegments(const QVector<Segment> &list)
+    QVector<Segment> Segment ::getConnectedSegments(QVector<Segment> list)
     {
         int i = 0;
         QVector<Segment> segments;
@@ -98,13 +98,18 @@ namespace Munip
 
     Segment Segment::getSegment(const QPoint &position,const QVector<Segment> &list)
     {
+        Segment invalid(QPoint(-1,-1),QPoint(-1,-1));
         int size = list.size();
+
+        if( size == 0 || position.y()!= list[0].startPos().y())
+            return invalid;
+
         int i = 0;
         while(i < size && !(position.x() >= list[i].startPos().x() && position.x() <= list[i].endPos().x() ) )
             i++;
 
         if( i == size )
-            return Segment(QPoint(-1,-1),QPoint(-1,-1));
+            return invalid;
 
         return list[i];
     }

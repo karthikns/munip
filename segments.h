@@ -32,14 +32,11 @@ namespace Munip
         void setDestinationPos(const QPoint &position);
         QPoint destinationPos() const;
 
-        void setNextSegment(const Segment &segment);
-        Segment nextSegment() const;
-
         int length() const;
 
         bool isValid() const;
 
-        QVector<Segment> getConnectedSegments(const QVector<Segment> &list);
+        QVector<Segment> getConnectedSegments(QVector<Segment> list);
         Segment getSegment(const QPoint &pos,const QVector<Segment> &list);
 
         Segment maxPath(const Segment &segment);
