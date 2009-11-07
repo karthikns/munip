@@ -160,6 +160,7 @@ namespace Munip {
         QVector<Segment> m_segments[5000];
         QHash<Segment,Segment> m_lookUpTable;
         int  m_connectedComponentID;
+        int m_imageMap[5000][5000];
 
         void findPaths();
         void drawDetectedLines();
@@ -170,6 +171,7 @@ namespace Munip {
 
         bool removeSegment(Segment &s);
         bool canBeRemoved(int x,int y);
+        void convertSymbol(Segment s);
 
 
    };
