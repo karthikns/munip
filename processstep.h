@@ -151,7 +151,7 @@ namespace Munip {
         Segment findMaxPath(Segment segment);
         void constructStaff();
         void removeLines();
-        void drawStaff(Staff& s);
+
 
     private:
         QVector<StaffLine> m_lineList;
@@ -169,9 +169,9 @@ namespace Munip {
         /* Some methods which i felt need to be bound
          to the processedImage Object*/
 
-        bool removeSegment(Segment &s);
-        bool canBeRemoved(int x,int y);
+
         void convertSymbol(Segment s);
+        void setImageMap(Segment &s,int value,bool replace);
 
 
    };

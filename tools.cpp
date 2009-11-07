@@ -105,9 +105,9 @@ namespace Munip
 
     bool segmentSortByPosition(Segment &s1,Segment &s2)
     {
-        return ((s1.startPos().x() < s2.startPos().x())||((s1.startPos().x() == s2.startPos().x()) && (s1.startPos().y() < s2.startPos().y())));
+        //return ((s1.startPos().x() < s2.startPos().x())||((s1.startPos().x() == s2.startPos().x()) && (s1.startPos().y() < s2.startPos().y())));
 
-        //return ((s1.startPos().y() < s2.startPos().y())||((s1.startPos().y() == s2.startPos().y()) && (s1.startPos().x() < s2.startPos().x())));
+        return ((s1.startPos().y() < s2.startPos().y())||((s1.startPos().y() == s2.startPos().y()) && (s1.startPos().x() < s2.startPos().x())));
     }
 
     bool staffLineSort(StaffLine &line1,StaffLine &line2)

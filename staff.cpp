@@ -238,6 +238,15 @@ namespace Munip
         qSort(m_segmentList.begin(),m_segmentList.end(),segmentSortByPosition);
     }
 
+    bool StaffLine ::findSegment(Segment& s) const
+    {
+        for(int i = 0; i < m_segmentList.size();i++)
+            if(m_segmentList[i] == s)
+                return true;
+        return false;
+
+    }
+
     Staff::Staff(const QPoint& vStart, const QPoint& vEnd)
     {
         m_startPos = vStart;

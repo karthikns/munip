@@ -60,6 +60,8 @@ namespace Munip {
 
         void sortSegments();
 
+        bool findSegment(Segment& s) const;
+
         //bool operator<(StaffLine line);
         //bool operator==(StaffLine line);
 

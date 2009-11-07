@@ -626,7 +626,7 @@ namespace Munip
                              if( isStaff( count ) )
                              {
                                  //DataWarehouse::instance() ->appendStaff( s );
-                                 drawStaff(s);
+                                 //drawStaff(s);
                              }
 
                          }
@@ -639,17 +639,6 @@ namespace Munip
             }
         }
     }
-
-    void StaffLineDetect::drawStaff( Staff& s )
-    {
-
-
-
-
-    }
-
-
-
 
     void StaffLineDetect ::drawDetectedLines()
     {
@@ -679,6 +668,55 @@ namespace Munip
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
         const int Black = 1 - White;
 
+        QSet<Segment> noisySegmentList;
+
+        for(int i = 0; i < m_lineList.size(); i++)
+        {
+            QVector<Segment> segmentList = m_lineList[i].segments();
+            for(int j = 0; j < segmentList.size();j++)
+            {
+                Segment s = segmentList[j];
+
+                while(s.isValid())
+                {
+                    for(int x = s.startPos().x();x <=s.endPos().x();x++)
+                    {
+                        QPoint above(x,s.endPos().y()-1);
+                        QPoint below(x,s.endPos().y()+1);
+                        Segment a,b;
+
+                        if( above.y() >= 0)
+                           a = s.getSegment(above,m_segments[above.y()]);
+
+                        if( below.y() < m_processedImage.height())
+                            b = s.getSegment(below,m_segments[below.y()]);
+
+
+                        if(a.isValid() && !noisySegmentList.contains(a))
+                        {
+                            noisySegmentList.insert(a);
+                            setImageMap(a,1,true);
+                        }
+                        if( b.isValid() && !noisySegmentList.contains(b))
+                        {
+                            noisySegmentList.insert(b);
+                            setImageMap(b,1,true);
+                        }
+                    }
+                    setImageMap(s,1,true);
+                    s = m_lookUpTable.value(s);
+                }
+            }
+        }
+        for(int y =0; y <m_processedImage.height();y++)
+            for(int i = 0; i < m_segments[y].size();i++)
+                setImageMap(m_segments[y][i],2,false);
+
+        QList<Segment> list = noisySegmentList.toList();
+
+        foreach(Segment t,list)
+            convertSymbol(t);
+
         for(int i = 0; i < m_lineList.size(); i++)
         {
             QVector<Segment> segmentList = m_lineList[i].segments();
@@ -687,85 +725,30 @@ namespace Munip
                 Segment s = segmentList[j];
                 while(s.isValid())
                 {
-                    for(int x = s.startPos().x();x <=s.endPos().x();x++)
-                        m_imageMap[x][s.endPos().y()] = 1;
+                    convertSymbol(s);
                     s = m_lookUpTable.value(s);
                 }
             }
-        }
-        for(int y =0; y <m_processedImage.height();y++)
-        {
-            for(int i = 0; i < m_segments[y].size();i++)
-                for(int x = m_segments[y][i].startPos().x();x <= m_segments[y][i].endPos().x();x++ )
-                    if(!m_imageMap[x][y])
-                        m_imageMap[x][y] = 2;
+
         }
 
         for(int i = 0; i < m_lineList.size();i++)
         {
             QVector<Segment> segmentList = m_lineList[i].segments();
-            for(int i = 0;i < segmentList.size();i++)
+            for(int j = 0; j < segmentList.size();j++)
             {
-                Segment s = segmentList[i];
+                Segment s = segmentList[j];
                 while(s.isValid())
                 {
-                    //TODO Inefficient Code here...Make it efficient :P
-                    for(int x=s.startPos().x(); x<=s.endPos().x();x++)
-                    {
-                        QPoint above(x,s.endPos().y()-1);
-                        QPoint aboveAbove(x,s.endPos().y()-2);
-                        QPoint below(x,s.endPos().y()+1);
-                        QPoint belowBelow(x,s.endPos().y()+2);
-
-                        if (above.y() >= 1) {
-                            if (m_imageMap[x][above.y()] == 2) {
-                                if (m_imageMap[x][aboveAbove.y()] == 2)
-                                    m_imageMap[x][s.endPos().y()] = 2;
-                            }
-                        }
-                        if (below.y() < m_processedImage.height()-1) {
-                            if (m_imageMap[x][below.y()] == 2) {
-                                if (m_imageMap[x][belowBelow.y()] == 2)
-                                    m_imageMap[x][s.endPos().y()] = 2;
-                            }
-                        }
-                   }
-/*
-                        //TODO Define functions to make operations easy
-                        Segment t,r;
-                        if( above.y() >=0) {
-
-                            t = s.getSegment(above,m_segments[above.y()]);
-                        if( below.y()<m_processedImage.height())
-                            r = s.getSegment(below,m_segments[below.y()]);
-                        if( t.isValid())
-                            for(int x = t.startPos().x(); x <= t.endPos().x();x++)
-                                m_imageMap[x][above.y()] = 1;
-
-                        if(r.isValid())
-                            for(int x = r.startPos().x();x<=r.endPos().x();x++)
-                                m_imageMap[x][below.y()] = 1;
-                    }
-                    convertSymbol(s);
-                    for(int x = s.startPos().x(); x <= s.endPos().x(); x++)
-                        if(m_imageMap[x][s.endPos().y()] == 1)
+                    for(int x=s.startPos().x();x<=s.endPos().x();x++)
+                       if( m_imageMap[x][s.endPos().y()] == 1 )
                             m_processedImage.setPixel(x,s.endPos().y(),White);
-                            */
-                    s= m_lookUpTable.value(s);
+
+                    s=m_lookUpTable.value(s);
                 }
             }
         }
     }
-    /*
-        for(int i = 0; i < m_lineList.size();i++)
-        {
-            m_lineList[i].sortSegments();
-            QVector<Segment> segmentList = m_lineList[i].segments();
-            for(int j = 0; j < segmentList.size();j++ )
-                 removeSegment(segmentList[j]);
-        }
-
-    }*/
 
     void StaffLineDetect::convertSymbol(Segment s)
     {
@@ -778,46 +761,21 @@ namespace Munip
             else if( m_imageMap[x-1][y+1] == 2 || m_imageMap[x-1][y+1] == 2 || m_imageMap[x+1][y+1] == 2)
                 m_imageMap[x][y] = 2;
 
-
         }
 
     }
 
-    bool StaffLineDetect ::canBeRemoved(int x,int y)
+
+    void StaffLineDetect::setImageMap(Segment &s,int value,bool replace)
     {
-        QPoint pos = QPoint(x,y);
-        const int Black = m_processedImage.color(0) == 0xffffffff ? 1 : 0;
-        const int White = 1 - Black;
-        if(pos.y()-1 > 0 && m_processedImage.pixelIndex(pos.x()-1,pos.y()-1) == White && m_processedImage.pixelIndex(pos.x(),pos.y()-1) == White && m_processedImage.pixelIndex(pos.x()+1,pos.y()-1) == White)
-            return true;
-        if(pos.y()+1 < m_processedImage.height() && m_processedImage.pixelIndex(pos.x()-1,pos.y()+1) == White && m_processedImage.pixelIndex(pos.x(),pos.y()+1) == White && m_processedImage.pixelIndex(pos.x()+1,pos.y()+1) == White)
-            return true;
-        return false;
-    }
-
-    bool StaffLineDetect::removeSegment(Segment &s)
-    {
-         const int Black = m_processedImage.color(0) == 0xffffffff ? 1 : 0;
-         const int White = 1 - Black;
-
-        for(int x = s.startPos().x(); x <= s.endPos().x(); x++)
-            if(canBeRemoved(x,s.endPos().y()))
-                    m_processedImage.setPixel(x,s.endPos().y(),White);
-
-        const int yPlus1 = s.endPos().y() + 1;
-        QVector<Segment> yPlus1Segments = m_segments[yPlus1];
-        const int yMinus1 = s.endPos().y() - 1;
-        QVector<Segment> yMinus1Segments = m_segments[yMinus1];
-
-        QVector<Segment> segments = s.getConnectedSegments(yPlus1Segments);
-        segments += s.getConnectedSegments(yMinus1Segments);
-        for(int i = 0; i < segments.size(); i++)
-           if(segments[i].isValid())
-                for(int x = segments[i].startPos().x(); x<=segments[i].endPos().x();x++)
-                    if(canBeRemoved(x,segments[i].endPos().y()))
-                        m_processedImage.setPixel(x,s.endPos().y(),White);
-
-        return true;
+        //if replace flag is false it sets only if the corresponding index is 0
+        if(replace)
+            for(int x = s.startPos().x();x <= s.endPos().x();x++)
+                m_imageMap[x][s.endPos().y()] = value;
+        else
+             for(int x = s.startPos().x();x <= s.endPos().x();x++)
+                 if(!m_imageMap[x][s.endPos().y()])
+                    m_imageMap[x][s.endPos().y()] = value;
 
     }
 
