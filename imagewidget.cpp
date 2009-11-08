@@ -62,7 +62,10 @@ RulerItem::RulerItem(const QRectF& constrainedRect, QGraphicsItem *parent) :
     m_constrainedRect(constrainedRect),
     m_alpha(200)
 {
-    setFlags(ItemIsMovable);
+    setFlag(ItemIsMovable);
+#if QT_VERSION >= 0x040600
+    setFlag(ItemSendsGeometryChanges);
+#endif
     setAcceptsHoverEvents(true);
 }
 
