@@ -9,7 +9,7 @@ namespace Munip {
     class DataWarehouse
     {
         public:
-            DataWarehouse* instance();
+            static DataWarehouse* instance();
             float pageSkew() const;
             void setPageSkew(float skew);
 

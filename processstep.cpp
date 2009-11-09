@@ -400,7 +400,7 @@ namespace Munip
     {
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
         const int Black = 1 - White;
-        int countBlack = 0,countWhite = 0;
+        int countWhite = 0;
         QPoint start,end;
 
         for(int y = 0; y < m_processedImage.height(); y++)
@@ -410,7 +410,6 @@ namespace Munip
                 x++;
 
             start = QPoint(x,y);
-            bool flag = false;
             countWhite = 0;
             while( x < m_processedImage.width() )
             {
@@ -600,44 +599,19 @@ namespace Munip
 
 
 
-       void StaffLineDetect::constructStaff()
+    void StaffLineDetect::constructStaff()
     {
-        Staff s;
-        int distance,d;
-        int count = 0;
-        for(int i = 0; i < m_lineList.size();i++)
-        {
-            switch(count)
-            {
-                case 0: s.addStaffLine( m_lineList[i] );
-                        count++;
-                        break;
-                case 1: s.addStaffLine( m_lineList[i] );
-                        count++;
-                        distance = s.distance(1);
-                        break;
-                default: s.addStaffLine( m_lineList[i] );
-                         d = s.distance(count);
-                         if( d >= (int) 0.8* distance )
-                         {
-                             if( d > distance )
-                                 distance = d;
-                             count++;
-                             if( isStaff( count ) )
-                             {
-                                 //DataWarehouse::instance() ->appendStaff( s );
-                                 //drawStaff(s);
-                             }
 
-                         }
-                         else
-                         {
-                             s.clear();
-                             count = 1;
-                             s.addStaffLine( m_lineList[i]);
-                         }
-            }
+        int i = 0;
+        while( i < m_lineList.size())
+        {
+            Staff s;
+            for(int count = 0; count < 5; count++)
+                s.addStaffLine(m_lineList[i+count]);
+            DataWarehouse ::instance()->appendStaff(s);
+            i+=5;
         }
+
     }
 
     void StaffLineDetect ::drawDetectedLines()
@@ -666,7 +640,7 @@ namespace Munip
     void StaffLineDetect ::removeLines()
     {
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
-        const int Black = 1 - White;
+
 
         QSet<Segment> noisySegmentList;
 
@@ -676,10 +650,7 @@ namespace Munip
             for(int j = 0; j < segmentList.size();j++)
             {
                 Segment s = segmentList[j];
-
-                //while(s.isValid())
-                //{
-                    for(int x = s.startPos().x();x <=s.endPos().x();x++)
+                for(int x = s.startPos().x();x <=s.endPos().x();x++)
                     {
                         QPoint above(x,s.endPos().y()-1);
                         QPoint below(x,s.endPos().y()+1);
@@ -704,8 +675,6 @@ namespace Munip
                         }
                     }
                     setImageMap(s,1,true);
-                    //s = m_lookUpTable.value(s);
-                //}
             }
         }
         for(int y =0; y <m_processedImage.height();y++)
@@ -723,11 +692,7 @@ namespace Munip
             for(int j = 0; j < segmentList.size();j++)
             {
                 Segment s = segmentList[j];
-                //while(s.isValid())
-                //{
-                    convertSymbol(s);
-                    //s = m_lookUpTable.value(s);
-                //}
+                convertSymbol(s);
             }
 
         }
@@ -738,14 +703,9 @@ namespace Munip
             for(int j = 0; j < segmentList.size();j++)
             {
                 Segment s = segmentList[j];
-                //while(s.isValid())
-                //{
-                    for(int x=s.startPos().x();x<=s.endPos().x();x++)
+                for(int x=s.startPos().x();x<=s.endPos().x();x++)
                        if( m_imageMap[x][s.endPos().y()] == 1 )
                             m_processedImage.setPixel(x,s.endPos().y(),White);
-
-                    //s=m_lookUpTable.value(s);
-                //}
             }
         }
     }
