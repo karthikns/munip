@@ -121,71 +121,36 @@ namespace Munip
     bool StaffLine :: aggregate(StaffLine &line )
     {
 
-        if( !isAdjacent(line) )
-            return false;
+        /*A better way of aggregating i feel
+         *Please examine
+         *and scrutinise
 
-        qDebug()<<Q_FUNC_INFO<<m_boundingBox<<line.boundingBox();
-        QVector<Segment> lineSegments = line.segments();
-        addSegmentList(lineSegments);
-        m_boundingBox|=line.boundingBox();
-        return true;
-
-        /*
-        //TODO how can u aggregate a line at (i,0) to line above it ;)
-        if( line.startPos().y() < m_startPos.y() || line.endPos().y() < m_endPos.y() )
-            return false;
-
-
-        if( line.startPos().y() - (m_startPos.y()+m_lineWidth-1) > 1 )
-            return false;
-
-
-        if( line.startPos().x() > m_endPos.x()+1 || line.endPos().x() < m_startPos.x() -1 )
-            return false;
-
-
-        if( line.startPos().y() == m_startPos.y() )
+        int i = 0,j = 0;
+        QVector<Segment> segmentList = line.segments();
+        while( i < m_segmentList.size() && j < segmentList.size())
         {
-            m_endPos.setX(line.endPos().x());
+            if(m_segmentList[i].isConnected(segmentList[j]))
+                j++;
+            else
+                i++;
+        }
+        if( i == m_segmentList.size() )
+        {
+            this->addSegmentList(segmentList);
             return true;
         }
-
-        if( line.startPos().x() >= m_startPos.x() -1 && line.endPos().x() <= m_endPos.x()+1 )
-        {
-            if( !(m_startPos.y() + m_lineWidth -1 == line.startPos().y() ) )
-                m_lineWidth++;
-             return true;
-        }
-
-        if( line.startPos().x() < m_startPos.x()-1 && line.endPos().x() > m_endPos.x()+1 )
-        {
-             if( !(m_startPos.y() + m_lineWidth -1 == line.startPos().y()) )
-                m_lineWidth++;
-
-             //m_startPos.setX(line.startPos().x());
-             //m_endPos.setX(line.endPos().x());
-             m_endPos = line.endPos();
-             return true;
-         }
-
-        if( line.startPos().x() >= m_startPos.x()-1 )
-        {
-             if( !(startPos().y() + m_lineWidth -1 == line.startPos().y()) )
-                m_lineWidth++;
-             //m_endPos.setX(line.endPos().x());
-             m_endPos = line.endPos();
-             return true;
-        }
-
-        if( line.endPos().x() <= m_endPos.x()+1 )
-        {
-             if( !(startPos().y() + m_lineWidth -1 == line.startPos().y()) )
-                m_lineWidth++;
-
-             //m_startPos.setX(line.startPos().x());
-             return true;
-        }
+        return false;
         */
+
+        if(this->isAdjacent(line))
+        {
+           QVector<Segment> segmentList = line.segments();
+           this->addSegmentList(segmentList);
+           return true;
+        }
+       return false;
+
+
 
     }
 

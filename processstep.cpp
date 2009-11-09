@@ -367,7 +367,7 @@ namespace Munip
         //removeStaffLines();
         //constructStaff();
 
-        //m_processedImage = m_lineRemovedTracker.toImage();
+        m_processedImage = m_lineRemovedTracker.toImage();
 
         emit ended();
     }
@@ -492,18 +492,18 @@ namespace Munip
                     line.addSegment(paths[i+k]);
 
                     Segment s = m_lookUpTable.value(paths[i+k]);
-                    /*
+
                     while(s.isValid())
                     {
                         line.addSegment(s);
                         s = m_lookUpTable.value(s);
                     }
-                    */
+
 
                     k++;
                 }
                 done.insert(ID);
-                //if(m_lineList.isEmpty()||!m_lineList.last().aggregate(line))
+                if(m_lineList.isEmpty()||!m_lineList.last().aggregate(line))
                     m_lineList.push_back(line);
             }
             k = (k== 0)?1:k;
@@ -516,8 +516,8 @@ namespace Munip
                 //m_lineList[i].displaySegments();
            // }
 
-         //drawDetectedLines();
-         removeLines();
+         drawDetectedLines();
+         //removeLines();
     }
 
     Segment StaffLineDetect::findMaxPath(Segment segment)
@@ -677,8 +677,8 @@ namespace Munip
             {
                 Segment s = segmentList[j];
 
-                while(s.isValid())
-                {
+                //while(s.isValid())
+                //{
                     for(int x = s.startPos().x();x <=s.endPos().x();x++)
                     {
                         QPoint above(x,s.endPos().y()-1);
@@ -704,8 +704,8 @@ namespace Munip
                         }
                     }
                     setImageMap(s,1,true);
-                    s = m_lookUpTable.value(s);
-                }
+                    //s = m_lookUpTable.value(s);
+                //}
             }
         }
         for(int y =0; y <m_processedImage.height();y++)
@@ -723,11 +723,11 @@ namespace Munip
             for(int j = 0; j < segmentList.size();j++)
             {
                 Segment s = segmentList[j];
-                while(s.isValid())
-                {
+                //while(s.isValid())
+                //{
                     convertSymbol(s);
-                    s = m_lookUpTable.value(s);
-                }
+                    //s = m_lookUpTable.value(s);
+                //}
             }
 
         }
@@ -738,14 +738,14 @@ namespace Munip
             for(int j = 0; j < segmentList.size();j++)
             {
                 Segment s = segmentList[j];
-                while(s.isValid())
-                {
+                //while(s.isValid())
+                //{
                     for(int x=s.startPos().x();x<=s.endPos().x();x++)
                        if( m_imageMap[x][s.endPos().y()] == 1 )
                             m_processedImage.setPixel(x,s.endPos().y(),White);
 
-                    s=m_lookUpTable.value(s);
-                }
+                    //s=m_lookUpTable.value(s);
+                //}
             }
         }
     }

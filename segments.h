@@ -41,6 +41,8 @@ namespace Munip
 
         Segment maxPath(const Segment &segment);
 
+        bool isConnected(const Segment &segment);
+
         private:
 
         QPoint m_startPos;
@@ -48,7 +50,7 @@ namespace Munip
         int m_connectedComponentID;
         QPoint m_destinationPos;
 
-        bool isConnected(const Segment &segment);
+
 
     };
 }
