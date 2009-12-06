@@ -151,6 +151,7 @@ namespace Munip {
         Segment findMaxPath(Segment segment);
         void constructStaff();
         void removeLines();
+        void popupHistogram();
 
 
     private:
