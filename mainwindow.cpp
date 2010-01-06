@@ -55,26 +55,26 @@ void MainWindow::setupActions()
 {
     QMenuBar *menuBar = QMainWindow::menuBar();
 
-    QAction *openAction = new QAction(QIcon(":/images/open.png"), tr("&Open"), this);
+    QAction *openAction = new QAction(QIcon(":/resources/open.png"), tr("&Open"), this);
     openAction->setShortcuts(QKeySequence::Open);
     openAction->setStatusTip(tr("Opens an image for viewing or processing"));
     connect(openAction, SIGNAL(triggered()), this, SLOT(slotOpen()));
 
-    QAction *saveAction = new QAction(QIcon(":/images/save.png"), tr("&Save"), this);
+    QAction *saveAction = new QAction(QIcon(":/resources/save.png"), tr("&Save"), this);
     saveAction->setShortcuts(QKeySequence::Save);
     saveAction->setStatusTip(tr("Saves an image"));
     connect(saveAction, SIGNAL(triggered()), this, SLOT(slotSave()));
 
-    QAction *saveAsAction = new QAction(QIcon(":/images/save-as.png"), tr("Save &As"), this);
+    QAction *saveAsAction = new QAction(QIcon(":/resources/save-as.png"), tr("Save &As"), this);
     saveAsAction->setStatusTip(tr("Prompts for a new filename for the image to be saved."));
     connect(saveAsAction, SIGNAL(triggered()), this, SLOT(slotSaveAs()));
 
-    QAction *closeAction = new QAction(QIcon(":/images/close.png"), tr("&Close window"), this);
+    QAction *closeAction = new QAction(QIcon(":/resources/close.png"), tr("&Close window"), this);
     closeAction->setShortcuts(QKeySequence::Close);
     closeAction->setStatusTip(tr("Closes the image"));
     connect(closeAction, SIGNAL(triggered()), this, SLOT(slotClose()));
 
-    QAction *quitAction = new QAction(QIcon(":/images/quit.png"), tr("&Quit"), this);
+    QAction *quitAction = new QAction(QIcon(":/resources/quit.png"), tr("&Quit"), this);
     quitAction->setShortcut(tr("Ctrl+Q"));
     quitAction->setStatusTip(tr("Quit application"));
     connect(quitAction, SIGNAL(triggered()), this, SLOT(slotQuit()));
@@ -94,17 +94,17 @@ void MainWindow::setupActions()
     fileBar->addAction(quitAction);
 
 
-    QAction *zoomInAction = new QAction(QIcon(":/images/zoom-in.png"), tr("Zoom &in"), this);
+    QAction *zoomInAction = new QAction(QIcon(":/resources/zoom-in.png"), tr("Zoom &in"), this);
     zoomInAction->setShortcuts(QKeySequence::ZoomIn);
     zoomInAction->setStatusTip(tr("Zooms in the image"));
     connect(zoomInAction, SIGNAL(triggered()), this, SLOT(slotZoomIn()));
 
-    QAction *zoomOutAction = new QAction(QIcon(":/images/zoom-out.png"), tr("Zoom &out"), this);
+    QAction *zoomOutAction = new QAction(QIcon(":/resources/zoom-out.png"), tr("Zoom &out"), this);
     zoomOutAction->setShortcuts(QKeySequence::ZoomOut);
     zoomOutAction->setStatusTip(tr("Zooms out the image"));
     connect(zoomOutAction, SIGNAL(triggered()), this, SLOT(slotZoomOut()));
 
-    m_showGridAction = new QAction(QIcon(":/images/show-grid.png"), tr("Show grid"), this);
+    m_showGridAction = new QAction(QIcon(":/resources/show-grid.png"), tr("Show grid"), this);
     m_showGridAction->setCheckable(true);
     m_showGridAction->setShortcut(tr("Ctrl+G"));
     m_showGridAction->setStatusTip(tr("Hide/Shows the grid"));
@@ -175,7 +175,7 @@ void MainWindow::setupActions()
 
     menuBar->addSeparator();
 
-    QAction *aboutAction = new QAction(QIcon(":/images/about.png"), tr("About MuNIP"), this);
+    QAction *aboutAction = new QAction(QIcon(":/resources/about.png"), tr("About MuNIP"), this);
     connect(aboutAction, SIGNAL(triggered()), this, SLOT(slotAboutMunip()));
 
     QMenu *helpMenu = menuBar->addMenu(tr("&Help"));
