@@ -1,7 +1,19 @@
 #include <QtTest/QtTest>
 #include <QImage>
 #include <QScopedPointer>
+#include <QTextStream>
 #include "processstep.h"
+
+qreal norm(qreal angle)
+{
+    while (angle > 360.0) {
+        angle -= 360;
+    }
+    while (angle < 0.0) {
+        angle += 360.0;
+    }
+    return angle;
+}
 
 class tst_SkewDetection : public QObject
 {
@@ -16,8 +28,17 @@ private Q_SLOTS:
     void skewDetect_data();
     void skewDetect();
 
+    void cleanupTestCase();
+
 private:
+    void pushStat(const QString &fileName, qreal angle, qreal accuracy) {
+        stats[fileName] << qMakePair(angle, accuracy);
+    }
     qreal calculatedAngle;
+    typedef QPair<qreal, qreal> AngleAccuracyPair;
+    typedef QHash<QString, QList<AngleAccuracyPair> > Hash;
+
+    Hash stats;
 };
 
 void tst_SkewDetection::skewDetect_data()
@@ -52,11 +73,11 @@ void tst_SkewDetection::skewDetect_data()
         QTest::newRow(qPrintable(dTag)) << data[i].fileName
                                         << image
                                         << 0.0
-                                        << data[i].actualAngle;
+                                            << data[i].actualAngle;
 
         const qreal start = -40.0;
         const qreal stop = +40.0;
-        const qreal step = 10.0;
+        const qreal step = 5.0;
 
         for (qreal s = start; s <= stop; s += step) {
             QString dataTag = data[i].fileName + QChar('_') + QString::number(s);
@@ -85,7 +106,32 @@ void tst_SkewDetection::skewDetect()
     connect(skew.data(), SIGNAL(angleCalculated(qreal)), SLOT(slotCalculatedAngle(qreal)));
     skew->process();
 
-    qDebug() << fileName << this->calculatedAngle;
+    qreal denominator = 1.0;
+    qreal accuracy = qAbs(norm(expectedAngle) - norm(calculatedAngle)) / denominator;
+    pushStat(fileName, expectedAngle, accuracy);
+    qDebug() << fileName << this->calculatedAngle << expectedAngle;
+}
+
+void tst_SkewDetection::cleanupTestCase()
+{
+    static const QString prefix = "plots";
+    for(Hash::iterator it = stats.begin(); it != stats.end(); ++it) {
+        QFile file(prefix + QChar('/') + QFileInfo(it.key()).baseName() + QString(".dat"));
+        if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            qFatal("Cannot open plot file %s for writing", qPrintable(file.fileName()));
+            return;
+        }
+
+        QTextStream stream(&file);
+        stream << QString("# ") << it.key() << endl;
+        QList<AngleAccuracyPair> &list = it.value();
+        qSort(list);
+        for(QList<AngleAccuracyPair>::iterator it  = list.begin(); it != list.end(); ++it) {
+            stream << (*it).first << " " << (*it).second << endl;
+        }
+
+        file.close();
+    }
 }
 
 QTEST_MAIN(tst_SkewDetection)
