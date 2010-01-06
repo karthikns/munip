@@ -6,10 +6,8 @@
 #include "mainwindow.h"
 #include "tools.h"
 #include "DataWarehouse.h"
-#include "projection.h"
 
 #include <QAction>
-#include <QDebug>
 #include <QInputDialog>
 #include <QLabel>
 #include <QPainter>
@@ -26,11 +24,11 @@ namespace Munip
 {
     int pageSkew;
 
-    ProcessStep::ProcessStep(const QImage& originalImage, ProcessQueue *processQueue) :
-            m_originalImage(originalImage),
-            m_processedImage(originalImage),
-            m_processQueue(processQueue),
-            m_processCompleted(false)
+        ProcessStep::ProcessStep(const QImage& originalImage, ProcessQueue *processQueue) :
+        m_originalImage(originalImage),
+        m_processedImage(originalImage),
+        m_processQueue(processQueue),
+        m_processCompleted(false)
     {
         if (!m_processQueue.isNull())
             m_processQueue->enqueue(this);
@@ -93,8 +91,8 @@ namespace Munip
     }
 
     ProcessStepAction::ProcessStepAction(const QByteArray& className, const QIcon& icon, const QString& caption, QObject *parent) :
-            QAction(icon, caption, parent),
-            m_className(className)
+        QAction(icon, caption, parent),
+        m_className(className)
     {
         connect(this, SIGNAL(triggered()), this, SLOT(execute()));
     }
@@ -181,8 +179,8 @@ namespace Munip
     }
 
     MonoChromeConversion::MonoChromeConversion(const QImage& originalImage, ProcessQueue *queue) :
-            ProcessStep(originalImage, queue),
-            m_threshold(240)
+        ProcessStep(originalImage, queue),
+        m_threshold(240)
     {
     }
 
@@ -194,9 +192,9 @@ namespace Munip
     }
 
     SkewCorrection::SkewCorrection(const QImage& originalImage, ProcessQueue *queue) :
-            ProcessStep(originalImage, queue),
-            m_workImage(originalImage),
-            m_lineSliceSize(20)//(int)originalImage.width()*0.05)
+        ProcessStep(originalImage, queue),
+        m_workImage(originalImage),
+        m_lineSliceSize(20)//(int)originalImage.width()*0.05)
     {
         Q_ASSERT(m_originalImage.format() == QImage::Format_Mono);
         //m_lineSliceSize = (int)originalImage.width()*0.05;
@@ -206,8 +204,8 @@ namespace Munip
     {
         emit started();
         double theta = std::atan(detectSkew());
-        qDebug() << Q_FUNC_INFO << theta
-                << theta*(180.0/M_PI) << endl;
+        mDebug() << Q_FUNC_INFO << theta
+                 << theta*(180.0/M_PI) << endl;
         if(theta == 0.0) {
             emit ended();
             return;
@@ -215,6 +213,7 @@ namespace Munip
 
         QTransform transform, trueTransform;
         double angle = -180.0/M_PI * theta;
+        emit angleCalculated(-angle);
         transform.rotate(angle);
         // Find out the true tranformation used (automatically adjusted
         // by QImage::transformed method)
@@ -265,26 +264,26 @@ namespace Munip
         qSort(m_skewList.begin(), m_skewList.end());
 
         foreach(double skew, m_skewList)
-            qDebug() << skew;
+            mDebug() << skew;
 
-        qDebug()<< "Display the list";
+        mDebug()<< "Display the list";
         int i = 0, n = m_skewList.size();
         int modefrequency = 0;
         int maxstartindex = -1, maxendindex = -1;
         while( i <= n-1)
         {
-            int runlength = 1;
-            double t = m_skewList[i];
-            int runvalue = (int) (t * 100);
-            while( i + runlength <= n-1 && (int)(m_skewList[i+runlength]*100) == runvalue)
-                runlength++;
-            if(runlength > modefrequency)
-            {
-                modefrequency = runlength;
-                maxstartindex = i;
-                maxendindex = i + runlength;
-            }
-            i += runlength;
+                int runlength = 1;
+                double t = m_skewList[i];
+                int runvalue = (int) (t * 100);
+                while( i + runlength <= n-1 && (int)(m_skewList[i+runlength]*100) == runvalue)
+                    runlength++;
+                if(runlength > modefrequency)
+                {
+                    modefrequency = runlength;
+                    maxstartindex = i;
+                    maxendindex = i + runlength;
+                }
+                i += runlength;
         }
 
         double skew = 0;
@@ -292,7 +291,7 @@ namespace Munip
             skew += m_skewList[i];
         skew /= modefrequency;
 
-        qDebug() << Q_FUNC_INFO <<skew;
+        mDebug() << Q_FUNC_INFO <<skew;
 
         if( skew >= 0)
             pageSkew = 1;
@@ -313,9 +312,9 @@ namespace Munip
         if(m_workImage.pixelIndex(x+1,y) == White && m_workImage.pixelIndex(x+1,y+1) == White && m_workImage.pixelIndex(x+1,y-1) == White && points.size() >= m_lineSliceSize )
         {
 
-            double skew;
-            m_skewList.push_back((skew = findSkew(points)));
-            points.pop_back();
+              double skew;
+              m_skewList.push_back((skew = findSkew(points)));
+              points.pop_back();
 
         }
         if(m_workImage.pixelIndex(x+1, y+1) == Black &&
@@ -351,7 +350,7 @@ namespace Munip
     }
 
     StaffLineDetect::StaffLineDetect(const QImage& originalImage, ProcessQueue *queue) :
-            ProcessStep(originalImage, queue)
+        ProcessStep(originalImage, queue)
     {
         Q_ASSERT(originalImage.format() == QImage::Format_Mono);
         m_connectedComponentID = 1;
@@ -369,7 +368,6 @@ namespace Munip
         //constructStaff();
 
         m_processedImage = m_lineRemovedTracker.toImage();
-        popupHistogram();
 
         emit ended();
     }
@@ -416,10 +414,10 @@ namespace Munip
             while( x < m_processedImage.width() )
             {
                 while(x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == Black )
-                    x++;
+                        x++;
 
                 while( x+countWhite < m_processedImage.width() && m_processedImage.pixelIndex(x+countWhite,y) == White )
-                    countWhite++;
+                        countWhite++;
                 if(checkDiscontinuity(countWhite))
                     end = QPoint(x-1,y);
                 else {
@@ -437,7 +435,7 @@ namespace Munip
                 start = QPoint(x,y);
             }
         }
-        findPaths();
+       findPaths();
 
     }
 
@@ -445,21 +443,21 @@ namespace Munip
     {
 
 
-        for(int y = 0; y <m_processedImage.height() ; y++)
-            for(int i = 0; i < m_segments[y].size(); i++)
-            {
-            findMaxPath(m_segments[y][i]);
-            m_connectedComponentID++;
-        }
+       for(int y = 0; y <m_processedImage.height() ; y++)
+          for(int i = 0; i < m_segments[y].size(); i++)
+          {
+               findMaxPath(m_segments[y][i]);
+               m_connectedComponentID++;
+          }
 
         QList<Segment> segmentList = m_lookUpTable.uniqueKeys();
         QVector<Segment> paths;
         foreach(Segment p,segmentList)
-            paths.push_back(p);
+           paths.push_back(p);
 
         qSort( paths.begin(),paths.end(),segmentSortByWeight );
         for(int i = 0; i < paths.size(); i++)
-            qDebug()<<paths[i].startPos()<<paths[i].endPos()<<m_lookUpTable.value(paths[i]).startPos()<<m_lookUpTable.value(paths[i]).endPos()<<paths[i].destinationPos();
+            mDebug()<<paths[i].startPos()<<paths[i].endPos()<<m_lookUpTable.value(paths[i]).startPos()<<m_lookUpTable.value(paths[i]).endPos()<<paths[i].destinationPos();
 
         Segment maxWeightPath = paths[0];
 
@@ -473,7 +471,7 @@ namespace Munip
         // Now construct the lines from optimal segments
 
         const int size = paths.size();
-        qDebug() << Q_FUNC_INFO << " Size = " << size;
+        mDebug() << Q_FUNC_INFO << " Size = " << size;
 
         qSort( paths.begin(),paths.end(),segmentSortByConnectedComponentID);
         QSet<int> done;
@@ -513,29 +511,29 @@ namespace Munip
         qSort(m_lineList.begin(),m_lineList.end(),staffLineSort);
 
         for(int i = 0; i < m_lineList.size(); i++)
-            qDebug() <<Q_FUNC_INFO<< m_lineList[i].startPos() << m_lineList[i].endPos()<<m_lineList[i].boundingBox();
-        //m_lineList[i].displaySegments();
-        // }
+                    mDebug() <<Q_FUNC_INFO<< m_lineList[i].startPos() << m_lineList[i].endPos()<<m_lineList[i].boundingBox();
+                //m_lineList[i].displaySegments();
+           // }
 
-        drawDetectedLines();
-        //removeLines();
+         drawDetectedLines();
+         //removeLines();
     }
 
     Segment StaffLineDetect::findMaxPath(Segment segment)
     {
-        if( !segment.isValid()) {
+       if( !segment.isValid()) {
             return segment;
-        }
-        //qDebug() << Q_FUNC_INFO << segment.startPos() << segment.endPos();
+       }
+       //mDebug() << Q_FUNC_INFO << segment.startPos() << segment.endPos();
 
-        if( m_lookUpTable.contains(segment) )
+       if( m_lookUpTable.contains(segment) )
         {
 
-            QHash<Segment,Segment> ::iterator i;
-            i = m_lookUpTable.find(segment);
-            segment = i.key();
+           QHash<Segment,Segment> ::iterator i;
+           i = m_lookUpTable.find(segment);
+           segment = i.key();
 
-            return segment;
+           return segment;
         }
 
         QVector<Segment> segments;
@@ -587,13 +585,13 @@ namespace Munip
         }
 
 
-        if( path.isValid())
+       if( path.isValid())
         {
-            segment.setDestinationPos(path.destinationPos());
-            segment.setConnectedComponentID(path.connectedComponentID());
+           segment.setDestinationPos(path.destinationPos());
+           segment.setConnectedComponentID(path.connectedComponentID());
         }
-        else
-            segment.setConnectedComponentID(m_connectedComponentID);
+       else
+           segment.setConnectedComponentID(m_connectedComponentID);
 
         m_lookUpTable.insert(segment,path);
         return segment;
@@ -618,26 +616,26 @@ namespace Munip
 
     void StaffLineDetect ::drawDetectedLines()
     {
-        QPainter p(&m_lineRemovedTracker);
+         QPainter p(&m_lineRemovedTracker);
 
-        int i = 0;
+         int i = 0;
 
-        QSet<Segment> visited;
-        while( i< m_lineList.size() )
-        {
-            p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
-            foreach(Segment s,m_lineList[i].segments())
-                while(s.isValid() && !visited.contains(s))
-                {
-                // p.drawLine(m_lineList[i].startPos(),m_lineList[i].endPos());
-                visited.insert(s);
-                p.drawLine(s.startPos(),s.endPos());
-                s = m_lookUpTable.value(s);
-            }
+         QSet<Segment> visited;
+         while( i< m_lineList.size() )
+         {
+              p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
+             foreach(Segment s,m_lineList[i].segments())
+                 while(s.isValid() && !visited.contains(s))
+                 {
+               // p.drawLine(m_lineList[i].startPos(),m_lineList[i].endPos());
+                    visited.insert(s);
+                    p.drawLine(s.startPos(),s.endPos());
+                    s = m_lookUpTable.value(s);
+                }
             i++;
-        }
+         }
 
-    }
+     }
 
     void StaffLineDetect ::removeLines()
     {
@@ -653,30 +651,30 @@ namespace Munip
             {
                 Segment s = segmentList[j];
                 for(int x = s.startPos().x();x <=s.endPos().x();x++)
-                {
-                    QPoint above(x,s.endPos().y()-1);
-                    QPoint below(x,s.endPos().y()+1);
-                    Segment a,b;
-
-                    if( above.y() >= 0)
-                        a = s.getSegment(above,m_segments[above.y()]);
-
-                    if( below.y() < m_processedImage.height())
-                        b = s.getSegment(below,m_segments[below.y()]);
-
-
-                    if(a.isValid() && !noisySegmentList.contains(a))
                     {
-                        noisySegmentList.insert(a);
-                        setImageMap(a,1,true);
+                        QPoint above(x,s.endPos().y()-1);
+                        QPoint below(x,s.endPos().y()+1);
+                        Segment a,b;
+
+                        if( above.y() >= 0)
+                           a = s.getSegment(above,m_segments[above.y()]);
+
+                        if( below.y() < m_processedImage.height())
+                            b = s.getSegment(below,m_segments[below.y()]);
+
+
+                        if(a.isValid() && !noisySegmentList.contains(a))
+                        {
+                            noisySegmentList.insert(a);
+                            setImageMap(a,1,true);
+                        }
+                        if( b.isValid() && !noisySegmentList.contains(b))
+                        {
+                            noisySegmentList.insert(b);
+                            setImageMap(b,1,true);
+                        }
                     }
-                    if( b.isValid() && !noisySegmentList.contains(b))
-                    {
-                        noisySegmentList.insert(b);
-                        setImageMap(b,1,true);
-                    }
-                }
-                setImageMap(s,1,true);
+                    setImageMap(s,1,true);
             }
         }
         for(int y =0; y <m_processedImage.height();y++)
@@ -706,8 +704,8 @@ namespace Munip
             {
                 Segment s = segmentList[j];
                 for(int x=s.startPos().x();x<=s.endPos().x();x++)
-                    if( m_imageMap[x][s.endPos().y()] == 1 )
-                        m_processedImage.setPixel(x,s.endPos().y(),White);
+                       if( m_imageMap[x][s.endPos().y()] == 1 )
+                            m_processedImage.setPixel(x,s.endPos().y(),White);
             }
         }
     }
@@ -741,21 +739,7 @@ namespace Munip
 
     }
 
-    void StaffLineDetect::popupHistogram()
-    {
-        MainWindow *main = MainWindow::instance();
-        if (!main) return;
 
-        const QList<Segment> keys = m_lookUpTable.keys();
-
-        ProjectionData data;
-        foreach (Segment s, keys) {
-            data << s.weight();
-        }
-
-        Munip::ProjectionWidget *wid = new Munip::ProjectionWidget(data);
-        main->addSubWindow(wid);
-    }
 
 
 
@@ -817,7 +801,7 @@ namespace Munip
                 }
             }
         }
-        qDebug()<<Q_FUNC_INFO<<p1.x()<<p2.x();
+        mDebug()<<Q_FUNC_INFO<<p1.x()<<p2.x();
         int width = p2.x() - p1.x();
         for(int y = 0; y < m_processedImage.height(); y++)
         {
@@ -837,7 +821,7 @@ namespace Munip
                         m_lineLocation.push_back(start);
                         m_lineLocation.push_back(end);
                         m_isLine[y] = 1;
-                        qDebug()<<start<<end<<count<<width;
+                        mDebug()<<start<<end<<count<<width;
                     }
                     done = true;
 
@@ -1174,24 +1158,40 @@ namespace Munip
 
     }
 
+    const qreal ImageRotation::InvalidAngle = -353;
+
     ImageRotation::ImageRotation(const QImage& image, ProcessQueue *queue) :
-        ProcessStep(image, queue)
+        ProcessStep(image, queue), m_angle(ImageRotation::InvalidAngle)
     {
+    }
+
+    ImageRotation::ImageRotation(const QImage& image, qreal _angle, ProcessQueue *queue) :
+        ProcessStep(image, queue), m_angle(_angle)
+    {
+        if (qAbs(m_angle) > 45.0) {
+            mDebug() << Q_FUNC_INFO << "Invalid angle passed" << _angle;
+            m_angle = 5.0 * (m_angle/qAbs(m_angle));
+       }
     }
 
     void ImageRotation::process()
     {
         emit started();
         QImage::Format destFormat = m_originalImage.format();
-        bool ok;
-        qreal angle = QInputDialog::getDouble(0, tr("Angle"), tr("Enter rotation angle in degrees for image rotation"),
+
+        if (qFuzzyCompare(m_angle, ImageRotation::InvalidAngle)) {
+            bool ok;
+            qreal angle = QInputDialog::getDouble(0, tr("Angle"), tr("Enter rotation angle in degrees for image rotation"),
                                          5, -45, 45, 1, &ok);
-        if (!ok) {
-            angle = 5;
+            if (!ok) {
+                angle = 5;
+            }
+
+            m_angle = angle;
         }
 
         QTransform transform;
-        transform.rotate(angle);
+        transform.rotate(m_angle);
         transform = m_originalImage.trueMatrix(transform, m_originalImage.width(), m_originalImage.height());
 
         m_processedImage = m_processedImage.transformed(transform, Qt::SmoothTransformation);

@@ -2,6 +2,8 @@
 #define PROCESSSTEP_H
 
 #include <QAction>
+#include <QDataStream>
+#include <QDebug>
 #include <QQueue>
 #include <QPoint>
 #include <QHash>
@@ -9,6 +11,17 @@
 #include <QVariant>
 #include "staff.h"
 #include "segments.h"
+
+#ifdef MUNIP_DEBUG
+    #define mDebug qDebug
+#else
+    struct MDebug : public QDebug
+    {
+        MDebug() : QDebug(&myData) {}
+        QString myData;
+    };
+    #define mDebug MDebug
+#endif
 
 class QIcon;
 class HorizontalRunlengthImage;
@@ -129,6 +142,9 @@ namespace Munip {
         void dfs(int x, int y, QList<QPoint> points);
         double findSkew(QList<QPoint> &points);
 
+    Q_SIGNALS:
+        void angleCalculated(qreal angleInDegrees);
+
     private:
         QImage m_workImage;
         const int m_lineSliceSize;
@@ -209,7 +225,12 @@ namespace Munip {
         Q_OBJECT;
     public:
         ImageRotation(const QImage& originalImage, ProcessQueue *processQueue = 0);
+        ImageRotation(const QImage& originalImage, qreal _angle, ProcessQueue *processQueue = 0);
         virtual void process();
+
+    private:
+        static const qreal InvalidAngle;
+        qreal m_angle;
     };
 }
 

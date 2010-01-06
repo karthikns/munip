@@ -7,7 +7,7 @@ TARGET = munip
 DEPENDPATH += .
 INCLUDEPATH += .
 
-CONFIG += debug console
+CONFIG += debug
 # Input
 HEADERS += DataWarehouse.h \
            horizontalrunlengthimage.h \
@@ -31,6 +31,8 @@ SOURCES += DataWarehouse.cpp \
            staff.cpp \
            tools.cpp
 RESOURCES += munipresources.qrc
+
+DEFINES += MUNIP_DEBUG
 
 MOC_DIR = .tmp
 UI_DIR = .tmp
