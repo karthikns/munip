@@ -214,6 +214,7 @@ namespace Munip
         QTransform transform, trueTransform;
         double angle = -180.0/M_PI * theta;
         emit angleCalculated(-angle);
+        mDebug() << "                  " << Q_FUNC_INFO << -angle << endl;
         transform.rotate(angle);
         // Find out the true tranformation used (automatically adjusted
         // by QImage::transformed method)
@@ -1158,7 +1159,7 @@ namespace Munip
 
     }
 
-    const qreal ImageRotation::InvalidAngle = -353;
+    const qreal ImageRotation::InvalidAngle = -753;
 
     ImageRotation::ImageRotation(const QImage& image, ProcessQueue *queue) :
         ProcessStep(image, queue), m_angle(ImageRotation::InvalidAngle)
@@ -1168,10 +1169,6 @@ namespace Munip
     ImageRotation::ImageRotation(const QImage& image, qreal _angle, ProcessQueue *queue) :
         ProcessStep(image, queue), m_angle(_angle)
     {
-        if (qAbs(m_angle) > 45.0) {
-            mDebug() << Q_FUNC_INFO << "Invalid angle passed" << _angle;
-            m_angle = 5.0 * (m_angle/qAbs(m_angle));
-       }
     }
 
     void ImageRotation::process()

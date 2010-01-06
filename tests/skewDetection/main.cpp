@@ -57,7 +57,13 @@ void tst_SkewDetection::skewDetect_data()
     #define S QString
     Data data[] = {
         { S("image.bmp"), 0.0 },
-        { S("music3.bmp"), 0.0 }
+        { S("music1.bmp"), -4.94 },
+        { S("music2.bmp"), 14.956 },
+        { S("music3.bmp"), 0.0 },
+        { S("music4.bmp"), -7.99 },
+        { S("scan0022.jpg"), 12.66 },
+        { S("scan0022small.jpg"), 12.66 },
+        { S("scan0025.jpg"), 26.08 }
     };
     #undef S
 
@@ -77,7 +83,7 @@ void tst_SkewDetection::skewDetect_data()
 
         const qreal start = -40.0;
         const qreal stop = +40.0;
-        const qreal step = 5.0;
+        const qreal step = 10.0;
 
         for (qreal s = start; s <= stop; s += step) {
             QString dataTag = data[i].fileName + QChar('_') + QString::number(s);
@@ -101,15 +107,18 @@ void tst_SkewDetection::skewDetect()
     QScopedPointer<Munip::ProcessStep> rotate(new Munip::ImageRotation(image, rotateBy));
     rotate->process();
     image = rotate->processedImage();
+    image.save(QString("plots/Png/%1_%2_beforeSkew.png").arg(QFileInfo(fileName).baseName()).arg(expectedAngle));
 
     QScopedPointer<Munip::ProcessStep> skew(new Munip::SkewCorrection(image));
     connect(skew.data(), SIGNAL(angleCalculated(qreal)), SLOT(slotCalculatedAngle(qreal)));
     skew->process();
 
     qreal denominator = 1.0;
-    qreal accuracy = qAbs(norm(expectedAngle) - norm(calculatedAngle)) / denominator;
+    qreal accuracy = qAbs((expectedAngle) - (calculatedAngle)) / denominator;
     pushStat(fileName, expectedAngle, accuracy);
-    qDebug() << fileName << this->calculatedAngle << expectedAngle;
+    qDebug() << fileName << this->calculatedAngle << expectedAngle << rotateBy;
+    skew->processedImage().save(QString("plots/Png/%1_%2_laterSkew.png").arg(QFileInfo(fileName).baseName()).arg(expectedAngle));
+
 }
 
 void tst_SkewDetection::cleanupTestCase()
