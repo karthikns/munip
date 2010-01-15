@@ -104,10 +104,19 @@ void tst_SkewDetection::skewDetect()
     QFETCH(qreal, rotateBy);
     QFETCH(qreal, expectedAngle);
 
+    // Ensure the existence of directory
+    {
+        QDir dir;
+        dir.mkdir("plots");
+        dir.mkdir("plots/Png");
+    }
+    const QString path = QString("plots/Png/%1_%2/").arg(QFileInfo(fileName).baseName()).arg(expectedAngle);
+    QDir().mkdir(path);
+
     QScopedPointer<Munip::ProcessStep> rotate(new Munip::ImageRotation(image, rotateBy));
     rotate->process();
     image = rotate->processedImage();
-    image.save(QString("plots/Png/%1_%2_beforeSkew.png").arg(QFileInfo(fileName).baseName()).arg(expectedAngle));
+    image.save(path + QString("beforeSkew.png"));
 
     QScopedPointer<Munip::ProcessStep> skew(new Munip::SkewCorrection(image));
     connect(skew.data(), SIGNAL(angleCalculated(qreal)), SLOT(slotCalculatedAngle(qreal)));
@@ -117,8 +126,7 @@ void tst_SkewDetection::skewDetect()
     qreal accuracy = qAbs((expectedAngle) - (calculatedAngle)) / denominator;
     pushStat(fileName, expectedAngle, accuracy);
     qDebug() << fileName << this->calculatedAngle << expectedAngle << rotateBy;
-    skew->processedImage().save(QString("plots/Png/%1_%2_laterSkew.png").arg(QFileInfo(fileName).baseName()).arg(expectedAngle));
-
+    skew->processedImage().save(path + QString("afterSkew.png"));
 }
 
 void tst_SkewDetection::cleanupTestCase()
