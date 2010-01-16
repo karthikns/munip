@@ -145,6 +145,8 @@ namespace Munip {
         void dfs(int x, int y, QList<QPoint> points);
         double findSkew(QList<QPoint> &points);
 
+        QList<double> skewList() const { return m_skewList; }
+
     Q_SIGNALS:
         void angleCalculated(qreal angleInDegrees);
 
