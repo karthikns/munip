@@ -22,8 +22,6 @@
 
 namespace Munip
 {
-    int pageSkew;
-
         ProcessStep::ProcessStep(const QImage& originalImage, ProcessQueue *processQueue) :
         m_originalImage(originalImage),
         m_processedImage(originalImage),
@@ -264,11 +262,19 @@ namespace Munip
         // Computation of the skew with highest frequency
         qSort(m_skewList.begin(), m_skewList.end());
 
-        foreach(double skew, m_skewList)
+        mDebug() << endl << Q_FUNC_INFO << "Display the list";
+        foreach(double skew, m_skewList) {
             mDebug() << skew;
+        }
+        mDebug() << endl;
 
-        mDebug()<< "Display the list";
+
         int i = 0, n = m_skewList.size();
+        if (n == 0) {
+            mWarning() << "Empty skew list encountered";
+            return 0.0;
+        }
+
         int modefrequency = 0;
         int maxstartindex = -1, maxendindex = -1;
         while( i <= n-1)
@@ -276,29 +282,22 @@ namespace Munip
                 int runlength = 1;
                 double t = m_skewList[i];
                 int runvalue = (int) (t * 100);
-                while( i + runlength <= n-1 && (int)(m_skewList[i+runlength]*100) == runvalue)
+                while( i + runlength <= n-1 && (int)(m_skewList[i+runlength]*100) == runvalue) {
                     runlength++;
+                }
                 if(runlength > modefrequency)
                 {
                     modefrequency = runlength;
                     maxstartindex = i;
-                    maxendindex = i + runlength;
+                    maxendindex = i + runlength - 1;
                 }
                 i += runlength;
         }
 
         double skew = 0;
-        for(int i = maxstartindex; i<= maxendindex;i++)
+        for(int i = maxstartindex; i <= maxendindex; i++)
             skew += m_skewList[i];
         skew /= modefrequency;
-
-        mDebug() << Q_FUNC_INFO <<skew;
-
-        if( skew >= 0)
-            pageSkew = 1;
-
-        else
-            pageSkew = -1;
 
         return skew;
     }
@@ -310,31 +309,39 @@ namespace Munip
         const int White = 1 - Black;
 
         m_workImage.setPixel(x, y, White);
-        if(m_workImage.pixelIndex(x+1,y) == White && m_workImage.pixelIndex(x+1,y+1) == White && m_workImage.pixelIndex(x+1,y-1) == White && points.size() >= m_lineSliceSize )
-        {
 
-              double skew;
-              m_skewList.push_back((skew = findSkew(points)));
+        const bool xPlus1Valid = (x+1 >= 0 && x+1 < m_workImage.width());
+        const bool yMinus1Valid = (y-1 >= 0 && y-1 < m_workImage.height());
+        const bool yPlus1Valid = (y+1 >= 0 && y+1 < m_workImage.height());
+
+
+        bool noBlacks = (!xPlus1Valid) ||
+                         ((m_workImage.pixelIndex(x+1, y) == White) &&
+                          (!yMinus1Valid || m_workImage.pixelIndex(x+1, y-1) == White) &&
+                          (!yPlus1Valid || m_workImage.pixelIndex(x+1, y+1) == White));
+        if(noBlacks && points.size() >= m_lineSliceSize )
+        {
+              double skew = findSkew(points);
+              m_skewList.push_back(skew);
               points.pop_back();
+        }
 
-        }
-        if(m_workImage.pixelIndex(x+1, y+1) == Black &&
-           x+1 < m_workImage.width() &&
-           y + 1 < m_workImage.height())
-        {
-            points.push_back(QPoint(x,y));
-            dfs(x+1, y+1, points);
-        }
-        if(m_workImage.pixelIndex(x+1, y) == Black &&
-           x+1 < m_workImage.width())
-        {
-            points.push_back(QPoint(x,y));
-            dfs(x+1, y, points);
-        }
-        if(m_workImage.pixelIndex(x+1, y-1) == Black && y-1 > 0)
-        {
-            points.push_back(QPoint(x,y));
-            dfs(x+1, y-1, points);
+        if (xPlus1Valid) {
+            if(yPlus1Valid && m_workImage.pixelIndex(x+1, y+1) == Black)
+            {
+                points.push_back(QPoint(x,y));
+                dfs(x+1, y+1, points);
+            }
+            if(m_workImage.pixelIndex(x+1, y) == Black)
+            {
+                points.push_back(QPoint(x,y));
+                dfs(x+1, y, points);
+            }
+            if(yMinus1Valid && m_workImage.pixelIndex(x+1, y-1))
+            {
+                points.push_back(QPoint(x,y));
+                dfs(x+1, y-1, points);
+            }
         }
     }
 

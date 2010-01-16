@@ -121,8 +121,11 @@ void tst_SkewDetection::skewDetect()
 void tst_SkewDetection::cleanupTestCase()
 {
     static const QString prefix = "plots";
+    QStringList datFileNames;
     for(Hash::iterator it = stats.begin(); it != stats.end(); ++it) {
-        QFile file(prefix + QChar('/') + QFileInfo(it.key()).baseName() + QString(".dat"));
+        QString fileName = prefix + QChar('/') + QFileInfo(it.key()).baseName() + QString(".dat");
+        datFileNames << fileName;
+        QFile file(fileName);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             qFatal("Cannot open plot file %s for writing", qPrintable(file.fileName()));
             return;
@@ -138,6 +141,20 @@ void tst_SkewDetection::cleanupTestCase()
 
         file.close();
     }
+
+    QStringList args;
+    args << "-e";
+    QString secondArg("set terminal png; set output 'plots/plot.png'; set xrange [-45:45]; set yrange [0:5]; plot ");
+    for (int i = 0; i < datFileNames.size(); ++i) {
+        secondArg += QChar('\'');
+        secondArg += datFileNames[i];
+        secondArg += QChar('\'');
+        secondArg += " using 1:2 with lines";
+        secondArg += (i == datFileNames.size()-1 ? ';' : ',');
+   }
+   args << secondArg;
+
+   QProcess::execute(QString("gnuplot"), args);
 }
 
 QTEST_MAIN(tst_SkewDetection)
