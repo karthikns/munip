@@ -1,0 +1,6 @@
+Makefile
+.tmp
+*.user
+munip
+tests/skewDetection/plots/
+tests/skewDetection/skewDetection
