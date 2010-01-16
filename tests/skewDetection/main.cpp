@@ -4,17 +4,6 @@
 #include <QTextStream>
 #include "processstep.h"
 
-qreal norm(qreal angle)
-{
-    while (angle > 360.0) {
-        angle -= 360;
-    }
-    while (angle < 0.0) {
-        angle += 360.0;
-    }
-    return angle;
-}
-
 class tst_SkewDetection : public QObject
 {
 Q_OBJECT
