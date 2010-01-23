@@ -225,6 +225,17 @@ namespace Munip {
     };
 
 
+    class StaffParamExtraction : public ProcessStep
+    {
+    Q_OBJECT
+    public:
+        StaffParamExtraction(const QImage& originalImage, ProcessQueue *queue);
+        virtual void process();
+
+    private:
+        QMap<int, int> m_runLengths[2];
+    };
+
     class ImageRotation : public ProcessStep
     {
         Q_OBJECT;

@@ -8,16 +8,19 @@
 #include "DataWarehouse.h"
 
 #include <QAction>
+#include <QFile>
 #include <QInputDialog>
 #include <QLabel>
 #include <QPainter>
 #include <QPen>
+#include <QProcess>
 #include <QRgb>
 #include <QSet>
 #include <QStack>
+#include <QTextStream>
 #include <QVector>
-#include <iostream>
 
+#include <iostream>
 #include <cmath>
 
 namespace Munip
@@ -130,6 +133,8 @@ namespace Munip
             step = new StaffLineDetect(originalImage, queue);
         else if (className == QByteArray("StaffLineRemoval"))
             step = new StaffLineRemoval(originalImage, queue);
+        else if (className == QByteArray("StaffParamExtraction"))
+            step = new StaffParamExtraction(originalImage, queue);
         else if (className == QByteArray("ImageRotation"))
             step = new ImageRotation(originalImage, queue);
 
@@ -1164,6 +1169,102 @@ void StaffLineRemoval::removeLine(QPoint& start,QPoint& end)
     }
 
 
+}
+
+StaffParamExtraction::StaffParamExtraction(const QImage& originalImage, ProcessQueue *queue) :
+    ProcessStep(originalImage, queue)
+{
+    Q_ASSERT(originalImage.format() == QImage::Format_Mono);
+    // Ensure non zero dimension;
+    Q_ASSERT(originalImage.height() * originalImage.width() > 0);
+}
+
+void StaffParamExtraction::process()
+{
+    emit started();
+
+    const int Black = m_originalImage.color(0) == 0xffffffff ? 1 : 0;
+    const int White = 1 - Black;
+
+
+    m_runLengths[0].clear();
+    m_runLengths[1].clear();
+
+    for (int x = 0; x < m_originalImage.width(); ++x) {
+        int runLength = 0;
+        int currentColor = m_originalImage.pixelIndex(x, 0);
+        for (int y = 0; y < m_originalImage.height(); ++y) {
+            if (m_originalImage.pixelIndex(x, y) == currentColor) {
+                runLength++;
+            } else {
+                m_runLengths[currentColor][runLength]++;
+                currentColor = m_originalImage.pixelIndex(x, y);
+                runLength = 1;
+            }
+        }
+    }
+
+    QString fileNames[2];
+    fileNames[Black] = QString("Black");
+    fileNames[White] = QString("White");
+
+    QString labels[2];
+    labels[Black] = QString("StaffLineHeight");
+    labels[White] = QString("StaffSpaceHeight");
+
+    for (int i = 0; i < 2; ++i) {
+        int maxRun = 0, maxValue = 0;
+        QFile file(fileNames[i] + QString(".dat"));
+        file.open(QIODevice::WriteOnly | QIODevice::Text);
+
+        QTextStream stream(&file);
+        QList<int> keys = m_runLengths[i].keys();
+        qSort(keys);
+
+        foreach (int k, keys) {
+            stream << k << " " << m_runLengths[i][k] << endl;
+            if (m_runLengths[i][k] > maxRun) {
+                maxValue = k;
+                maxRun = m_runLengths[i][k];
+            }
+        }
+        file.close();
+
+        QStringList args;
+        args << "-e";
+        args << QString("set terminal png;"
+                        "set output '%1.png';"
+                        "set label '  %2 = %3 (%4 freq)' at %5, %6 point;"
+                        "set yrange[0:%7];"
+                        "plot '%8.dat' using 1:2 with impulses;")
+                .arg(fileNames[i])
+                .arg(labels[i])
+                .arg(maxValue)
+                .arg(maxRun)
+                .arg(maxValue)
+                .arg(maxRun)
+                .arg(maxRun + 250)
+                .arg(fileNames[i]);
+
+        QProcess::execute(QString("gnuplot"), args);
+    }
+
+    QImage plots[2];
+    plots[Black].load(fileNames[Black] + QString(".png"));
+    plots[White].load(fileNames[White] + QString(".png"));
+
+    QSize sz;
+    sz.setWidth(qMax(plots[0].width(), plots[1].width()));
+    sz.setHeight(plots[0].height() + 50 + plots[1].height());
+    m_processedImage = QImage(sz, QImage::Format_ARGB32_Premultiplied);
+    m_processedImage.fill(0xffffffff);
+
+    QPainter p(&m_processedImage);
+    p.drawImage(QPoint(0, 0), plots[0]);
+    p.drawImage(QPoint(0, plots[0].height() + 50), plots[1]);
+    p.end();
+
+    emit ended();
 }
 
 const qreal ImageRotation::InvalidAngle = -753;

@@ -142,9 +142,15 @@ void MainWindow::setupActions()
                                                              tr("&Remove Staff lines"), this);
     staffLineRemoval->setShortcut(tr("Ctrl+5"));
 
+
+    QAction *staffParamAction = new Munip::ProcessStepAction("StaffParamExtraction", QIcon(),
+                                                             tr("&Staff Parameter extraction"), this);
+    staffParamAction->setShortcut(tr("Ctrl+6"));
+    staffParamAction->setStatusTip(tr("Computes staff space height and staff line height of a deskewewd image"));;
+
     QAction *rotation = new Munip::ProcessStepAction("ImageRotation", QIcon(),
                                                      tr("&Rotate image"), this);
-    rotation->setShortcut(tr("Ctrl+6"));
+    rotation->setShortcut(tr("Ctrl+7"));
 
     QAction *projectionAction = new QAction(tr("&Projection"), this);
     projectionAction->setShortcut(tr("Ctrl+P"));
@@ -157,6 +163,7 @@ void MainWindow::setupActions()
     processMenu->addAction(correctSkewAction);
     processMenu->addAction(staffLineDetect);
     processMenu->addAction(staffLineRemoval);
+    processMenu->addAction(staffParamAction);
     processMenu->addAction(rotation);
     processMenu->addAction(projectionAction);
 
@@ -166,6 +173,7 @@ void MainWindow::setupActions()
     processBar->addAction(correctSkewAction);
     processBar->addAction(staffLineDetect);
     processBar->addAction(staffLineRemoval);
+    processBar->addAction(staffParamAction);
     processBar->addAction(rotation);
     processBar->addAction(projectionAction);
 

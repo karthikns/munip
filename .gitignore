@@ -4,3 +4,7 @@ Makefile
 munip
 tests/skewDetection/plots/
 tests/skewDetection/skewDetection
+Black.png
+White.png
+*.dat
+*.swp
