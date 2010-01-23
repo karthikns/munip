@@ -1198,7 +1198,7 @@ void ImageRotation::process()
     transform.rotate(m_angle);
     transform = m_originalImage.trueMatrix(transform, m_originalImage.width(), m_originalImage.height());
 
-    m_processedImage = m_processedImage.transformed(transform, Qt::SmoothTransformation);
+    m_processedImage = m_processedImage.transformed(transform, Qt::FastTransformation);
     if (destFormat == QImage::Format_Mono) {
         m_processedImage = Munip::convertToMonochrome(m_processedImage, 240);
     } else {
