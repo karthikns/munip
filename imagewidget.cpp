@@ -158,6 +158,8 @@ void ImageWidget::init()
     setDragMode(ScrollHandDrag);
     viewport()->setCursor(QCursor(Qt::ArrowCursor));
 
+    m_skewDetector = 0;
+
     MainWindow *instance = MainWindow::instance();
     if (instance) {
         connect(this, SIGNAL(statusMessage(const QString&)),
@@ -328,14 +330,51 @@ void ImageWidget::wheelEvent(QWheelEvent *event)
     }
 }
 
+void ImageWidget::mousePressEvent(QMouseEvent *event)
+{
+    QPoint pf = m_imageItem->mapFromScene(mapToScene(event->pos())).toPoint();
+
+    if (event->buttons().testFlag(Qt::MidButton)) {
+        if (m_skewDetector) {
+            if (m_skewDetector->pen().color() == QColor(Qt::green)) {
+                delete m_skewDetector;
+                m_skewDetector = 0;
+            } else {
+                QLineF line = m_skewDetector->line();
+                line.setP2(pf);
+                m_skewDetector->setLine(line);
+                m_skewDetector->setPen(QPen(Qt::green, 1));
+            }
+        } else {
+            m_skewDetector = new QGraphicsLineItem(m_imageItem);
+            m_skewDetector->setLine(QLineF(pf, pf));
+            m_skewDetector->setPen(QPen(Qt::blue, 1));
+            scene()->addItem(m_skewDetector);
+        }
+        updateStatusMessage();
+    }
+    QGraphicsView::mousePressEvent(event);
+}
+
 void ImageWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    QPointF pf = mapToScene(event->pos());
-    pf = m_imageItem->mapFromScene(pf);
-    QPoint p(int(pf.x()), int(pf.y()));
-    QString msg = QString("%1, %2").arg(p.x()).arg(p.y());
-    emit statusMessage(msg);
+    m_mousePos = m_imageItem->mapFromScene(mapToScene(event->pos())).toPoint();
+    if (m_skewDetector && m_skewDetector->pen().color() != QColor(Qt::green)) {
+        QLineF line = m_skewDetector->line();
+        line.setP2(m_mousePos);
+        m_skewDetector->setLine(line);
+    }
+    updateStatusMessage();
     QGraphicsView::mouseMoveEvent(event);
+}
+
+void ImageWidget::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_Escape) {
+        delete m_skewDetector;
+        m_skewDetector = 0;
+        updateStatusMessage();
+    }
 }
 
 void ImageWidget::setScale(qreal scale)
@@ -349,4 +388,16 @@ void ImageWidget::setScale(qreal scale)
         setSceneRect(transform.map(m_imageItem->boundingRect()).boundingRect());
 
     }
+}
+
+void ImageWidget::updateStatusMessage()
+{
+    QString msg = QString("%1, %2").arg(m_mousePos.x()).arg(m_mousePos.y());
+    if (m_skewDetector) {
+        qreal angle = m_skewDetector->line().angle();
+        while (angle > 180.0) angle -= 360.0;
+
+        msg += QString("Skew: %1)").arg(angle);
+    }
+    emit statusMessage(msg);
 }

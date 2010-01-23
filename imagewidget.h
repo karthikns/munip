@@ -81,11 +81,14 @@ Q_SIGNALS:
 protected:
     void drawForeground(QPainter *painter, const QRectF& rect);
     void wheelEvent(QWheelEvent *event);
+    void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
+    void keyPressEvent(QKeyEvent *event);
 
 private:
     void init();
     void setScale(qreal scale);
+    void updateStatusMessage();
 
     ImageItem *m_imageItem;
     QString m_fileName;
@@ -97,6 +100,8 @@ private:
 
     RulerItem *m_ruler;
     QGraphicsRectItem *m_boundaryItem;
+    QGraphicsLineItem *m_skewDetector;
+    QPoint m_mousePos;
 };
 
 #endif
