@@ -48,13 +48,13 @@ void tst_SkewDetection::skewDetect_data()
     static const QString prefix = "../../images/";
     #define S QString
     Data data[] = {
-        { S("music2.bmp"), 14.956 },
+        { S("music4.bmp"), -7.99 },
 
 // The #if is for easier faster testing (make it 0 to disable temporarily)
 #if 1
         { S("music3.bmp"), 0.0 },
-        { S("music4.bmp"), -7.99 },
         { S("image.bmp"), 0.0 },
+        { S("music2.bmp"), 14.956 },
         { S("scan0022.jpg"), 12.66 },
         { S("scan0022small.jpg"), 12.66 },
         { S("scan0025.jpg"), 26.08 },
