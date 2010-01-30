@@ -248,6 +248,17 @@ namespace Munip {
         static const qreal InvalidAngle;
         qreal m_angle;
     };
+
+    class ImageCluster : public ProcessStep
+    {
+    Q_OBJECT
+    public:
+        ImageCluster(const QImage& originalImage, ProcessQueue *queue);
+        virtual void process();
+
+    private:
+    };
+
 }
 
 #endif

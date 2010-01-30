@@ -137,6 +137,8 @@ namespace Munip
             step = new StaffParamExtraction(originalImage, queue);
         else if (className == QByteArray("ImageRotation"))
             step = new ImageRotation(originalImage, queue);
+        else if (className == QByteArray("ImageCluster"))
+            step = new ImageCluster(originalImage, queue);
 
         return step;
     }
@@ -1325,4 +1327,17 @@ void ImageRotation::process()
 
     emit ended();
 }
+
+ImageCluster :: ImageCluster(const QImage& originalImage, ProcessQueue *queue) :
+    ProcessStep(originalImage, queue)
+{
+}
+
+void ImageCluster :: process()
+{
+    emit started();
+
+    emit ended();
+}
+
 }

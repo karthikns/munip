@@ -152,6 +152,9 @@ void MainWindow::setupActions()
                                                      tr("&Rotate image"), this);
     rotation->setShortcut(tr("Ctrl+7"));
 
+    QAction *cluster = new Munip::ProcessStepAction("ImageCluster", QIcon(),tr("Cluster Image"), this);
+    cluster->setShortcut(tr("Ctrl+8"));
+
     QAction *projectionAction = new QAction(tr("&Projection"), this);
     projectionAction->setShortcut(tr("Ctrl+P"));
     projectionAction->setStatusTip(tr("Calculates horizontal projection of the image"));;
@@ -165,6 +168,7 @@ void MainWindow::setupActions()
     processMenu->addAction(staffLineRemoval);
     processMenu->addAction(staffParamAction);
     processMenu->addAction(rotation);
+    processMenu->addAction(cluster);
     processMenu->addAction(projectionAction);
 
     SideBar *processBar = new SideBar();
@@ -175,6 +179,7 @@ void MainWindow::setupActions()
     processBar->addAction(staffLineRemoval);
     processBar->addAction(staffParamAction);
     processBar->addAction(rotation);
+    processBar->addAction(cluster);
     processBar->addAction(projectionAction);
 
     QDockWidget *dock = new QDockWidget(tr("Process"), this);
