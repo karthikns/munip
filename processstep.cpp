@@ -4,6 +4,7 @@
 #include "imagewidget.h"
 #include "horizontalrunlengthimage.h"
 #include "mainwindow.h"
+#include "projection.h"
 #include "tools.h"
 #include "DataWarehouse.h"
 
@@ -11,6 +12,7 @@
 #include <QFile>
 #include <QInputDialog>
 #include <QLabel>
+#include <QMessageBox>
 #include <QPainter>
 #include <QPen>
 #include <QProcess>
@@ -122,7 +124,6 @@ namespace Munip
     ProcessStep* ProcessStepFactory::create(const QByteArray& className, const QImage& originalImage, ProcessQueue *queue)
     {
         ProcessStep *step = 0;
-
         if (className == QByteArray("GrayScaleConversion"))
             step = new GrayScaleConversion(originalImage, queue);
         else if (className == QByteArray("MonoChromeConversion"))
@@ -1336,6 +1337,20 @@ ImageCluster :: ImageCluster(const QImage& originalImage, ProcessQueue *queue) :
 void ImageCluster :: process()
 {
     emit started();
+
+    Munip::ProjectionData data;
+
+    data.resize(24);
+    data[5] = 13;
+    data[7] = 18;
+    data[10] = 3;
+    data[23] = 4;
+
+    ProjectionWidget *wid = new Munip::ProjectionWidget(data);
+
+    MainWindow *main = MainWindow::instance();
+    main->addSubWindow(wid);
+    wid->show();
 
     emit ended();
 }
