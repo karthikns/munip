@@ -68,3 +68,13 @@ void DataWarehouse :: appendStaff( Staff staff )
 {
     m_staffList.append(staff);
 }
+
+QImage DataWarehouse ::workImage() const
+{
+    return m_workImage;
+}
+
+void DataWarehouse ::setWorkImage(const QImage &image)
+{
+    m_workImage = image;
+}

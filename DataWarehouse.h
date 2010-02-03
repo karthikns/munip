@@ -3,6 +3,7 @@
 #include "staff.h"
 #include<QList>
 #include<QPair>
+#include<QImage>
 
 namespace Munip {
 
@@ -24,11 +25,16 @@ namespace Munip {
             void appendStaff( Staff staff );
             QList<Staff> staffList() const;
 
+            QImage workImage() const;
+            void setWorkImage(const QImage& image);
+
         private:
             DataWarehouse();
             static DataWarehouse* m_dataWarehouse;
             float m_pageSkew;
             float m_pageSkewPrecision;
+            QImage m_workImage;
+
             uint m_lineSize;
             QList<Staff> m_staffList;
      };

@@ -112,6 +112,7 @@ namespace Munip
         if (!step)
             return;
 
+        DataWarehouse ::instance()->setWorkImage(imgWidget->image());
         step->process();
 
         ImageWidget *processed = new ImageWidget(step->processedImage());
@@ -383,7 +384,7 @@ namespace Munip
         //removeStaffLines();
         //constructStaff();
 
-        m_processedImage = m_lineRemovedTracker.toImage();
+       m_processedImage = m_lineRemovedTracker.toImage();
 
         emit ended();
     }
@@ -623,12 +624,20 @@ void StaffLineDetect::constructStaff()
     {
         Staff s;
         for(int count = 0; count < 5; count++)
+        {
+            m_lineList[i+count].sortSegments();
             s.addStaffLine(m_lineList[i+count]);
+        }
+
+
         DataWarehouse ::instance()->appendStaff(s);
         i+=5;
+
+
     }
 
 }
+
 
 void StaffLineDetect ::drawDetectedLines()
 {

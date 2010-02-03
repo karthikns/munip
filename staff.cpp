@@ -1,4 +1,5 @@
 #include "staff.h"
+#include "DataWarehouse.h"
 
 #include "tools.h"
 
@@ -283,5 +284,112 @@ namespace Munip
         distance -= m_staffLines[index-1].lineWidth();
         return distance;
     }
+
+    QRect Staff::boundingRect()
+    {
+        if(m_boundingRect.bottomLeft() == QPoint(-1,-1))
+            m_boundingRect = this->constructBoundingRect();
+
+        return m_boundingRect;
+
+    }
+
+    QRect Staff::constructBoundingRect()
+    {
+        //TODO: avoid constants like 0,4
+        int maxTop = 1<<30,maxBottom = -1;
+        QVector<Segment> segments1 = m_staffLines[0].segments();
+        foreach(Segment s,segments1)
+        {
+            int leftTop = findLeftTop(s.startPos());
+            if(maxTop > leftTop)
+                maxTop = leftTop;
+
+        }
+        QVector<Segment> segments2 = m_staffLines[4].segments();
+        foreach(Segment s,segments2)
+        {
+
+            int rightBottom = findRightBottom(s.startPos());
+            if(maxBottom < rightBottom)
+                maxBottom = rightBottom;
+
+        }
+        return QRect(segments1[0].startPos().x(),maxTop,segments2[segments2.size()-1].endPos().x(),maxBottom);
+
+    }
+
+    int Staff::findLeftTop(QPoint pos)
+    {
+        const int x = pos.x();
+        const int y = pos.y();
+
+        if( m_visited[x][y] > 0)
+            return m_visited[x][y];
+
+        const QImage processedImage = DataWarehouse::instance()->workImage();
+        const int White = processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
+        int t1,t2,t3;
+        t1 = t2 = t3 = 1<<30;
+        if( pos.y() - 1 > 0)
+        {
+            if(pos.x()-1 > 0)
+            {
+                if( processedImage.pixelIndex(pos.x()-1,pos.y()-1) == Black)
+                    t1= findLeftTop(QPoint(pos.x()-1,pos.y()-1));
+
+            }
+
+            if( processedImage.pixelIndex(pos.x(),pos.y()-1)== Black)
+            {
+                 t2 = findLeftTop(QPoint(pos.x(),pos.y()-1));
+            }
+            if( pos.x()+1 < processedImage.width() && processedImage.pixelIndex(pos.x(),pos.y()-1) == Black)
+            {
+                t3 = findLeftTop(QPoint(pos.x()+1,pos.y()-1));
+            }
+        }
+        if( t1 == t2 && t1 == t3 && t1 == 1<<30)
+            m_visited[x][y] = pos.y();
+        else
+            m_visited[x][y] = qMin(t1,qMin(t2,t3));
+        return m_visited[x][y];
+    }
+
+    int Staff::findRightBottom(QPoint pos)
+    {
+        const int x = pos.x();
+        const int y = pos.y();
+        if(m_visited[x][y] > 0)
+            return m_visited[x][y];
+
+        const QImage processedImage = DataWarehouse::instance()->workImage();
+        const int White = processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
+        int t1,t2,t3;
+
+        t1 = t2 = t3 = -1;
+        if( pos.y()+1 < processedImage.height() )
+        {
+            if(pos.x()+1 < processedImage.width() && processedImage.pixelIndex(pos.x()+1,pos.y()+1) == Black)
+                t1 = findRightBottom(QPoint(pos.x()+1,pos.y()+1));
+            if(pos.x()-1 > 0 && processedImage.pixelIndex(pos.x()-1,pos.y()+1) == Black)
+                t2 = findRightBottom(QPoint(pos.x()-1,pos.y()+1));
+            if( processedImage.pixelIndex(pos.x(),pos.y()+1) == Black)
+                t3 = findRightBottom(QPoint(pos.x(),pos.y()+1));
+        }
+        if( t1 == t2 && t2 == t3 && t3 == -1)
+            m_visited[x][y] = y;
+        else
+            m_visited[x][y] = qMax(t1,qMax(t2,t3));
+        return m_visited[x][y];
+
+    }
+
+
+
+
+
 
 }
