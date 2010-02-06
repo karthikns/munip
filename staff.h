@@ -101,16 +101,14 @@ namespace Munip {
 
         int distance( int index);
 
-        QRect constructBoundingRect();
-        QRect boundingRect();
+        void setBoundingRect(const QRect& boundingRect);
+        QRect boundingRect() const;
 
-        int findLeftTop(QPoint pos);
-        int findRightBottom(QPoint pos);
+
     private:
         QVector<StaffLine> m_staffLines;
         QPoint m_startPos;
         QPoint m_endPos;
-        int m_visited[2001][2001];
         QRect m_boundingRect;
 
     };

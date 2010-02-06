@@ -171,7 +171,9 @@ namespace Munip {
         void detectLines();
         Segment findMaxPath(Segment segment);
         void constructStaff();
+        QRect findStaffBoundingRect(const Staff &s);
         void removeLines();
+        void identifySymbolRegions(const Staff &s);
         void popupHistogram();
 
 
@@ -182,18 +184,15 @@ namespace Munip {
         QVector<Segment> m_segments[5000];
         QHash<Segment,Segment> m_lookUpTable;
         int  m_connectedComponentID;
-        int m_imageMap[5000][5000];
+        //int m_imageMap[5000][5000];
+        QVector<QRect> m_symbolRegions;
+        QImage m_colorImage;
 
         void findPaths();
         void drawDetectedLines();
 
-        //TODO:
-        /* Some methods which i felt need to be bound
-         to the processedImage Object*/
-
-
-        void convertSymbol(Segment s);
-        void setImageMap(Segment &s,int value,bool replace);
+        int findTopHeight(QPoint pos,QImage& workImage);
+        int findBottomHeight(QPoint pos,QImage& workImage);
 
 
    };
