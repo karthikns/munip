@@ -186,7 +186,7 @@ namespace Munip {
         int  m_connectedComponentID;
         //int m_imageMap[5000][5000];
         QVector<QRect> m_symbolRegions;
-        QImage m_colorImage;
+
 
         void findPaths();
         void drawDetectedLines();

@@ -380,14 +380,13 @@ namespace Munip
 
         m_lineRemovedTracker = QPixmap(m_processedImage.size());
         m_lineRemovedTracker.fill(QColor(Qt::white));
-        m_colorImage = m_lineRemovedTracker.toImage();
         detectLines();
 
         //removeStaffLines();
         constructStaff();
 
-       //m_processedImage = m_lineRemovedTracker.toImage();
-        m_processedImage = m_colorImage;
+        m_processedImage = m_lineRemovedTracker.toImage();
+
 
         emit ended();
     }
@@ -638,7 +637,7 @@ void StaffLineDetect::constructStaff()
         s.setBoundingRect(findStaffBoundingRect(s));
 
         DataWarehouse ::instance()->appendStaff(s);
-        mDebug() <<Q_FUNC_INFO<<s.startPos()<<s.endPos()<<s.boundingRect();
+        mDebug() <<Q_FUNC_INFO<<s.boundingRect().topLeft()<<s.boundingRect().bottomRight()<<s.boundingRect();
         //identifySymbolRegions(s);
         i+=5;
 
@@ -677,6 +676,7 @@ QRect StaffLineDetect::findStaffBoundingRect(const Staff& s)
         }
     }
 
+
     return QRect(QPoint(firstLine.startPos().x(),maxTopHeight),QPoint(lastLine.endPos().x(),maxBottomHeight));
 
 }
@@ -689,25 +689,36 @@ int StaffLineDetect::findTopHeight(QPoint pos,QImage& workImage)
     t1 = t2 = t3 = 1<<30;
 
     if(workImage.pixelIndex(pos) == White)
-    {
-        mDebug() << Q_FUNC_INFO << pos.y();
         return pos.y();
-    }
+
 
     workImage.setPixel(pos,White);
+    bool flag = false;
 
     if( pos.y() - 1 > 0)
     {
-        if(pos.x()-1 > 0 && workImage.pixelIndex(pos.x()-1,pos.y()-1) == Black)
-              t1= findTopHeight(QPoint(pos.x()-1,pos.y()-1),workImage);
-
         if( workImage.pixelIndex(pos.x(),pos.y()-1)== Black)
-              t2 = findTopHeight(QPoint(pos.x(),pos.y()-1),workImage);
+        {
+            flag = true;
+            t2 = findTopHeight(QPoint(pos.x(),pos.y()-1),workImage);
+        }
 
-        if( pos.x()+1 < workImage.width() && workImage.pixelIndex(pos.x(),pos.y()-1) == Black)
-              t3 = findTopHeight(QPoint(pos.x()+1,pos.y()-1),workImage);
+        if(pos.x()-1 > 0 && workImage.pixelIndex(pos.x()-1,pos.y()-1) == Black)
+        {
+            flag = true;
+            t1= findTopHeight(QPoint(pos.x()-1,pos.y()-1),workImage);
+        }
+
+        if( pos.x()+1 < workImage.width() && workImage.pixelIndex(pos.x()+1,pos.y()-1) == Black)
+        {
+            flag = true;
+            t3 = findTopHeight(QPoint(pos.x()+1,pos.y()-1),workImage);
+        }
 
     }
+    if(!flag)
+        return pos.y();
+
     return qMin(t1,qMin(t2,t3));
 }
 
@@ -723,17 +734,31 @@ int StaffLineDetect::findBottomHeight(QPoint pos,QImage& workImage)
         return pos.y();
 
     workImage.setPixel(pos,White);
+    bool flag = false;
+
     if( pos.y()+1 < workImage.height() )
     {
-        if(pos.x()+1 < workImage.width() && workImage.pixelIndex(pos.x()+1,pos.y()+1) == Black)
-            t1 = findBottomHeight(QPoint(pos.x()+1,pos.y()+1),workImage);
-
-        if(pos.x()-1 > 0 && workImage.pixelIndex(pos.x()-1,pos.y()+1) == Black)
-            t2 = findBottomHeight(QPoint(pos.x()-1,pos.y()+1),workImage);
-
         if( workImage.pixelIndex(pos.x(),pos.y()+1) == Black)
+        {
+            flag = true;
             t3 = findBottomHeight(QPoint(pos.x(),pos.y()+1),workImage);
+        }
+
+        if(pos.x()+1 < workImage.width() && workImage.pixelIndex(pos.x()+1,pos.y()+1) == Black)
+        {
+            flag = true;
+            t1 = findBottomHeight(QPoint(pos.x()+1,pos.y()+1),workImage);
+        }
+        if(pos.x()-1 > 0 && workImage.pixelIndex(pos.x()-1,pos.y()+1) == Black)
+        {
+            flag = true;
+            t2 = findBottomHeight(QPoint(pos.x()-1,pos.y()+1),workImage);
+        }
+
     }
+    if(!flag)
+        return pos.y();
+
     return qMax(t1,qMax(t2,t3));
 }
 
@@ -743,7 +768,7 @@ void StaffLineDetect ::drawDetectedLines()
 
     int i = 0;
 
-    QRgb Red = qRgb(1,0,0);
+
     QSet<Segment> visited;
     while (i< m_lineList.size())
     {
@@ -754,118 +779,15 @@ void StaffLineDetect ::drawDetectedLines()
 
                 visited.insert(s);
                 p.drawLine(s.startPos(),s.endPos());
-                for(int x = s.startPos().x(); x<= s.endPos().x();x++)
-                    m_colorImage.setPixel(x,s.endPos().y(),Red);
                 s = m_lookUpTable.value(s);
             }
         i++;
     }
 
 }
-/*
-void StaffLineDetect ::removeLines()
-{
-    const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
 
 
-    QSet<Segment> noisySegmentList;
 
-    for(int i = 0; i < m_lineList.size(); i++)
-    {
-        QVector<Segment> segmentList = m_lineList[i].segments();
-        for(int j = 0; j < segmentList.size();j++)
-        {
-            Segment s = segmentList[j];
-            for(int x = s.startPos().x();x <=s.endPos().x();x++)
-            {
-                QPoint above(x,s.endPos().y()-1);
-                QPoint below(x,s.endPos().y()+1);
-                Segment a,b;
-
-                if ( above.y() >= 0)
-                    a = s.getSegment(above,m_segments[above.y()]);
-
-                if ( below.y() < m_processedImage.height())
-                    b = s.getSegment(below,m_segments[below.y()]);
-
-
-                if (a.isValid() && !noisySegmentList.contains(a))
-                {
-                    noisySegmentList.insert(a);
-                    setImageMap(a,1,true);
-                }
-                if ( b.isValid() && !noisySegmentList.contains(b))
-                {
-                    noisySegmentList.insert(b);
-                    setImageMap(b,1,true);
-                }
-            }
-            setImageMap(s,1,true);
-        }
-    }
-    for(int y =0; y <m_processedImage.height();y++)
-        for(int i = 0; i < m_segments[y].size();i++)
-            setImageMap(m_segments[y][i],2,false);
-
-    QList<Segment> list = noisySegmentList.toList();
-
-    foreach(Segment t,list)
-        convertSymbol(t);
-
-    for(int i = 0; i < m_lineList.size(); i++)
-    {
-        QVector<Segment> segmentList = m_lineList[i].segments();
-        for(int j = 0; j < segmentList.size();j++)
-        {
-            Segment s = segmentList[j];
-            convertSymbol(s);
-        }
-
-    }
-
-    for(int i = 0; i < m_lineList.size();i++)
-    {
-        QVector<Segment> segmentList = m_lineList[i].segments();
-        for(int j = 0; j < segmentList.size();j++)
-        {
-            Segment s = segmentList[j];
-            for(int x=s.startPos().x();x<=s.endPos().x();x++)
-                if ( m_imageMap[x][s.endPos().y()] == 1)
-                    m_processedImage.setPixel(x,s.endPos().y(),White);
-        }
-    }
-}
-
-
-void StaffLineDetect::convertSymbol(Segment s)
-{
-    int y = s.endPos().y();
-    for(int x = s.startPos().x();x<=s.endPos().x();x++)
-    {
-
-        if (m_imageMap[x-1][y-1] == 2 || m_imageMap[x][y-1] == 2 || m_imageMap[x+1][y-1] == 2)
-            m_imageMap[x][y] = 2;
-        else if ( m_imageMap[x-1][y+1] == 2 || m_imageMap[x-1][y+1] == 2 || m_imageMap[x+1][y+1] == 2)
-            m_imageMap[x][y] = 2;
-
-    }
-
-}
-
-void StaffLineDetect::setImageMap(Segment &s,int value,bool replace)
-{
-    //if replace flag is false it sets only if the corresponding index is 0
-    if (replace)
-        for(int x = s.startPos().x();x <= s.endPos().x();x++)
-            m_imageMap[x][s.endPos().y()] = value;
-    else
-        for(int x = s.startPos().x();x <= s.endPos().x();x++)
-            if (!m_imageMap[x][s.endPos().y()])
-                m_imageMap[x][s.endPos().y()] = value;
-
-}
-
-*/
 void StaffLineDetect::identifySymbolRegions(const Staff &s)
 {
     const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
