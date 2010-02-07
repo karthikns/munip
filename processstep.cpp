@@ -108,9 +108,11 @@ namespace Munip
         ImageWidget *imgWidget = main->activeImageWidget();
         if (!imgWidget)
             return;
-        ProcessStep *step = ProcessStepFactory::create(m_className, imgWidget->image());
-        if (!step)
+        QScopedPointer<ProcessStep> step(
+                ProcessStepFactory::create(m_className, imgWidget->image()));
+        if (step.isNull()) {
             return;
+        }
 
         DataWarehouse ::instance()->setWorkImage(imgWidget->image());
         step->process();
