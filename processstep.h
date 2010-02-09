@@ -258,7 +258,7 @@ namespace Munip {
 
     private:
         QImage m_workImage;
-        QList<ClusterPoint> points;
+        ClusterSet m_clusterSet;
     };
 
 }

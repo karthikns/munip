@@ -1431,12 +1431,9 @@ void ImageCluster :: process()
             if(m_workImage.pixelIndex(x,y) == Black)
             {            
                 m_workImage.setPixel(x,y,1-Black);
-                ++count;
             }
         }
     }
-
-    mDebug() << endl << "Count : " << count << endl;
 
     m_processedImage = m_workImage;
 

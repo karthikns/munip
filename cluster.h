@@ -2,6 +2,7 @@
 #define CLUSTER_H
 
 #include <QPoint>
+#include <QList>
 
 namespace Munip
 {
@@ -21,6 +22,14 @@ namespace Munip
         int clusterNumber;
     };
 
+    class ClusterSet
+    {
+    public:
+        void addPoint(ClusterPoint);
+        void computeCore();
+    private:
+        QList<ClusterPoint> points;
+    };
 }
 
 #endif // CLUSTER_H

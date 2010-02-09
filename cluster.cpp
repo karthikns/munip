@@ -33,3 +33,13 @@ void ClusterPoint::setClusterNumber(int num)
 {
     clusterNumber = num;
 }
+
+void ClusterSet::addPoint(ClusterPoint cp)
+{
+    points.append(ClusterPoint(cp));
+}
+
+void ClusterSet::computeCore()
+{
+
+}
