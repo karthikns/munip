@@ -7,6 +7,7 @@
 #include "projection.h"
 #include "tools.h"
 #include "DataWarehouse.h"
+#include "cluster.h"
 
 #include <QAction>
 #include <QFile>
@@ -273,12 +274,12 @@ namespace Munip
         // Computation of the skew with highest frequency
         qSort(m_skewList.begin(), m_skewList.end());
 
-        mDebug() << endl << Q_FUNC_INFO << "Display the list";
+/*        mDebug() << endl << Q_FUNC_INFO << "Display the list";
         foreach(double skew, m_skewList) {
             mDebug() << skew;
         }
         mDebug() << endl;
-
+*/
 
         int i = 0, n = m_skewList.size();
         if (n == 0) {
@@ -1395,7 +1396,7 @@ void ImageRotation::process()
 }
 
 ImageCluster :: ImageCluster(const QImage& originalImage, ProcessQueue *queue) :
-    ProcessStep(originalImage, queue)
+    ProcessStep(originalImage, queue), m_workImage(originalImage)
 {
 }
 
@@ -1403,7 +1404,7 @@ void ImageCluster :: process()
 {
     emit started();
 
-    Munip::ProjectionData data;
+    /*Munip::ProjectionData data;
 
     data.resize(24);
     data[5] = 13;
@@ -1415,7 +1416,29 @@ void ImageCluster :: process()
 
     MainWindow *main = MainWindow::instance();
     main->addSubWindow(wid);
-    wid->show();
+    wid->show();*/
+
+    mDebug() << endl << "Hello World" << endl;
+
+    long int count=0;
+
+    int x = 0, y = 0;
+    const int Black = m_workImage.color(0) == 0xffffffff ? 1 : 0;
+    for(y = 0; y < m_workImage.height(); y++)
+    {
+        for(x = 0;  x < m_workImage.width(); x++)
+        {
+            if(m_workImage.pixelIndex(x,y) == Black)
+            {            
+                m_workImage.setPixel(x,y,1-Black);
+                ++count;
+            }
+        }
+    }
+
+    mDebug() << endl << "Count : " << count << endl;
+
+    m_processedImage = m_workImage;
 
     emit ended();
 }

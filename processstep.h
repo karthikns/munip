@@ -11,6 +11,7 @@
 #include <QVariant>
 #include "staff.h"
 #include "segments.h"
+#include "cluster.h"
 
 #ifdef MUNIP_DEBUG
     #define mDebug qDebug
@@ -250,12 +251,14 @@ namespace Munip {
 
     class ImageCluster : public ProcessStep
     {
-    Q_OBJECT
+        Q_OBJECT
     public:
         ImageCluster(const QImage& originalImage, ProcessQueue *queue);
         virtual void process();
 
     private:
+        QImage m_workImage;
+        QList<ClusterPoint> points;
     };
 
 }
