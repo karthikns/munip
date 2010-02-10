@@ -1431,9 +1431,18 @@ void ImageCluster :: process()
             if(m_workImage.pixelIndex(x,y) == Black)
             {            
                 m_workImage.setPixel(x,y,1-Black);
+                m_clusterSet.addPoint(ClusterPoint(x,y));
+                ++count;
             }
         }
     }
+
+
+    mDebug() << endl << count << endl << m_clusterSet.size() << endl;
+
+    m_clusterSet.computeNearestNeighbors();
+
+    mDebug() << endl << "No of core points : " << m_clusterSet.coreSize() << endl;
 
     m_processedImage = m_workImage;
 
