@@ -43,11 +43,14 @@ void ClusterPoint::setClusterNumber(int num)
 
 int  ClusterPoint::pointDistance(ClusterPoint pt)
 {
-    return (int)sqrt( (long)point.x()*point.x() + (long)point.y()*point.y() );
+    //Euclidian Distance
+    return (int)sqrt( (point.x()-pt.point.x())*(point.x()-pt.point.x()) + (point.y()-pt.point.y())*(point.y()-pt.point.y()) );
 }
 
 
-ClusterSet::ClusterSet() : radius(1), minPts(8)
+
+
+ClusterSet::ClusterSet() : radius(3), minPts(4)
 {
 }
 
@@ -62,12 +65,14 @@ void ClusterSet::computeNearestNeighbors()
     {
         for(int j=i+1; j<size(); ++j)
         {
-            if( points[i].pointDistance(points[j]) > radius )
+            qDebug() << points[i].pointDistance(points[j]);
+            if( points[i].pointDistance(points[j]) < radius )
             {
                 points[i].incrementNeighbors();
                 points[j].incrementNeighbors();
             }
         }
+        qDebug();
     }
 }
 
@@ -79,10 +84,11 @@ int  ClusterSet::size() const
 int ClusterSet::coreSize() const
 {
     int size=0;
+    qDebug();
     foreach(ClusterPoint pt, points)
     {
-        //QDebug() << pt.getNeighbors() << endl;
-        if(pt.getNeighbors()>minPts)
+        qDebug() << pt.getNeighbors();
+        if(pt.getNeighbors() >= minPts)
             ++size;
     }
     return size;

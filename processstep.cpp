@@ -1420,8 +1420,6 @@ void ImageCluster :: process()
 
     mDebug() << endl << "Hello World" << endl;
 
-    long int count=0;
-
     int x = 0, y = 0;
     const int Black = m_workImage.color(0) == 0xffffffff ? 1 : 0;
     for(y = 0; y < m_workImage.height(); y++)
@@ -1432,13 +1430,12 @@ void ImageCluster :: process()
             {            
                 m_workImage.setPixel(x,y,1-Black);
                 m_clusterSet.addPoint(ClusterPoint(x,y));
-                ++count;
             }
         }
     }
 
 
-    mDebug() << endl << count << endl << m_clusterSet.size() << endl;
+    mDebug() << endl << "Black pixel count : "<< m_clusterSet.size() << endl;
 
     m_clusterSet.computeNearestNeighbors();
 
