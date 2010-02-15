@@ -249,7 +249,7 @@ namespace Munip
         //
         // NOTE: Pen width = 2 ensures there is no faint line garbage
         //       left behind.
-        QPainter painter(&m_processedImage);
+        ::QPainter painter(&m_processedImage);
         painter.setPen(QPen(Qt::white, 2));
         painter.setBrush(QBrush(Qt::white));
         painter.drawPolygon(remainingBlackTriangularAreas);
@@ -767,7 +767,7 @@ int StaffLineDetect::findBottomHeight(QPoint pos,QImage& workImage)
 
 void StaffLineDetect ::drawDetectedLines()
 {
-    QPainter p(&m_lineRemovedTracker);
+    ::QPainter p(&m_lineRemovedTracker);
 
     int i = 0;
 
@@ -985,7 +985,7 @@ QVector<Staff> StaffLineRemoval::fillDataStructures()
 
     m_lineRemovedTracker = QPixmap(m_processedImage.size());
     m_lineRemovedTracker.fill(QColor(Qt::white));
-    QPainter p(&m_lineRemovedTracker);
+    ::QPainter p(&m_lineRemovedTracker);
 #if 1
     if (!m_lineLocation.isEmpty() && m_lineLocation.size()%2 != 0) {
         m_lineLocation.append(m_lineLocation[m_lineLocation.size()-1]);
@@ -1328,7 +1328,7 @@ void StaffParamExtraction::process()
     m_processedImage = QImage(sz, QImage::Format_ARGB32_Premultiplied);
     m_processedImage.fill(0xffffffff);
 
-    QPainter p(&m_processedImage);
+    ::QPainter p(&m_processedImage);
     p.drawImage(QPoint(0, 0), plots[0]);
     p.drawImage(QPoint(0, plots[0].height() + 50), plots[1]);
     p.end();
@@ -1386,7 +1386,7 @@ void ImageRotation::process()
     //
     // NOTE: Pen width = 2 ensures there is no faint line garbage
     //       left behind.
-    QPainter painter(&m_processedImage);
+    ::QPainter painter(&m_processedImage);
     painter.setPen(QPen(Qt::white, 2));
     painter.setBrush(QBrush(Qt::white));
     painter.drawPolygon(remainingBlackTriangularAreas);
@@ -1442,6 +1442,15 @@ void ImageCluster :: process()
     mDebug() << endl << "No of core points : " << m_clusterSet.coreSize() << endl;
 
     m_processedImage = m_workImage;
+
+    QPixmap drawableImage(m_processedImage.size());
+    drawableImage.fill(Qt::white);
+    QPainter p(&drawableImage);
+    p.setPen(QColor(255,0,0));
+
+    m_clusterSet.drawCore(p);
+
+    m_processedImage = drawableImage.toImage();
 
     emit ended();
 }

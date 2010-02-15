@@ -1,6 +1,7 @@
 #include "cluster.h"
 #include <QDebug>
 #include <QPoint>
+#include <QPainter>
 #include <cmath>
 
 using namespace Munip;
@@ -47,10 +48,20 @@ int  ClusterPoint::pointDistance(ClusterPoint pt)
     return (int)sqrt( (point.x()-pt.point.x())*(point.x()-pt.point.x()) + (point.y()-pt.point.y())*(point.y()-pt.point.y()) );
 }
 
+int ClusterPoint::x()
+{
+    return point.x();
+}
+
+int ClusterPoint::y()
+{
+    return point.y();
+}
 
 
 
-ClusterSet::ClusterSet() : radius(3), minPts(4)
+
+ClusterSet::ClusterSet() : radius(2), minPts(8)
 {
 }
 
@@ -93,3 +104,15 @@ int ClusterSet::coreSize() const
     }
     return size;
 }
+
+void ClusterSet::drawCore(QPainter &p)
+{
+    foreach(ClusterPoint pt, points)
+    {
+        if(pt.getNeighbors() >= minPts)
+        {
+            p.drawPoint(pt.x(), pt.y());
+        }
+    }
+}
+

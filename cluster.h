@@ -3,9 +3,11 @@
 
 #include <QPoint>
 #include <QList>
+#include <QPainter>
 
 namespace Munip
 {
+
     class ClusterPoint
     {
     public:
@@ -17,6 +19,8 @@ namespace Munip
         int getNeighbors() const;
         void setClusterNumber(int);
         int  pointDistance(ClusterPoint);
+        int  x();
+        int  y();
 
     private:
         QPoint point;
@@ -33,6 +37,7 @@ namespace Munip
         void computeNearestNeighbors();
         int  size() const;
         int coreSize() const;
+        void drawCore(QPainter &p);
 
     private:
 
