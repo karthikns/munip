@@ -61,7 +61,7 @@ int ClusterPoint::y()
 
 
 
-ClusterSet::ClusterSet() : radius(2), minPts(8)
+ClusterSet::ClusterSet() : radius(2), minPts(4)
 {
 }
 
@@ -76,14 +76,12 @@ void ClusterSet::computeNearestNeighbors()
     {
         for(int j=i+1; j<size(); ++j)
         {
-            qDebug() << points[i].pointDistance(points[j]);
             if( points[i].pointDistance(points[j]) < radius )
             {
                 points[i].incrementNeighbors();
                 points[j].incrementNeighbors();
             }
         }
-        qDebug();
     }
 }
 
@@ -95,10 +93,8 @@ int  ClusterSet::size() const
 int ClusterSet::coreSize() const
 {
     int size=0;
-    qDebug();
     foreach(ClusterPoint pt, points)
     {
-        qDebug() << pt.getNeighbors();
         if(pt.getNeighbors() >= minPts)
             ++size;
     }

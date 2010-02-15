@@ -1404,22 +1404,6 @@ void ImageCluster :: process()
 {
     emit started();
 
-    /*Munip::ProjectionData data;
-
-    data.resize(24);
-    data[5] = 13;
-    data[7] = 18;
-    data[10] = 3;
-    data[23] = 4;
-
-    ProjectionWidget *wid = new Munip::ProjectionWidget(data);
-
-    MainWindow *main = MainWindow::instance();
-    main->addSubWindow(wid);
-    wid->show();*/
-
-    mDebug() << endl << "Hello World" << endl;
-
     int x = 0, y = 0;
     const int Black = m_workImage.color(0) == 0xffffffff ? 1 : 0;
     for(y = 0; y < m_workImage.height(); y++)
@@ -1447,7 +1431,6 @@ void ImageCluster :: process()
     drawableImage.fill(Qt::white);
     QPainter p(&drawableImage);
     p.setPen(QColor(255,0,0));
-
     m_clusterSet.drawCore(p);
 
     m_processedImage = drawableImage.toImage();
