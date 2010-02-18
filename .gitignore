@@ -8,3 +8,5 @@ Black.png
 White.png
 *.dat
 *.swp
+.my-setup
+images/.directory
