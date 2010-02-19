@@ -1396,7 +1396,7 @@ void ImageRotation::process()
 }
 
 ImageCluster :: ImageCluster(const QImage& originalImage, ProcessQueue *queue) :
-    ProcessStep(originalImage, queue), m_workImage(originalImage)
+    ProcessStep(originalImage, queue)
 {
 }
 
@@ -1404,36 +1404,17 @@ void ImageCluster :: process()
 {
     emit started();
 
-    int x = 0, y = 0;
-    const int Black = m_workImage.color(0) == 0xffffffff ? 1 : 0;
-    for(y = 0; y < m_workImage.height(); y++)
-    {
-        for(x = 0;  x < m_workImage.width(); x++)
-        {
-            if(m_workImage.pixelIndex(x,y) == Black)
-            {            
-                m_workImage.setPixel(x,y,1-Black);
-                m_clusterSet.addPoint(ClusterPoint(x,y));
-            }
-        }
-    }
-
-
-    mDebug() << endl << "Black pixel count : "<< m_clusterSet.size() << endl;
-
+    m_clusterSet.setImage(m_originalImage);
     m_clusterSet.computeNearestNeighbors();
 
-    mDebug() << endl << "No of core points : " << m_clusterSet.coreSize() << endl;
+    mDebug() << Q_FUNC_INFO << "No of core points : " << m_clusterSet.coreSize() << endl;
 
-    m_processedImage = m_workImage;
-
-    QPixmap drawableImage(m_processedImage.size());
-    drawableImage.fill(Qt::white);
-    QPainter p(&drawableImage);
-    p.setPen(QColor(255,0,0));
+    m_processedImage = QImage(m_originalImage.size(), QImage::Format_ARGB32_Premultiplied);
+    QPainter p(&m_processedImage);
+    p.fillRect(QRect(QPoint(0, 0), m_processedImage.size()), Qt::white);
+    p.setPen(QColor(Qt::red));
     m_clusterSet.drawCore(p);
-
-    m_processedImage = drawableImage.toImage();
+    p.end();
 
     emit ended();
 }

@@ -3,46 +3,33 @@
 
 #include <QPoint>
 #include <QList>
+#include <QHash>
 #include <QPainter>
 
 namespace Munip
 {
-
-    class ClusterPoint
-    {
-    public:
-        ClusterPoint();
-        ClusterPoint(QPoint);
-        ClusterPoint(int,int);
-        void setPoint(QPoint);
-        void incrementNeighbors();
-        int getNeighbors() const;
-        void setClusterNumber(int);
-        int  pointDistance(ClusterPoint);
-        int  x();
-        int  y();
-
-    private:
-        QPoint point;
-        int neighbors;
-        int clusterNumber;
-    };
-
-
     class ClusterSet
     {
     public:
-        ClusterSet();
-        void addPoint(ClusterPoint);
+        ClusterSet(int radius = 2, int minPts = 4);
+        ~ClusterSet();
+
         void computeNearestNeighbors();
-        int  size() const;
+
         int coreSize() const;
         void drawCore(QPainter &p);
 
-    private:
+        QImage image() const;
+        void setImage(const QImage& image);
 
-        QList<ClusterPoint> points;
-        int radius, minPts;
+    private:
+        void computeNearestNeighbor(int x, int y);
+
+        QImage m_image;
+        QHash<QPoint, int> m_neighborMatrix;
+
+        int m_radius;
+        int m_minPoints;
     };
 }
 

@@ -257,7 +257,6 @@ namespace Munip {
         virtual void process();
 
     private:
-        QImage m_workImage;
         ClusterSet m_clusterSet;
     };
 

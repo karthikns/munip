@@ -6,109 +6,103 @@
 
 using namespace Munip;
 
-ClusterPoint::ClusterPoint() : neighbors(0), clusterNumber(-1)
+//! A simple hash function for use with QHash<QPoint>.
+// Assumption: p is +ve and p.x() value is <= 4000
+static uint qHash(const QPoint& p)
 {
-    point.setX(0);
-    point.setY(0);
+    return p.x() * 4000 + p.y();
 }
 
-ClusterPoint::ClusterPoint(QPoint pt) : point(pt), neighbors(0), clusterNumber(-1)
-{
-}
-
-ClusterPoint::ClusterPoint(int x,int y) : neighbors(0), clusterNumber(-1)
-{
-    point.setX(x);
-    point.setY(y);
-}
-
-void ClusterPoint::setPoint(QPoint pt)
-{
-    point = pt;
-}
-
-void ClusterPoint::incrementNeighbors()
-{
-    ++neighbors;
-}
-
-int ClusterPoint::getNeighbors() const
-{
-    return neighbors;
-}
-
-void ClusterPoint::setClusterNumber(int num)
-{
-    clusterNumber = num;
-}
-
-int  ClusterPoint::pointDistance(ClusterPoint pt)
-{
-    //Euclidian Distance
-    return (int)sqrt( (point.x()-pt.point.x())*(point.x()-pt.point.x()) + (point.y()-pt.point.y())*(point.y()-pt.point.y()) );
-}
-
-int ClusterPoint::x()
-{
-    return point.x();
-}
-
-int ClusterPoint::y()
-{
-    return point.y();
-}
-
-
-
-
-ClusterSet::ClusterSet() : radius(2), minPts(4)
+ClusterSet::ClusterSet(int radius, int minPts) :
+    m_radius(radius), m_minPoints(minPts)
 {
 }
 
-void ClusterSet::addPoint(ClusterPoint cp)
+ClusterSet::~ClusterSet()
 {
-    points.append(ClusterPoint(cp));
+}
+
+void ClusterSet::computeNearestNeighbor(int x, int y)
+{
+    const int Black = m_image.color(0) == 0xffffffff ? 1 : 0;
+    int neighbors = 0;
+
+    const int yInit = qMax(0, y - m_radius);
+    const int yLimit = qMin(m_image.height() - 1, y + m_radius);
+
+    const int xInit = qMax(0, x - m_radius);
+    const int xLimit = qMin(m_image.width() - 1, x + m_radius);
+
+    for (int yy = yInit; yy < yLimit; ++yy) {
+        for (int xx = xInit; xx < xLimit; ++xx) {
+            if (xx == x && yy == y) {
+                continue;
+            }
+            if (m_image.pixelIndex(xx, yy) == Black) {
+                if (QLineF(xx, yy, x, y).length() <= qreal(m_radius)) {
+                    ++neighbors;
+                }
+            }
+        }
+
+    }
+    // Only add points having atleast a single neighbor
+    if (neighbors > 0) {
+        m_neighborMatrix[QPoint(x, y)] = neighbors;
+    }
 }
 
 void ClusterSet::computeNearestNeighbors()
 {
-    for(int i=0; i<size()-1; ++i)
-    {
-        for(int j=i+1; j<size(); ++j)
-        {
-            if( points[i].pointDistance(points[j]) < radius )
-            {
-                points[i].incrementNeighbors();
-                points[j].incrementNeighbors();
+    if (m_image.isNull() || m_image.format() != QImage::Format_Mono) {
+        qWarning() << Q_FUNC_INFO << "Not yet initialized with appropriate image";
+        return;
+    }
+
+    const int Black = m_image.color(0) == 0xffffffff ? 1 : 0;
+    for (int y = 0; y < m_image.height(); ++y) {
+        for (int x = 0; x < m_image.width(); ++x) {
+            if (m_image.pixelIndex(x, y) == Black) {
+                computeNearestNeighbor(x, y);
             }
         }
     }
 }
 
-int  ClusterSet::size() const
-{
-    return points.size();
-}
-
 int ClusterSet::coreSize() const
 {
-    int size=0;
-    foreach(ClusterPoint pt, points)
-    {
-        if(pt.getNeighbors() >= minPts)
-            ++size;
+    int core = 0;
+    QHash<QPoint, int>::const_iterator it, end = m_neighborMatrix.end();
+    for (it = m_neighborMatrix.begin(); it != end; ++it) {
+        if (it.value() > m_minPoints) {
+            ++core;
+        }
     }
-    return size;
+
+    return core;
 }
 
 void ClusterSet::drawCore(QPainter &p)
 {
-    foreach(ClusterPoint pt, points)
-    {
-        if(pt.getNeighbors() >= minPts)
-        {
-            p.drawPoint(pt.x(), pt.y());
+    QHash<QPoint, int>::const_iterator it, end = m_neighborMatrix.end();
+    for (it = m_neighborMatrix.begin(); it != end; ++it) {
+        if (it.value() > m_minPoints) {
+            p.drawPoint(it.key());
         }
+    }
+}
+
+QImage ClusterSet::image() const
+{
+    return m_image;
+}
+
+void ClusterSet::setImage(const QImage& img)
+{
+    m_image = img;
+    m_neighborMatrix.clear();
+    if (m_image.isNull() || m_image.format() != QImage::Format_Mono) {
+        qWarning() << Q_FUNC_INFO << "Initialized with invalid image";
     }
 }
 
