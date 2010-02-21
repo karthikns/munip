@@ -37,9 +37,10 @@ namespace Munip {
     class Page;
     class ProcessQueue;
 
+    // Assumes line's start pos is <= 4k and >= 0.
     inline uint qHash( const Munip ::Segment &line )
     {
-        return(line.startPos().x()^line.endPos().y());
+        return(line.startPos().x() * 4000 + line.endPos().y());
     }
 
      /**
