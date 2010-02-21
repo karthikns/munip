@@ -14,6 +14,12 @@ namespace Munip
         ClusterSet(int radius = 2, int minPts = 4);
         ~ClusterSet();
 
+        int radius() const;
+        void setRadius(int radius);
+
+        int minPoints() const;
+        void setMinPoints(int minPts);
+
         void computeNearestNeighbors();
 
         int coreSize() const;

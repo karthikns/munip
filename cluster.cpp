@@ -22,6 +22,28 @@ ClusterSet::~ClusterSet()
 {
 }
 
+int ClusterSet::radius() const
+{
+    return m_radius;
+}
+
+void ClusterSet::setRadius(int radius)
+{
+    m_radius = radius;
+    m_neighborMatrix.clear();
+}
+
+int ClusterSet::minPoints() const
+{
+    return m_minPoints;
+}
+
+void ClusterSet::setMinPoints(int minPts)
+{
+    m_minPoints = minPts;
+    m_neighborMatrix.clear();
+}
+
 void ClusterSet::computeNearestNeighbor(int x, int y)
 {
     const int Black = m_image.color(0) == 0xffffffff ? 1 : 0;

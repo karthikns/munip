@@ -1404,14 +1404,41 @@ void ImageRotation::process()
     emit ended();
 }
 
+int ImageCluster::InvalidStaffSpaceHeight = -1;
+
 ImageCluster :: ImageCluster(const QImage& originalImage, ProcessQueue *queue) :
     ProcessStep(originalImage, queue)
 {
+    m_clusterSet.setRadius(ImageCluster::InvalidStaffSpaceHeight);
+    m_clusterSet.setMinPoints(ImageCluster::InvalidStaffSpaceHeight);
 }
 
-void ImageCluster :: process()
+ImageCluster :: ImageCluster(const QImage& originalImage, int staffSpaceHeight , ProcessQueue *queue) :
+    ProcessStep(originalImage, queue)
+{
+    QPair<int, int> p = ImageCluster::clusterParams(staffSpaceHeight);
+    m_clusterSet.setRadius(p.first);
+    m_clusterSet.setMinPoints(p.second);
+}
+
+void ImageCluster::process()
 {
     emit started();
+
+    if (m_clusterSet.radius() < 0) {
+        bool ok;
+        int staffSpaceHeight =
+            QInputDialog::getInt(0, tr("Staff space height"),
+                    tr("Enter staff space height in pixels"),
+                    5, 0, 100, 1, &ok);
+        if (!ok) {
+            staffSpaceHeight = 5;
+        }
+
+        QPair<int, int> p = ImageCluster::clusterParams(staffSpaceHeight);
+        m_clusterSet.setRadius(p.first);
+        m_clusterSet.setMinPoints(p.second);
+    }
 
     m_clusterSet.setImage(m_originalImage);
     m_clusterSet.computeNearestNeighbors();
@@ -1426,6 +1453,17 @@ void ImageCluster :: process()
     p.end();
 
     emit ended();
+}
+
+QPair<int, int> ImageCluster::clusterParams(int staffSpaceHeight)
+{
+    if (staffSpaceHeight < 0) {
+        return QPair<int, int>(ImageCluster::InvalidStaffSpaceHeight,
+                ImageCluster::InvalidStaffSpaceHeight);
+    }
+    int radius = int(.70 * staffSpaceHeight);
+    int area = int(M_PI * radius * radius);
+    return qMakePair(staffSpaceHeight, area);
 }
 
 }

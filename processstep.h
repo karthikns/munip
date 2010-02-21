@@ -256,10 +256,16 @@ namespace Munip {
     {
         Q_OBJECT
     public:
-        ImageCluster(const QImage& originalImage, ProcessQueue *queue);
+        ImageCluster(const QImage& originalImage, ProcessQueue *queue = 0);
+        ImageCluster(const QImage& originalImage,
+                int staffSpaceHeight = InvalidStaffSpaceHeight,
+                ProcessQueue *queue = 0);
         virtual void process();
 
+        static QPair<int, int> clusterParams(int staffSpaceHeight);
+
     private:
+        static int InvalidStaffSpaceHeight;
         ClusterSet m_clusterSet;
     };
 
