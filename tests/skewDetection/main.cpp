@@ -45,13 +45,13 @@ void tst_SkewDetection::skewDetect_data()
         qreal actualAngle;
     };
 
-    static const QString prefix = "../../images/";
+    static const QString prefix = "images/";
     #define S QString
     Data data[] = {
         { S("music4.bmp"), -7.99 },
 
 // The #if is for easier faster testing (make it 0 to disable temporarily)
-#if 1
+#if 0
         { S("music3.bmp"), 0.0 },
         { S("image.bmp"), 0.0 },
         { S("music2.bmp"), 14.956 },
@@ -104,9 +104,11 @@ void tst_SkewDetection::skewDetect()
     // Ensure the existence of directories
     {
         QDir dir;
-        dir.mkdir("plots");
-        dir.mkdir("plots/Png");
-        dir.mkdir("plots/histograms");
+        dir.mkdir("test_output");
+        dir.mkdir("test_output/skewDetection");
+        dir.mkdir("test_output/skewDetection/plots");
+        dir.mkdir("test_output/skewDetection/plots/Png");
+        dir.mkdir("test_output/skewDetection/plots/histograms");
     }
 
     const QString uniqId = QString("%1_%2")
@@ -117,7 +119,7 @@ void tst_SkewDetection::skewDetect()
     QScopedPointer<Munip::ProcessStep> rotate(new Munip::ImageRotation(image, rotateBy));
     rotate->process();
     image = rotate->processedImage();
-    image.save(QString("plots/Png/%1before.png").arg(uniqId));
+    image.save(QString("test_output/skewDetection/plots/Png/%1before.png").arg(uniqId));
 
 
     // Generate after skew image
@@ -129,7 +131,7 @@ void tst_SkewDetection::skewDetect()
     qreal accuracy = qAbs((expectedAngle) - (calculatedAngle)) / denominator;
     pushStat(fileName, expectedAngle, accuracy);
     qDebug() << fileName << this->calculatedAngle << expectedAngle << rotateBy;
-    skew->processedImage().save(QString("plots/Png/%1after.png").arg(uniqId));
+    skew->processedImage().save(QString("test_output/skewDetection/plots/Png/%1after.png").arg(uniqId));
 
 
     // Generate Histogram
@@ -141,7 +143,7 @@ void tst_SkewDetection::skewDetect()
         bins[(int)(skew * 100)] << skew;
     }
 
-    const QString angleFileNamePrefix = QString("plots/histograms/%1").arg(uniqId);
+    const QString angleFileNamePrefix = QString("test_output/skewDetection/plots/histograms/%1").arg(uniqId);
     QFile file(angleFileNamePrefix + QString(".dat"));
     file.open(QIODevice::WriteOnly | QIODevice::Text);
 
@@ -168,7 +170,7 @@ void tst_SkewDetection::skewDetect()
 
 void tst_SkewDetection::cleanupTestCase()
 {
-    static const QString prefix = "plots";
+    static const QString prefix = "test_output/skewDetection/plots";
     QDir().mkdir(prefix);
 
     QStringList datFileNames;
@@ -194,7 +196,7 @@ void tst_SkewDetection::cleanupTestCase()
 
     QStringList args;
     args << "-e";
-    QString secondArg("set terminal png; set output 'plots/plot.png'; set xrange [-45:45]; set yrange [0:5]; plot ");
+    QString secondArg("set terminal png; set output 'test_output/skewDetection/plots/plot.png'; set xrange [-45:45]; set yrange [0:5]; plot ");
     for (int i = 0; i < datFileNames.size(); ++i) {
         secondArg += QChar('\'');
         secondArg += datFileNames[i];

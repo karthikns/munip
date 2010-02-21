@@ -25,8 +25,8 @@ void tst_SymbolDetection::clusterDetect_data()
     QTest::addColumn<QString>("filePrefix");
     QTest::addColumn<QImage>("image");
 
-    static const QString prefix = "../../images/";
-    static const QString outPrefix = "images";
+    static const QString prefix = "images/";
+    static const QString outPrefix = "test_output/symbolDetection/images";
     QString data[] = {
          "music3.bmp",
 
@@ -49,7 +49,10 @@ void tst_SymbolDetection::clusterDetect_data()
 
         const qreal aspectRatio = qreal(original.width())/original.height();
         {
-            for (int width = 500; width < 4000; width += 100) {
+            const int startWidth = 500;
+            const int stopWidth = 1000;
+            const int widthStep = 500;
+            for (int width = startWidth; width <= startWidth; width += widthStep) {
                 int height = int(qRound(width/aspectRatio));
                 QImage scaled = original.scaled(width,
                         height,
@@ -78,7 +81,9 @@ void tst_SymbolDetection::clusterDetect()
     // Ensure the existence of directories
     {
         QDir dir;
-        dir.mkdir("images");
+        dir.mkdir("test_output");
+        dir.mkdir("test_output/symbolDetection");
+        dir.mkdir("test_output/symbolDetection/images");
     }
 
     image.save(filePrefix + ".png");

@@ -10,6 +10,7 @@
 #include "cluster.h"
 
 #include <QAction>
+#include <QDir>
 #include <QFile>
 #include <QInputDialog>
 #include <QLabel>
@@ -1274,9 +1275,10 @@ void StaffParamExtraction::process()
         }
     }
 
+    QDir().mkdir("test_output");
     QString fileNames[2];
-    fileNames[Black] = QString("Black");
-    fileNames[White] = QString("White");
+    fileNames[Black] = QString("test_output/Black");
+    fileNames[White] = QString("test_output/White");
 
     QString labels[2];
     labels[Black] = QString("StaffLineHeight");
