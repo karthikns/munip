@@ -116,7 +116,7 @@ namespace Munip
             return;
         }
 
-        DataWarehouse ::instance()->setWorkImage(imgWidget->image());
+        DataWarehouse::instance()->setWorkImage(imgWidget->image());
         step->process();
 
         ImageWidget *processed = new ImageWidget(step->processedImage());
@@ -250,7 +250,7 @@ namespace Munip
         //
         // NOTE: Pen width = 2 ensures there is no faint line garbage
         //       left behind.
-        ::QPainter painter(&m_processedImage);
+::QPainter painter(&m_processedImage);
         painter.setPen(QPen(Qt::white, 2));
         painter.setBrush(QBrush(Qt::white));
         painter.drawPolygon(remainingBlackTriangularAreas);
@@ -552,7 +552,7 @@ Segment StaffLineDetect::findMaxPath(Segment segment)
     if ( m_lookUpTable.contains(segment))
     {
 
-        QHash<Segment,Segment> ::iterator i;
+        QHash<Segment,Segment>::iterator i;
         i = m_lookUpTable.find(segment);
         segment = i.key();
 
@@ -640,7 +640,7 @@ void StaffLineDetect::constructStaff()
         s.setEndPos(s.staffLines()[s.staffLines().size()-1].endPos());
         s.setBoundingRect(findStaffBoundingRect(s));
 
-        DataWarehouse ::instance()->appendStaff(s);
+        DataWarehouse::instance()->appendStaff(s);
         mDebug() <<Q_FUNC_INFO<<s.boundingRect().topLeft()<<s.boundingRect().bottomRight()<<s.boundingRect();
         //identifySymbolRegions(s);
         i+=5;
@@ -766,9 +766,9 @@ int StaffLineDetect::findBottomHeight(QPoint pos,QImage& workImage)
     return qMax(t1,qMax(t2,t3));
 }
 
-void StaffLineDetect ::drawDetectedLines()
+void StaffLineDetect::drawDetectedLines()
 {
-    ::QPainter p(&m_lineRemovedTracker);
+::QPainter p(&m_lineRemovedTracker);
 
     int i = 0;
 
@@ -986,7 +986,7 @@ QVector<Staff> StaffLineRemoval::fillDataStructures()
 
     m_lineRemovedTracker = QPixmap(m_processedImage.size());
     m_lineRemovedTracker.fill(QColor(Qt::white));
-    ::QPainter p(&m_lineRemovedTracker);
+::QPainter p(&m_lineRemovedTracker);
 #if 1
     if (!m_lineLocation.isEmpty() && m_lineLocation.size()%2 != 0) {
         m_lineLocation.append(m_lineLocation[m_lineLocation.size()-1]);
@@ -1408,14 +1408,14 @@ void ImageRotation::process()
 
 int ImageCluster::InvalidStaffSpaceHeight = -1;
 
-ImageCluster :: ImageCluster(const QImage& originalImage, ProcessQueue *queue) :
+ImageCluster::ImageCluster(const QImage& originalImage, ProcessQueue *queue) :
     ProcessStep(originalImage, queue)
 {
     m_clusterSet.setRadius(ImageCluster::InvalidStaffSpaceHeight);
     m_clusterSet.setMinPoints(ImageCluster::InvalidStaffSpaceHeight);
 }
 
-ImageCluster :: ImageCluster(const QImage& originalImage, int staffSpaceHeight , ProcessQueue *queue) :
+ImageCluster::ImageCluster(const QImage& originalImage, int staffSpaceHeight , ProcessQueue *queue) :
     ProcessStep(originalImage, queue)
 {
     QPair<int, int> p = ImageCluster::clusterParams(staffSpaceHeight);

@@ -25,7 +25,7 @@ namespace Munip
         constructBoundingRect();
     }
 
-    StaffLine :: StaffLine()
+    StaffLine::StaffLine()
     {
     }
 
@@ -100,12 +100,12 @@ namespace Munip
         return m_boundingBox;
     }
 
-    int StaffLine :: length()
+    int StaffLine::length()
     {
         return (m_endPos.x() - m_startPos.x());
     }
 
-    bool StaffLine ::contains(const Segment &segment)
+    bool StaffLine::contains(const Segment &segment)
     {
        for(int i = 0; i < m_segmentList.size();i++)
            if( m_segmentList[i] == segment)
@@ -119,7 +119,7 @@ namespace Munip
                 line.boundingBox().top()) == 1;
     }
 
-    bool StaffLine :: aggregate(StaffLine &line )
+    bool StaffLine::aggregate(StaffLine &line )
     {
 
         /*A better way of aggregating i feel
@@ -188,23 +188,23 @@ namespace Munip
         return m_segmentList;
     }
 
-    bool StaffLine ::isValid() const
+    bool StaffLine::isValid() const
     {
         return !( m_startPos == QPoint(-1,-1) || m_endPos == QPoint(-1,-1) || m_lineWidth == -1);
     }
 
-    void StaffLine ::displaySegments()
+    void StaffLine::displaySegments()
     {
         for(int i= 0; i < m_segmentList.size(); i++)
                   qDebug()<<m_segmentList[i].startPos()<<m_segmentList[i].endPos()<<m_segmentList[i].destinationPos();
     }
 
-    void StaffLine ::sortSegments()
+    void StaffLine::sortSegments()
     {
         qSort(m_segmentList.begin(),m_segmentList.end(),segmentSortByPosition);
     }
 
-    bool StaffLine ::findSegment(Segment& s) const
+    bool StaffLine::findSegment(Segment& s) const
     {
         for(int i = 0; i < m_segmentList.size();i++)
             if(m_segmentList[i] == s)
@@ -219,7 +219,7 @@ namespace Munip
         m_endPos = vEnd;
     }
 	
-    Staff :: Staff()
+    Staff::Staff()
     {
 
     }
@@ -261,7 +261,7 @@ namespace Munip
         m_staffLines.append(sline);
     }
 	
-    void Staff :: addStaffLineList(QVector<StaffLine> list)
+    void Staff::addStaffLineList(QVector<StaffLine> list)
     {
 		m_staffLines = list;
     }
@@ -271,12 +271,12 @@ namespace Munip
         return m_startPos.y() < other.m_startPos.y();
     }
 
-    void Staff :: clear()
+    void Staff::clear()
     {
         m_staffLines.clear();
     }
 
-    int Staff ::distance( int index )
+    int Staff::distance( int index )
     {
         qDebug() << Q_FUNC_INFO << " " << index << m_staffLines.size();
         if( index == 0 || index > 5 )  // TODO must be extensible
