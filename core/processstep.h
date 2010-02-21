@@ -98,8 +98,8 @@ namespace Munip {
         Q_OBJECT;
     public:
         ProcessStepAction(const QByteArray& className,
-                          const QIcon& icon,
-                          const QString& caption,
+                          const QIcon& icon = QIcon(),
+                          const QString& caption = QString(),
                           QObject *parent = 0);
 
     public Q_SLOTS:
@@ -112,6 +112,7 @@ namespace Munip {
     struct ProcessStepFactory
     {
         static ProcessStep* create(const QByteArray& className, const QImage& originalImage, ProcessQueue *processQueue = 0);
+        static QList<ProcessStepAction*> actions(QObject *parent = 0);
     };
 
     class GrayScaleConversion : public ProcessStep
@@ -259,7 +260,7 @@ namespace Munip {
     public:
         ImageCluster(const QImage& originalImage, ProcessQueue *queue = 0);
         ImageCluster(const QImage& originalImage,
-                int staffSpaceHeight = InvalidStaffSpaceHeight,
+                int staffSpaceHeight = ImageCluster::InvalidStaffSpaceHeight,
                 ProcessQueue *queue = 0);
         virtual void process();
 
@@ -268,6 +269,20 @@ namespace Munip {
     private:
         static int InvalidStaffSpaceHeight;
         ClusterSet m_clusterSet;
+    };
+
+    class SymbolAreaExtraction : public ProcessStep
+    {
+        Q_OBJECT
+    public:
+        SymbolAreaExtraction(const QImage& originalImage, ProcessQueue *queue = 0);
+        SymbolAreaExtraction(const QImage& originalImage,
+                int staffSpaceHeight = SymbolAreaExtraction::InvalidStaffSpaceHeight,
+                ProcessQueue *queue = 0);
+        virtual void process();
+
+    private:
+        static int InvalidStaffSpaceHeight;
     };
 
 }

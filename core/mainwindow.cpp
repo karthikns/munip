@@ -121,39 +121,7 @@ void MainWindow::setupActions()
     viewBar->addAction(zoomOutAction);
     viewBar->addAction(m_showGridAction);
 
-    QAction *toGrayScaleAction = new Munip::ProcessStepAction("GrayScaleConversion", QIcon(),
-                                                              tr("&GrayScale conversion"), this);
-    toGrayScaleAction->setShortcut(tr("Ctrl+1"));
-
-    QAction *toMonochromeAction = new Munip::ProcessStepAction("MonoChromeConversion", QIcon(),
-                                                               tr("Convert to &monochrome"), this);
-    toMonochromeAction->setShortcut(tr("Ctrl+2"));
-    toMonochromeAction->setStatusTip(tr("Converts the active image to monochrome"));
-
-    QAction *correctSkewAction = new Munip::ProcessStepAction("SkewCorrection", QIcon(),
-                                                              tr("Correct &Skew"), this);
-    correctSkewAction->setShortcut(tr("Ctrl+3"));
-
-    QAction *staffLineDetect = new Munip::ProcessStepAction("StaffLineDetect", QIcon(),
-                                                             tr("&Detect Staff lines"), this);
-    staffLineDetect->setShortcut(tr("Ctrl+4"));
-
-    QAction *staffLineRemoval = new Munip::ProcessStepAction("StaffLineRemoval", QIcon(),
-                                                             tr("&Remove Staff lines"), this);
-    staffLineRemoval->setShortcut(tr("Ctrl+5"));
-
-
-    QAction *staffParamAction = new Munip::ProcessStepAction("StaffParamExtraction", QIcon(),
-                                                             tr("&Staff Parameter extraction"), this);
-    staffParamAction->setShortcut(tr("Ctrl+6"));
-    staffParamAction->setStatusTip(tr("Computes staff space height and staff line height of a deskewewd image"));;
-
-    QAction *rotation = new Munip::ProcessStepAction("ImageRotation", QIcon(),
-                                                     tr("&Rotate image"), this);
-    rotation->setShortcut(tr("Ctrl+7"));
-
-    QAction *cluster = new Munip::ProcessStepAction("ImageCluster", QIcon(),tr("Cluster Image"), this);
-    cluster->setShortcut(tr("Ctrl+8"));
+    QList<Munip::ProcessStepAction*> psActions = Munip::ProcessStepFactory::actions(this);
 
     QAction *projectionAction = new QAction(tr("&Projection"), this);
     projectionAction->setShortcut(tr("Ctrl+P"));
@@ -161,25 +129,13 @@ void MainWindow::setupActions()
     connect(projectionAction, SIGNAL(triggered()), this, SLOT(slotProjection()));
 
     QMenu *processMenu = menuBar->addMenu(tr("&Process"));
-    processMenu->addAction(toGrayScaleAction);
-    processMenu->addAction(toMonochromeAction);
-    processMenu->addAction(correctSkewAction);
-    processMenu->addAction(staffLineDetect);
-    processMenu->addAction(staffLineRemoval);
-    processMenu->addAction(staffParamAction);
-    processMenu->addAction(rotation);
-    processMenu->addAction(cluster);
-    processMenu->addAction(projectionAction);
-
     SideBar *processBar = new SideBar();
-    processBar->addAction(toGrayScaleAction);
-    processBar->addAction(toMonochromeAction);
-    processBar->addAction(correctSkewAction);
-    processBar->addAction(staffLineDetect);
-    processBar->addAction(staffLineRemoval);
-    processBar->addAction(staffParamAction);
-    processBar->addAction(rotation);
-    processBar->addAction(cluster);
+    foreach (Munip::ProcessStepAction *action, psActions) {
+        processMenu->addAction(action);
+        processBar->addAction(action);
+    }
+
+    processMenu->addAction(projectionAction);
     processBar->addAction(projectionAction);
 
     QDockWidget *dock = new QDockWidget(tr("Process"), this);

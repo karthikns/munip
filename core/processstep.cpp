@@ -99,6 +99,9 @@ namespace Munip
         QAction(icon, caption, parent),
         m_className(className)
     {
+        if (caption.isEmpty()) {
+            setText(QString(className));
+        }
         connect(this, SIGNAL(triggered()), this, SLOT(execute()));
     }
 
@@ -145,8 +148,30 @@ namespace Munip
             step = new ImageRotation(originalImage, queue);
         else if (className == QByteArray("ImageCluster"))
             step = new ImageCluster(originalImage, queue);
+        else if (className == QByteArray("SymbolAreaExtraction"))
+            step = new SymbolAreaExtraction(originalImage, queue);
 
         return step;
+    }
+
+    QList<ProcessStepAction*> ProcessStepFactory::actions(QObject *parent)
+    {
+        QList<ProcessStepAction*> actions;
+        QByteArray classes[] =
+        {
+            "GrayScaleConversion", "MonoChromeConversion", "SkewCorrection",
+            "StaffLineDetect", "StaffLineRemoval", "StaffParamExtraction",
+            "ImageRotation", "ImageCluster", "SymbolAreaExtraction"
+        };
+
+        int size = (int)((sizeof(classes))/(sizeof(QByteArray)));
+        for (int i = 0; i < size; ++i) {
+            ProcessStepAction *newAction = new ProcessStepAction(classes[i]);
+            newAction->setParent(parent);
+            actions << newAction;
+        }
+
+        return actions;
     }
 
     GrayScaleConversion::GrayScaleConversion(const QImage& originalImage, ProcessQueue *queue) : ProcessStep(originalImage, queue)
@@ -1468,4 +1493,25 @@ QPair<int, int> ImageCluster::clusterParams(int staffSpaceHeight)
     return qMakePair(staffSpaceHeight, area);
 }
 
+int SymbolAreaExtraction::InvalidStaffSpaceHeight = -1;
+
+SymbolAreaExtraction::SymbolAreaExtraction(const QImage& originalImage, ProcessQueue *queue) :
+    ProcessStep(originalImage, queue)
+{
+
+}
+
+SymbolAreaExtraction::SymbolAreaExtraction(const QImage& originalImage,
+        int staffSpaceHeight, ProcessQueue *queue) :
+    ProcessStep(originalImage, queue)
+{
+    Q_UNUSED(staffSpaceHeight);
+}
+
+void SymbolAreaExtraction::process()
+{
+    emit started();
+
+    emit ended();
+}
 }
