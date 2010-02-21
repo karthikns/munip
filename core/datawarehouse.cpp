@@ -57,6 +57,11 @@ QSize DataWarehouse::resolution() const
     return img ? img->image().size() : QSize(0, 0);
 }
 
+void DataWarehouse::clearStaff()
+{
+    m_staffList.clear();
+}
+
 QList<Staff> DataWarehouse::staffList() const
 {
     return m_staffList;

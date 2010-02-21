@@ -43,6 +43,8 @@ namespace Munip {
         return(line.startPos().x() * 4000 + line.endPos().y());
     }
 
+    QColor randColor();
+
      /**
      * This base class represents a process step like skew
      * detection. It provides access to the original as well as

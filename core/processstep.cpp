@@ -29,6 +29,20 @@
 
 namespace Munip
 {
+    QColor randColor()
+    {
+        static QList<int> possible;
+        if (possible.isEmpty()) {
+            for (int i = 0; i < 19; ++i) {
+                if (i != Qt::black || i != Qt::white) {
+                    possible << i;
+                }
+            }
+        }
+
+        return QColor(Qt::GlobalColor(possible[qrand() % possible.size()]));
+    }
+
     ProcessStep::ProcessStep(const QImage& originalImage, ProcessQueue *processQueue) :
         m_originalImage(originalImage),
         m_processedImage(originalImage),
@@ -651,6 +665,7 @@ void StaffLineDetect::constructStaff()
 {
 
     int i = 0;
+    DataWarehouse::instance()->clearStaff();
     while (i < m_lineList.size())
     {
         Staff s;
@@ -1511,6 +1526,72 @@ SymbolAreaExtraction::SymbolAreaExtraction(const QImage& originalImage,
 void SymbolAreaExtraction::process()
 {
     emit started();
+
+    m_processedImage = QImage(m_originalImage.size(), QImage::Format_ARGB32_Premultiplied);
+    m_processedImage.fill(0xffffffff);
+
+    const int Black = m_originalImage.color(0) == 0xffffffff ? 1 : 0;
+    for (int x = 0; x < m_originalImage.width(); ++x) {
+        for (int y = 0; y < m_originalImage.height(); ++y) {
+            if (m_originalImage.pixelIndex(x, y) == Black) {
+                m_processedImage.setPixel(x, y, QColor(Qt::black).rgb());
+            }
+        }
+    }
+
+    DataWarehouse *dw = DataWarehouse::instance();
+    QList<Staff> staffList = dw->staffList();
+#if 1
+    const int spacing = 50;
+    QSize size(0, 0);
+    foreach (const Staff& s, staffList) {
+        QRect r = s.boundingRect();
+        size.rheight() += 2 * r.height() + spacing;
+        if (size.width() < r.width()) {
+            size.setWidth(r.width());
+        }
+    }
+
+    m_processedImage = QImage(size, QImage::Format_ARGB32_Premultiplied);
+    m_processedImage.fill(0xffffffff);
+
+    int y = 0;
+    QPainter p(&m_processedImage);
+    foreach (const Staff& s, staffList) {
+        QRect r = s.boundingRect();
+        QRect target(QPoint(0, y), r.size());
+        p.drawImage(target, m_originalImage, r);
+
+        y += r.height() + .5 * spacing;
+        QRect projectionRect = r.translated(QPoint(0, y) - r.topLeft());
+        p.setPen(QColor(Qt::blue));
+        p.drawRect(projectionRect.adjusted(-2, -2, 2, 2));
+        p.setPen(QColor(Qt::red));
+
+        for (int x = r.left(), X = projectionRect.left(); x <= r.right(); ++x, ++X) {
+            int count = 0;
+            for (int y = r.top(); y < r.bottom(); ++y) {
+                if (m_originalImage.pixelIndex(x, y) == Black) {
+                    count++;
+                }
+            }
+            if (count) {
+                p.drawLine(X, projectionRect.bottom(), X, projectionRect.bottom() - count);
+            }
+        }
+
+
+        y += r.height() + .5 * spacing;
+    }
+
+
+#else
+    QPainter p(&m_processedImage);
+    foreach (const Staff& s, staffList) {
+        p.setPen(randColor());
+        p.drawRect(s.boundingRect());
+    }
+#endif
 
     emit ended();
 }

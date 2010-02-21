@@ -74,6 +74,10 @@ void MainWindow::setupActions()
     closeAction->setStatusTip(tr("Closes the image"));
     connect(closeAction, SIGNAL(triggered()), this, SLOT(slotClose()));
 
+    QAction *closeAllAction = new QAction(QIcon(":/resources/close.png"), tr("&Close all windows"), this);
+    closeAllAction->setStatusTip(tr("Closes all open windows"));
+    connect(closeAllAction, SIGNAL(triggered()), this, SLOT(slotCloseAll()));
+
     QAction *quitAction = new QAction(QIcon(":/resources/quit.png"), tr("&Quit"), this);
     quitAction->setShortcut(tr("Ctrl+Q"));
     quitAction->setStatusTip(tr("Quit application"));
@@ -84,6 +88,7 @@ void MainWindow::setupActions()
     fileMenu->addAction(saveAction);
     fileMenu->addAction(saveAsAction);
     fileMenu->addAction(closeAction);
+    fileMenu->addAction(closeAllAction);
     fileMenu->addSeparator();
     fileMenu->addAction(quitAction);
     QToolBar *fileBar = addToolBar(tr("&File"));
@@ -91,6 +96,7 @@ void MainWindow::setupActions()
     fileBar->addAction(saveAction);
     fileBar->addAction(saveAsAction);
     fileBar->addAction(closeAction);
+    fileBar->addAction(closeAllAction);
     fileBar->addAction(quitAction);
 
 
@@ -209,6 +215,11 @@ void MainWindow::slotSaveAs()
 void MainWindow::slotClose()
 {
     m_mdiArea->closeActiveSubWindow();
+}
+
+void MainWindow::slotCloseAll()
+{
+    m_mdiArea->closeAllSubWindows();
 }
 
 void MainWindow::slotQuit()

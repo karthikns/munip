@@ -25,6 +25,7 @@ public slots:
     void slotSave();
     void slotSaveAs();
     void slotClose();
+    void slotCloseAll();
     void slotQuit();
 
     void slotZoomIn();

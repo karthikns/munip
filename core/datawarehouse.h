@@ -22,6 +22,7 @@ namespace Munip {
 
         QSize resolution()  const;
 
+        void clearStaff();
         void appendStaff( Staff staff );
         QList<Staff> staffList() const;
 
