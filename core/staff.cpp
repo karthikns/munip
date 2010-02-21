@@ -1,6 +1,6 @@
 #include "staff.h"
-#include "DataWarehouse.h"
 
+#include "datawarehouse.h"
 #include "tools.h"
 
 #include <QDebug>

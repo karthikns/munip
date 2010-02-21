@@ -1,13 +1,13 @@
 #include "processstep.h"
 #include "staff.h"
 
-#include "imagewidget.h"
+#include "cluster.h"
+#include "datawarehouse.h"
 #include "horizontalrunlengthimage.h"
+#include "imagewidget.h"
 #include "mainwindow.h"
 #include "projection.h"
 #include "tools.h"
-#include "DataWarehouse.h"
-#include "cluster.h"
 
 #include <QAction>
 #include <QDir>

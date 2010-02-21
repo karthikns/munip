@@ -3,7 +3,7 @@ TARGET = core
 CONFIG += static
 
 # Input
-HEADERS += DataWarehouse.h \
+HEADERS += datawarehouse.h \
     horizontalrunlengthimage.h \
     imagewidget.h \
     mainwindow.h \
@@ -14,7 +14,7 @@ HEADERS += DataWarehouse.h \
     staff.h \
     tools.h \
     cluster.h
-SOURCES += DataWarehouse.cpp \
+SOURCES += datawarehouse.cpp \
     horizontalrunlengthimage.cpp \
     imagewidget.cpp \
     mainwindow.cpp \

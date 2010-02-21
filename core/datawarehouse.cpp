@@ -1,4 +1,4 @@
-#include "DataWarehouse.h"
+#include "datawarehouse.h"
 #include "staff.h"
 #include "mainwindow.h"
 #include "imagewidget.h"
