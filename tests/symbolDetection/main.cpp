@@ -52,7 +52,7 @@ void tst_SymbolDetection::clusterDetect_data()
             const int startWidth = 500;
             const int stopWidth = 1000;
             const int widthStep = 500;
-            for (int width = startWidth; width <= startWidth; width += widthStep) {
+            for (int width = startWidth; width <= stopWidth; width += widthStep) {
                 int height = int(qRound(width/aspectRatio));
                 QImage scaled = original.scaled(width,
                         height,
