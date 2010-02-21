@@ -232,7 +232,10 @@ namespace Munip {
         StaffParamExtraction(const QImage& originalImage, ProcessQueue *queue);
         virtual void process();
 
+        int staffSpaceHeight() const;
+
     private:
+        int m_staffSpaceHeight;
         QMap<int, int> m_runLengths[2];
     };
 

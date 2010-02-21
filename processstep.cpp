@@ -1241,7 +1241,8 @@ void StaffLineRemoval::removeLine(QPoint& start,QPoint& end)
 }
 
 StaffParamExtraction::StaffParamExtraction(const QImage& originalImage, ProcessQueue *queue) :
-    ProcessStep(originalImage, queue)
+    ProcessStep(originalImage, queue),
+    m_staffSpaceHeight(5)
 {
     Q_ASSERT(originalImage.format() == QImage::Format_Mono);
     // Ensure non zero dimension;
@@ -1297,6 +1298,9 @@ void StaffParamExtraction::process()
                 maxRun = m_runLengths[i][k];
             }
         }
+        if (i == White) {
+            m_staffSpaceHeight = maxValue;
+        }
         file.close();
 
         QStringList args;
@@ -1328,12 +1332,17 @@ void StaffParamExtraction::process()
     m_processedImage = QImage(sz, QImage::Format_ARGB32_Premultiplied);
     m_processedImage.fill(0xffffffff);
 
-    ::QPainter p(&m_processedImage);
+    QPainter p(&m_processedImage);
     p.drawImage(QPoint(0, 0), plots[0]);
     p.drawImage(QPoint(0, plots[0].height() + 50), plots[1]);
     p.end();
 
     emit ended();
+}
+
+int StaffParamExtraction::staffSpaceHeight() const
+{
+    return m_staffSpaceHeight;
 }
 
 const qreal ImageRotation::InvalidAngle = -753;
@@ -1386,7 +1395,7 @@ void ImageRotation::process()
     //
     // NOTE: Pen width = 2 ensures there is no faint line garbage
     //       left behind.
-    ::QPainter painter(&m_processedImage);
+    QPainter painter(&m_processedImage);
     painter.setPen(QPen(Qt::white, 2));
     painter.setBrush(QBrush(Qt::white));
     painter.drawPolygon(remainingBlackTriangularAreas);
