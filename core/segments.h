@@ -10,8 +10,7 @@ namespace Munip
 {
     class Segment
     {
-
-        public:
+    public:
 
         Segment();
         Segment(const QPoint& start,const QPoint& end);
@@ -43,7 +42,7 @@ namespace Munip
 
         bool isConnected(const Segment &segment);
 
-        private:
+    private:
 
         QPoint m_startPos;
         QPoint m_endPos;
@@ -56,12 +55,12 @@ namespace Munip
 }
 
 inline bool operator==(const Munip::Segment& line1,const Munip::Segment& line2)
-    {
-        return (line1.startPos()==line2.startPos() && line1.endPos()==line2.endPos());
-    }
+{
+    return (line1.startPos()==line2.startPos() && line1.endPos()==line2.endPos());
+}
 inline bool operator!=(const Munip::Segment& line1,const Munip::Segment& line2)
-    {
-        return !(line1 == line2);
-    }
+{
+    return !(line1 == line2);
+}
 
 #endif // SEGMENTS_H

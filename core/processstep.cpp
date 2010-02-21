@@ -250,7 +250,7 @@ namespace Munip
         //
         // NOTE: Pen width = 2 ensures there is no faint line garbage
         //       left behind.
-::QPainter painter(&m_processedImage);
+        QPainter painter(&m_processedImage);
         painter.setPen(QPen(Qt::white, 2));
         painter.setBrush(QBrush(Qt::white));
         painter.drawPolygon(remainingBlackTriangularAreas);
@@ -768,7 +768,7 @@ int StaffLineDetect::findBottomHeight(QPoint pos,QImage& workImage)
 
 void StaffLineDetect::drawDetectedLines()
 {
-::QPainter p(&m_lineRemovedTracker);
+    QPainter p(&m_lineRemovedTracker);
 
     int i = 0;
 
@@ -986,7 +986,7 @@ QVector<Staff> StaffLineRemoval::fillDataStructures()
 
     m_lineRemovedTracker = QPixmap(m_processedImage.size());
     m_lineRemovedTracker.fill(QColor(Qt::white));
-::QPainter p(&m_lineRemovedTracker);
+    QPainter p(&m_lineRemovedTracker);
 #if 1
     if (!m_lineLocation.isEmpty() && m_lineLocation.size()%2 != 0) {
         m_lineLocation.append(m_lineLocation[m_lineLocation.size()-1]);

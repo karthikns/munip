@@ -9,34 +9,34 @@ namespace Munip {
 
     class DataWarehouse
     {
-        public:
-            static DataWarehouse* instance();
-            float pageSkew() const;
-            void setPageSkew(float skew);
+    public:
+        static DataWarehouse* instance();
+        float pageSkew() const;
+        void setPageSkew(float skew);
 
-            float pageSkewPrecison() const;
-            void setPageSkewPrecision(float precision);
+        float pageSkewPrecison() const;
+        void setPageSkewPrecision(float precision);
 
-            uint lineSize() const;
-            void setLineSize(uint lineSize);
+        uint lineSize() const;
+        void setLineSize(uint lineSize);
 
-            QPair<uint,uint> resolution()  const;
+        QSize resolution()  const;
 
-            void appendStaff( Staff staff );
-            QList<Staff> staffList() const;
+        void appendStaff( Staff staff );
+        QList<Staff> staffList() const;
 
-            QImage workImage() const;
-            void setWorkImage(const QImage& image);
+        QImage workImage() const;
+        void setWorkImage(const QImage& image);
 
-        private:
-            DataWarehouse();
-            static DataWarehouse* m_dataWarehouse;
-            float m_pageSkew;
-            float m_pageSkewPrecision;
-            QImage m_workImage;
+    private:
+        DataWarehouse();
+        static DataWarehouse* m_dataWarehouse;
+        float m_pageSkew;
+        float m_pageSkewPrecision;
+        QImage m_workImage;
 
-            uint m_lineSize;
-            QList<Staff> m_staffList;
-     };
+        uint m_lineSize;
+        QList<Staff> m_staffList;
+    };
 }
 #endif

@@ -10,7 +10,7 @@ DataWarehouse* DataWarehouse::m_dataWarehouse = 0;
 DataWarehouse::DataWarehouse()
 {
     m_pageSkewPrecision = 0.3f;
-    m_lineSize = (int)resolution().first*0.05;
+    m_lineSize = (int)qRound(resolution().width()*0.05);
 }
 
 DataWarehouse* DataWarehouse::instance()
@@ -50,13 +50,11 @@ uint DataWarehouse::lineSize() const
     return m_lineSize;
 }
 
-QPair<uint,uint> DataWarehouse::resolution() const
+QSize DataWarehouse::resolution() const
 {
     MainWindow* t = MainWindow::instance();
-    if( !t->activeImageWidget() )
-        return QPair<uint,uint>(0,0);
-    QPair<uint,uint> ob( t->activeImageWidget()->image().width(),t->activeImageWidget()->image().height() );
-    return ob;
+    ImageWidget *img = t->activeImageWidget();
+    return img ? img->image().size() : QSize(0, 0);
 }
 
 QList<Staff> DataWarehouse::staffList() const
