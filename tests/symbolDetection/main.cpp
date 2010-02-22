@@ -49,9 +49,9 @@ void tst_SymbolDetection::clusterDetect_data()
 
         const qreal aspectRatio = qreal(original.width())/original.height();
         {
-            const int startWidth = 500;
-            const int stopWidth = 1000;
-            const int widthStep = 500;
+            const int startWidth = 400;
+            const int stopWidth = 2000;
+            const int widthStep = 400;
             for (int width = startWidth; width <= stopWidth; width += widthStep) {
                 int height = int(qRound(width/aspectRatio));
                 QImage scaled = original.scaled(width,

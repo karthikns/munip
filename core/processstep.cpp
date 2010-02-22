@@ -1904,9 +1904,9 @@ QPair<int, int> ImageCluster::clusterParams(int staffSpaceHeight)
         return QPair<int, int>(ImageCluster::InvalidStaffSpaceHeight,
                 ImageCluster::InvalidStaffSpaceHeight);
     }
-    int radius = int(.70 * staffSpaceHeight);
+    int radius = int(.85 * staffSpaceHeight);
     int area = int(M_PI * radius * radius);
-    return qMakePair(staffSpaceHeight, area);
+    return qMakePair(staffSpaceHeight, int(qRound(.8 * area)));
 }
 
 int SymbolAreaExtraction::InvalidStaffSpaceHeight = -1;
