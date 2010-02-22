@@ -9,3 +9,5 @@ Makefile
 munip
 skewDetectionTest
 symbolDetectionTest
+
+test_output
