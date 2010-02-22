@@ -30,8 +30,13 @@
 class QIcon;
 class HorizontalRunlengthImage;
 
+inline uint qHash(const QRect &rect)
+{
+    return(rect.left() * 4000 + rect.right());
+}
 
 namespace Munip {
+
 
     // Forwared declarations
     class Page;
@@ -186,11 +191,14 @@ namespace Munip {
         QVector<StaffLine> m_lineList;
         QVector<Segment> m_maxPaths;
         QPixmap m_lineRemovedTracker;
+        QPixmap m_rectTracker;
+        QImage m_symbolMap;
+        QImage m_lineMap;
         QVector<Segment> m_segments[5000];
         QHash<Segment,Segment> m_lookUpTable;
         int  m_connectedComponentID;
         //int m_imageMap[5000][5000];
-        QVector<QRect> m_symbolRegions;
+        QList<QRect> m_symbolRegions;
 
 
         void findPaths();
@@ -199,6 +207,16 @@ namespace Munip {
         int findTopHeight(QPoint pos,QImage& workImage);
         int findBottomHeight(QPoint pos,QImage& workImage);
 
+        QList<Segment> findTopSegments(Segment segment,QImage& workImage);
+        QList<Segment> findBottomSegments(Segment segment,QImage& workImage);
+        QList<Segment> findAdjacentSymbolSegments(Segment segment,QImage& workImage);
+
+        void  aggregateSymbolRegion();
+        QRect aggregateSymbolRects(QRect rect1,QRect rect2);
+        QRect aggregateAdjacentRegions(QRect symbolRect1,QRect symbolRect2);
+
+
+        void StaffCleanUp(const Staff &staff);
 
    };
 

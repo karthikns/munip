@@ -17,10 +17,10 @@ namespace Munip
 
         ~Segment();
 
-        void setStartPos(QPoint &pos);
+        void setStartPos(const QPoint &pos);
         QPoint startPos() const;
 
-        void setEndPos(QPoint &pos);
+        void setEndPos(const QPoint &pos);
         QPoint endPos() const;
 
         int weight() const;
@@ -48,11 +48,9 @@ namespace Munip
         QPoint m_endPos;
         int m_connectedComponentID;
         QPoint m_destinationPos;
-
-
-
     };
 }
+
 
 inline bool operator==(const Munip::Segment& line1,const Munip::Segment& line2)
 {

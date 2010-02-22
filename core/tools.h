@@ -28,6 +28,7 @@ namespace Munip
     bool segmentSortByConnectedComponentID(Segment &s1,Segment &s2);
     bool segmentSortByPosition(Segment &s1,Segment &s2);
     bool staffLineSort(StaffLine &line1,StaffLine &line2);
+    bool symbolRectSort(QRect &symbolRect1,QRect &symbolRect2);
 
     double normalizedLineTheta(const QLineF& line);
 }

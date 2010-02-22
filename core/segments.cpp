@@ -22,7 +22,7 @@ namespace Munip
 
     }
 
-    void Segment ::setStartPos(QPoint &pos)
+    void Segment ::setStartPos(const QPoint &pos)
     {
         m_startPos = pos;
     }
@@ -32,7 +32,7 @@ namespace Munip
         return m_startPos;
     }
 
-    void Segment ::setEndPos(QPoint &pos)
+    void Segment ::setEndPos(const QPoint &pos)
     {
         m_endPos = pos;
     }

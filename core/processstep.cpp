@@ -422,14 +422,25 @@ namespace Munip
         emit started();
 
         m_lineRemovedTracker = QPixmap(m_processedImage.size());
+        m_rectTracker = QPixmap(m_processedImage.size());
         m_lineRemovedTracker.fill(QColor(Qt::white));
+        m_rectTracker.fill(QColor(Qt::white));
+        m_symbolMap = m_processedImage;
         detectLines();
+        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
 
         //removeStaffLines();
         constructStaff();
 
-        m_processedImage = m_lineRemovedTracker.toImage();
-
+       // m_processedImage = m_lineRemovedTracker.toImage();
+        QPainter p(&m_rectTracker);
+        for(int x = 0; x < m_symbolMap.width(); x++)
+            for(int y = 0; y< m_symbolMap.height();y++)
+                if(m_symbolMap.pixelIndex(x,y) == Black)
+                    p.drawPoint(x,y);
+        MainWindow::instance()->addSubWindow(new ImageWidget(m_rectTracker.toImage()));
+        MainWindow::instance()->addSubWindow(new ImageWidget(m_symbolMap));
 
         emit ended();
     }
@@ -680,9 +691,9 @@ void StaffLineDetect::constructStaff()
         s.setEndPos(s.staffLines()[s.staffLines().size()-1].endPos());
         s.setBoundingRect(findStaffBoundingRect(s));
 
-        DataWarehouse::instance()->appendStaff(s);
-        mDebug() <<Q_FUNC_INFO<<s.boundingRect().topLeft()<<s.boundingRect().bottomRight()<<s.boundingRect();
-        //identifySymbolRegions(s);
+        DataWarehouse ::instance()->appendStaff(s);
+        //mDebug() <<Q_FUNC_INFO<<s.boundingRect().topLeft()<<s.boundingRect().bottomRight()<<s.boundingRect();
+        identifySymbolRegions(s);
         i+=5;
 
 
@@ -808,6 +819,7 @@ int StaffLineDetect::findBottomHeight(QPoint pos,QImage& workImage)
 
 void StaffLineDetect::drawDetectedLines()
 {
+    const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
     QPainter p(&m_lineRemovedTracker);
 
     int i = 0;
@@ -823,48 +835,429 @@ void StaffLineDetect::drawDetectedLines()
 
                 visited.insert(s);
                 p.drawLine(s.startPos(),s.endPos());
+
+                for(int x = s.startPos().x(); x <= s.endPos().x();x++)
+                    m_symbolMap.setPixel(x,s.startPos().y(),White);
                 s = m_lookUpTable.value(s);
             }
         i++;
     }
 
+    m_lineMap = m_lineRemovedTracker.toImage();
+    ProcessStep *step = ProcessStepFactory::create("MonoChromeConversion",m_lineMap,0);
+    step->process();
+    m_lineMap = step->processedImage();
 }
 
 
 
-void StaffLineDetect::identifySymbolRegions(const Staff &s)
+QRect StaffLineDetect::aggregateAdjacentRegions(QRect symbolRect1,QRect symbolRect2)
+{
+    if(symbolRect1.intersects(symbolRect2) )
+    {
+        mDebug()<<"hii"<<symbolRect1<<symbolRect2;
+        QRect aggregatedRect = symbolRect1;
+        if(aggregatedRect.left() > symbolRect2.left())
+           aggregatedRect.setLeft(symbolRect2.left());
+
+
+       if(aggregatedRect.right() < symbolRect2.right())
+           aggregatedRect.setRight(symbolRect2.right());
+
+
+       if(aggregatedRect.top() > symbolRect2.top())
+           aggregatedRect.setTop(symbolRect2.top());
+
+
+       if(aggregatedRect.bottom() < symbolRect2.bottom())
+           aggregatedRect.setBottom(symbolRect2.bottom());
+       return aggregatedRect;
+
+
+    }
+    if(symbolRect1.contains(symbolRect2))
+        return symbolRect1;
+    if(symbolRect2.contains(symbolRect1))
+        return symbolRect2;
+
+    return QRect(QPoint(-1,-1),QPoint(-1,-1));
+
+}
+
+QRect StaffLineDetect::aggregateSymbolRects( QRect symbolRect1, QRect symbolRect2)
 {
     const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
-    const int Black = 1-White;
-
-    int x = s.startPos().x(),y = s.startPos().y();
-    int count = 0;
-
-    while(x <= s.endPos().x())
+    if(symbolRect1.bottom() > symbolRect2.bottom())
     {
+        QRect temp = symbolRect1;
+        symbolRect1 = symbolRect2;
+        symbolRect2 = temp;
+    }
 
-        while(y < s.endPos().y() && m_processedImage.pixelIndex(x,y) == Black)
-        {       y++;
-                count++;
-        }
-        while(y < s.endPos().y() && m_processedImage.pixelIndex(x,y) == White)
-                y++;
-
-        if(y == s.endPos().y())
-        {
-            mDebug()<<Q_FUNC_INFO<<x<<y<<count;
-            y = s.startPos().y();
-            count = 0;
+    QRect aggregatedRect = symbolRect1;
+    int y = symbolRect1.bottom();
+    int x = symbolRect1.left();
+    y++;
+    bool isLine = true;
+    int vicinity = 0;
+    while(isLine)
+    {
+        while(x <= symbolRect1.right() && y <= m_processedImage.height() && m_lineMap.pixelIndex(x,y) == White)
             x++;
+        if(x > symbolRect1.right())
+            isLine = false;
+        else
+        {
+            aggregatedRect.setBottom(y);
+            y++;
+            x = symbolRect1.left();
+            vicinity++;
+        }
+    }
+    aggregatedRect.setBottom(y);
+
+
+    if(aggregatedRect.bottom() >= symbolRect2.top() && symbolRect2.left() >= aggregatedRect.left()-vicinity && symbolRect2.left() <= aggregatedRect.right()+vicinity)
+    {
+         if(aggregatedRect.left() > symbolRect2.left())
+            aggregatedRect.setLeft(symbolRect2.left());
+
+
+        if(aggregatedRect.right() < symbolRect2.right())
+            aggregatedRect.setRight(symbolRect2.right());
+
+
+        if(aggregatedRect.top() > symbolRect2.top())
+            aggregatedRect.setTop(symbolRect2.top());
+
+
+        if(aggregatedRect.bottom() < symbolRect2.bottom())
+            aggregatedRect.setBottom(symbolRect2.bottom());
+
+          //mDebug()<<true<<aggregatedRect.topLeft()<<aggregatedRect.bottomRight()<<aggregatedRect;//<<symbolRect2.topLeft()<<symbolRect2.bottomRight()<<symbolRect2;
+
+        return aggregatedRect;
+
+    }
+
+    return QRect(QPoint(-1,-1),QPoint(-1,-1));
+}
+
+void StaffLineDetect::aggregateSymbolRegion()
+{
+
+    QVector<QRect> symbolRegions = m_symbolRegions.toVector();
+    for(int i = 0; i < symbolRegions.size()-1 ; i++)
+    {
+        if(symbolRegions[i] == QRect(QPoint(-1,-1),QPoint(-1,-1)))
+            continue;
+
+        int count = 1;
+        while(i+count < symbolRegions.size() && symbolRegions[i+count].left() >= symbolRegions[i].left() && symbolRegions[i+count].left() <= symbolRegions[i].right())
+        {
+           QRect aggregatedRect = aggregateSymbolRects(symbolRegions[i],symbolRegions[i+count]);
+           if(aggregatedRect.topLeft() == QPoint(-1,-1) && aggregatedRect.bottomRight() == QPoint(-1,-1))
+           {
+               count++;
+               continue;
+           }
+
+           symbolRegions[i] = aggregatedRect;
+           symbolRegions[i+count] = QRect(QPoint(-1,-1),QPoint(-1,-1));
+           count++;
+
+        }
+    }
+
+    qSort(symbolRegions.begin(),symbolRegions.end(),symbolRectSort);
+
+    for(int i = 0; i < symbolRegions.size()-1;i++)
+    {
+        if(symbolRegions[i] == QRect(QPoint(-1,-1),QPoint(-1,-1)))
+            continue;
+
+        int count = 1;
+        while(i+count < symbolRegions.size() && symbolRegions[i+count].left() >= symbolRegions[i].left() && symbolRegions[i+count].left() <= symbolRegions[i].right())
+        {
+           QRect aggregatedRect = aggregateAdjacentRegions(symbolRegions[i],symbolRegions[i+count]);
+           if(aggregatedRect.topLeft() == QPoint(-1,-1) && aggregatedRect.bottomRight() == QPoint(-1,-1))
+           {
+               count++;
+               continue;
+           }
+
+           symbolRegions[i] = aggregatedRect;
+           symbolRegions[i+count] = QRect(QPoint(-1,-1),QPoint(-1,-1));
+           count++;
+
+        }
+    }
+    m_symbolRegions.clear();
+    foreach(QRect symbolRegion,symbolRegions)
+    {
+        if(symbolRegion.topLeft() == QPoint(-1,-1) && symbolRegion.bottomRight() == QPoint(-1,-1))
+            continue;
+        m_symbolRegions.push_back(symbolRegion);
+        mDebug()<<Q_FUNC_INFO<<symbolRegion<<symbolRegion.topLeft()<<symbolRegion.bottomRight();
+    }
+
+}
+
+
+
+void StaffLineDetect::identifySymbolRegions(const Staff &staff)
+{
+    QRect rect = staff.boundingRect();
+    QPoint topLeft = rect.topLeft();
+    QPoint bottomRight = rect.bottomRight();
+    QQueue<Segment> segmentQueue;
+    QSet<Segment> segmentSet;
+    QPainter p(&m_rectTracker);
+
+    StaffCleanUp(staff);
+    QImage workImage = m_symbolMap;
+    const int White = workImage.color(0) == 0xffffffff ? 0 : 1;
+    const int Black = 1 - White;
+
+    for(int y = topLeft.y(); y <= bottomRight.y(); y++)
+        for(int x = topLeft.x(); x <= bottomRight.x(); x++)
+
+            if(workImage.pixelIndex(x,y) == Black )
+            {
+                Segment segment;
+                segment.setStartPos(QPoint(x,y));
+                while(x < bottomRight.x() && workImage.pixelIndex(x,y) == Black)
+                    x++;
+                segment.setEndPos(QPoint(x-1,y));
+                segmentQueue.push_back(segment);
+                QRect symbolRect(segment.startPos(),segment.endPos());
+
+                while(!segmentQueue.empty())
+                {
+                    Segment segment = segmentQueue.front();
+
+                    segmentQueue.pop_front();
+                    if(segmentSet.contains(segment))
+                        continue;
+
+                    segmentSet.insert(segment);
+                    for(int x = segment.startPos().x(); x <= segment.endPos().x();x++)
+                        workImage.setPixel(x,segment.startPos().y(),White);
+
+                    if(segment.startPos().y() > symbolRect.bottom())
+                        symbolRect.setBottom(segment.startPos().y());
+
+                    if(segment.startPos().y() < symbolRect.top())
+                        symbolRect.setTop(segment.startPos().y());
+
+                    if(segment.startPos().x() < symbolRect.left())
+                        symbolRect.setLeft(segment.startPos().x());
+
+                    if(segment.endPos().x() > symbolRect.right())
+                        symbolRect.setRight(segment.endPos().x());
+
+
+
+                    QList<Segment> segments = findAdjacentSymbolSegments(segment,workImage);
+                    if(segments.size() > 0)
+                        segmentQueue.append(segments);
+                }
+
+                m_symbolRegions.push_back(symbolRect);
+
+
+            }
+
+    qSort(m_symbolRegions.begin(),m_symbolRegions.end(),symbolRectSort);
+    aggregateSymbolRegion();
+
+    foreach(QRect rectRegion,m_symbolRegions)
+    {
+           p.setPen(QColor(qrand() % 255, qrand()%255, 100+qrand()%155));
+           p.drawRect(rectRegion);
+    }
+
+}
+
+void StaffLineDetect::StaffCleanUp(const Staff &staff)
+{
+    const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+    const int Black = 1 - White;
+    QPoint removeMatrix[4][3];
+    for(int i =0; i < 4; i++)
+        for(int j =0; j <3;j++)
+            removeMatrix[i][j] = QPoint(-1,-1);
+
+    for(int y = staff.boundingRect().topLeft().y(); y <= staff.boundingRect().bottomRight().y(); y++)
+    {
+        for(int x = staff.boundingRect().topLeft().x(); x <= staff.boundingRect().bottomRight().x(); x++)
+        {
+            if(m_symbolMap.pixelIndex(x,y) == Black)
+            {
+
+                /*
+                 * THE MATRIX APPROACH-- A WOW ALGO FOR CLEANUP BUT NEEDS REFINEMENT*/
+
+
+                removeMatrix[1][1] = QPoint(x,y);
+                bool firstRowEmpty = true;
+                bool lastRowEmpty = true;
+
+                if(y-1 > 0)
+                {
+                    if(x-1 > 0 && m_symbolMap.pixelIndex(x-1,y-1) == Black)
+                    {
+                        removeMatrix[0][0] = QPoint(x-1,y-1);
+                        firstRowEmpty = false;
+                    }
+                    if(m_symbolMap.pixelIndex(x,y-1) == Black)
+                    {
+                        removeMatrix[0][1] = QPoint(x,y-1);
+                        firstRowEmpty = false;
+                    }
+                    if(x+1 < m_processedImage.width() && m_symbolMap.pixelIndex(x+1,y-1) == Black)
+                    {
+                        removeMatrix[0][2] = QPoint(x+1,y-1);
+                        firstRowEmpty = false;
+                    }
+                }
+
+                if(y+1 < m_processedImage.height())
+                {
+                    if(x-1 > 0 && m_symbolMap.pixelIndex(x-1,y+1) == Black)
+                        removeMatrix[2][0] = QPoint(x-1,y+1);
+                    if(m_symbolMap.pixelIndex(x,y+1) == Black)
+                        removeMatrix[2][1] = QPoint(x,y+1);
+                    if(x+1 < m_processedImage.height() && m_symbolMap.pixelIndex(x+1,y+1) == Black)
+                        removeMatrix[2][2] = QPoint(x+1,y+1);
+                }
+
+                if(y+2 < m_processedImage.height())
+                {
+                    if(x-1 > 0 && m_symbolMap.pixelIndex(x-1,y+2) == Black)
+                    {
+                        removeMatrix[3][0] = QPoint(x-1,y+2);
+                        lastRowEmpty = false;
+                    }
+                    if(m_symbolMap.pixelIndex(x,y+2) == Black)
+                    {
+                        removeMatrix[3][1] = QPoint(x,y+2);
+                        lastRowEmpty = false;
+                    }
+                    if(x+1 < m_processedImage.height() && m_symbolMap.pixelIndex(x+1,y+2) == Black)
+                    {
+                        removeMatrix[3][2] = QPoint(x+1,y+2);
+                        lastRowEmpty = false;
+                    }
+                }
+
+                if(firstRowEmpty && lastRowEmpty)
+                {
+
+                    if(removeMatrix[2][1] != QPoint(-1,-1))
+                        m_symbolMap.setPixel(removeMatrix[2][1],White);
+                    m_symbolMap.setPixel(x,y,White);
+                }
+                for(int i = 0; i < 4; i++)
+                    for(int j =0;j<3;j++)
+                        removeMatrix[i][j] = QPoint(-1,-1);
+
+            }
         }
     }
 
 
+
 }
 
 
+QList<Segment> StaffLineDetect::findTopSegments(Segment segment, QImage &workImage)
+{
+    const int White = workImage.color(0) == 0xffffffff ? 0 : 1;
+    const int Black = 1 - White;
+
+    int x = segment.startPos().x()-1;
+    int y = segment.startPos().y()-1;
 
 
+    QList<Segment> topSegments;
+
+    if( y < 0)
+        return topSegments;
+
+    if(workImage.pixelIndex(x,y) == Black)
+    {
+        while(x >= 0 && workImage.pixelIndex(x,y) == Black)
+            x--;
+        Segment s;
+        s.setStartPos(QPoint(x+1,y));
+        while(x < workImage.width() && workImage.pixelIndex(x,y) == Black)
+            x++;
+        s.setEndPos(QPoint(x-1,y));
+        topSegments.push_back(s);
+
+    }
+    while(x <= segment.endPos().x()+1)
+    {
+        while(x<= segment.endPos().x()+1 && workImage.pixelIndex(x,y) == White)
+            x++;
+        Segment s;
+        s.setStartPos(QPoint(x,segment.endPos().y()));
+        while(x < workImage.width() && workImage.pixelIndex(x,y) == Black)
+            x++;
+        s.setEndPos(QPoint(x,segment.endPos().y()));
+        topSegments.push_back(s);
+    }
+    return topSegments;
+}
+
+QList<Segment> StaffLineDetect::findBottomSegments(Segment segment, QImage &workImage)
+{
+    const int White = workImage.color(0) == 0xffffffff ? 0 : 1;
+    const int Black = 1 - White;
+
+    int x = segment.startPos().x()-1;
+    int y = segment.startPos().y()+1;
+    QList<Segment> bottomSegments;
+
+    if( y >= workImage.height() || x < 0 )
+        return bottomSegments;
+
+    if(workImage.pixelIndex(x,y) == Black)
+    {
+        while(x >= 0 && workImage.pixelIndex(x,y) == Black)
+            x--;
+        Segment s;
+        s.setStartPos(QPoint(x+1,y));
+        x = segment.startPos().x()-1;
+        while(x <= segment.endPos().x()+1 && workImage.pixelIndex(x,y) == Black)
+            x++;
+        s.setEndPos(QPoint(x-1,y));
+        bottomSegments.push_back(s);
+
+    }
+    while(x < workImage.width() && x <= segment.endPos().x()+1)
+    {
+        while(x < workImage.width() && x<= segment.endPos().x()+1 && workImage.pixelIndex(x,y) == White)
+            x++;
+        if(x <= segment.endPos().x()+1)
+        {
+            Segment s;
+            s.setStartPos(QPoint(x,y));
+            while(x < workImage.width() && workImage.pixelIndex(x,y) == Black)
+                x++;
+            s.setEndPos(QPoint(x-1,y));
+            bottomSegments.push_back(s);
+        }
+    }
+
+    return bottomSegments;
+}
+
+QList<Segment> StaffLineDetect::findAdjacentSymbolSegments(Segment segment,QImage& workImage)
+{
+    return findBottomSegments(segment,workImage);
+}
 
 
 

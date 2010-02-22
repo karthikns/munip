@@ -115,6 +115,11 @@ namespace Munip
         return line1.startPos().y() < line2.startPos().y();
     }
 
+    bool symbolRectSort(QRect &symbolRect1,QRect &symbolRect2)
+    {
+        return ( ( symbolRect1.topLeft().x() < symbolRect2.topLeft().x() ) || ( symbolRect1.topLeft().x() == symbolRect2.topLeft().x() && symbolRect1.topLeft().y() < symbolRect2.topLeft().y() ) );
+    }
+
      double normalizedLineTheta(const QLineF& line)
     {
         double angle = line.angle();
