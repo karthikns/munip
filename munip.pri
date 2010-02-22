@@ -12,3 +12,5 @@ DEPENDPATH += $$PWD/core
 INCLUDEPATH += $$PWD/core
 LIBS += -L$$PWD
 DESTDIR = $$PWD
+
+PRE_TARGETDEPS += $$PWD/libcore.a
