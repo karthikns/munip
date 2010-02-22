@@ -13,6 +13,7 @@
 #include "segments.h"
 #include "cluster.h"
 
+//#define MUNIP_DEBUG
 #ifdef MUNIP_DEBUG
     #define mDebug qDebug
     #define mWarning qWarning
@@ -255,9 +256,11 @@ namespace Munip {
         virtual void process();
 
         int staffSpaceHeight() const;
+        int staffLineHeight() const;
 
     private:
         int m_staffSpaceHeight;
+        int m_staffLineHeight;
         QMap<int, int> m_runLengths[2];
     };
 

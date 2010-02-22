@@ -671,7 +671,6 @@ Segment StaffLineDetect::findMaxPath(Segment segment)
 }
 
 
-
 void StaffLineDetect::constructStaff()
 {
 
@@ -700,6 +699,7 @@ void StaffLineDetect::constructStaff()
     }
 
 }
+
 
 QRect StaffLineDetect::findStaffBoundingRect(const Staff& s)
 {
@@ -1676,7 +1676,8 @@ void StaffLineRemoval::removeLine(QPoint& start,QPoint& end)
 
 StaffParamExtraction::StaffParamExtraction(const QImage& originalImage, ProcessQueue *queue) :
     ProcessStep(originalImage, queue),
-    m_staffSpaceHeight(5)
+    m_staffSpaceHeight(5),
+    m_staffLineHeight(2)
 {
     Q_ASSERT(originalImage.format() == QImage::Format_Mono);
     // Ensure non zero dimension;
@@ -1735,6 +1736,8 @@ void StaffParamExtraction::process()
         }
         if (i == White) {
             m_staffSpaceHeight = maxValue;
+        } else {
+            m_staffLineHeight = maxValue;
         }
         file.close();
 
@@ -1778,6 +1781,11 @@ void StaffParamExtraction::process()
 int StaffParamExtraction::staffSpaceHeight() const
 {
     return m_staffSpaceHeight;
+}
+
+int StaffParamExtraction::staffLineHeight() const
+{
+    return m_staffLineHeight;
 }
 
 const qreal ImageRotation::InvalidAngle = -753;
@@ -1954,6 +1962,7 @@ void SymbolAreaExtraction::process()
         QRect r = s.boundingRect();
         QRect target(QPoint(0, y), r.size());
         p.drawImage(target, m_originalImage, r);
+        p.fillRect(target, QColor(60, 60, 60, 100));
 
         y += r.height() + .5 * spacing;
         QRect projectionRect = r.translated(QPoint(0, y) - r.topLeft());
@@ -1961,6 +1970,7 @@ void SymbolAreaExtraction::process()
         p.drawRect(projectionRect.adjusted(-2, -2, 2, 2));
         p.setPen(QColor(Qt::red));
 
+        QList<int> counts;
         for (int x = r.left(), X = projectionRect.left(); x <= r.right(); ++x, ++X) {
             int count = 0;
             for (int y = r.top(); y < r.bottom(); ++y) {
@@ -1971,7 +1981,34 @@ void SymbolAreaExtraction::process()
             if (count) {
                 p.drawLine(X, projectionRect.bottom(), X, projectionRect.bottom() - count);
             }
+            counts << count;
         }
+
+        // Just a random push so that there is no crash on empty list.
+        if (counts.isEmpty()) {
+            counts << 5;
+        }
+
+        int staffSpaceHeight = -1;
+        {
+            StaffParamExtraction *param = new StaffParamExtraction(m_originalImage, 0);
+            param->process();
+            staffSpaceHeight = param->staffLineHeight();
+            delete param;
+        }
+
+        {
+            QColor c(Qt::darkYellow);
+            //c.setAlpha(150);
+            p.setPen(c);
+        }
+        for (int i = 0; i < counts.size(); ++i) {
+            if (counts[i] <= 5 * staffSpaceHeight) {
+                p.drawLine(target.left() + i, target.top(),
+                        target.left() + i, target.bottom());
+            }
+        }
+        mDebug() << Q_FUNC_INFO << counts;
 
 
         y += r.height() + .5 * spacing;
