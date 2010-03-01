@@ -1,19 +1,22 @@
 #ifndef PROCESSSTEP_H
 #define PROCESSSTEP_H
 
+#include "cluster.h"
+#include "segments.h"
+#include "staff.h"
+#include "tools.h"
+
 #include <QAction>
 #include <QDataStream>
 #include <QDebug>
-#include <QQueue>
-#include <QPoint>
 #include <QHash>
+#include <QPoint>
 #include <QPointer>
+#include <QQueue>
 #include <QVariant>
-#include "staff.h"
-#include "segments.h"
-#include "cluster.h"
 
-//#define MUNIP_DEBUG
+// Flag to turn off debug output(used to disable debug output in testcases)
+#define MUNIP_DEBUG
 #ifdef MUNIP_DEBUG
     #define mDebug qDebug
     #define mWarning qWarning

@@ -5,6 +5,7 @@ Makefile
 
 *.swp
 *.user
+*.vimproject
 
 munip
 skewDetectionTest
