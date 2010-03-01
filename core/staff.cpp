@@ -259,11 +259,13 @@ namespace Munip
     void Staff::addStaffLine(const StaffLine& sline)
     {
         m_staffLines.append(sline);
+        constructStaffBoundingRect();
     }
-	
-    void Staff::addStaffLineList(QVector<StaffLine> list)
+
+    void Staff::addStaffLineList(const QVector<StaffLine>& list)
     {
-		m_staffLines = list;
+        m_staffLines = list;
+        constructStaffBoundingRect();
     }
 
     bool Staff::operator<(Staff& other)
@@ -290,6 +292,46 @@ namespace Munip
     {
         return m_boundingRect;
 
+    }
+
+    QRect Staff::staffBoundingRect() const
+    {
+        return m_staffBoundingRect;
+    }
+
+    void Staff::constructStaffBoundingRect()
+    {
+        if (m_staffLines.isEmpty()) {
+            qWarning() << Q_FUNC_INFO <<
+                "This staff hasn't been constructed completely";
+            return;
+        }
+        QRect r;
+
+        StaffLine boundaryLines[2] = {
+            m_staffLines.first(),
+            m_staffLines.last()
+        };
+
+        for (int i = 0; i <= 1; ++i) {
+            const StaffLine& line = boundaryLines[i];
+
+            const QVector<Segment> segments = line.segments();
+            foreach (const Segment& segment, segments) {
+                QRect segRect(segment.startPos(), segment.endPos());
+                if (r.isNull()) {
+                    r = segRect;
+                } else {
+                    r |= segRect;
+                }
+            }
+            if (r.isNull()) {
+                r = line.boundingBox();
+            } else {
+                r |= line.boundingBox();
+            }
+        }
+        m_staffBoundingRect = r;
     }
 
     void Staff::setBoundingRect(const QRect& boundingRect )

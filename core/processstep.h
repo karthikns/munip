@@ -255,15 +255,22 @@ namespace Munip {
     {
     Q_OBJECT
     public:
+        StaffParamExtraction(const QImage& originalImage, bool drawGraph,
+                ProcessQueue *queue);
         StaffParamExtraction(const QImage& originalImage, ProcessQueue *queue);
+
         virtual void process();
 
-        int staffSpaceHeight() const;
-        int staffLineHeight() const;
+        void setDrawGraph(bool status);
+
+        Range<int> staffSpaceHeight() const;
+        Range<int> staffLineHeight() const;
 
     private:
-        int m_staffSpaceHeight;
-        int m_staffLineHeight;
+        Range<int> m_staffSpaceHeight;
+        Range<int> m_staffLineHeight;
+
+        bool m_drawGraph;
         QMap<int, int> m_runLengths[2];
     };
 

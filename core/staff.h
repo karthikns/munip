@@ -92,8 +92,8 @@ namespace Munip {
 
         QVector<StaffLine> staffLines() const;
         void addStaffLine(const StaffLine& staffLine);
-		
-        void addStaffLineList(QVector<StaffLine> list) ;
+
+        void addStaffLineList(const QVector<StaffLine>& list) ;
 
         bool operator<(Staff& other);
 
@@ -104,12 +104,17 @@ namespace Munip {
         void setBoundingRect(const QRect& boundingRect);
         QRect boundingRect() const;
 
+        // This rectangle does not include symbols above or below boudary
+        // stafflines.
+        QRect staffBoundingRect() const;
+        void constructStaffBoundingRect();
 
     private:
         QVector<StaffLine> m_staffLines;
         QPoint m_startPos;
         QPoint m_endPos;
         QRect m_boundingRect;
+        QRect m_staffBoundingRect;
 
     };
 }

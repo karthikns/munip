@@ -96,11 +96,12 @@ void tst_SymbolDetection::clusterDetect()
     skew->process();
     image = skew->processedImage();
 
-    QScopedPointer<Munip::StaffParamExtraction> param(new Munip::StaffParamExtraction(image, 0));
+    QScopedPointer<Munip::StaffParamExtraction>
+        param(new Munip::StaffParamExtraction(image, false, 0));
     param->process();
 
     QScopedPointer<Munip::ImageCluster> cluster(new Munip::ImageCluster(image,
-                param->staffSpaceHeight()));
+                param->staffSpaceHeight().min));
     cluster->process();
     image = cluster->processedImage();
 

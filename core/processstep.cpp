@@ -1674,10 +1674,25 @@ void StaffLineRemoval::removeLine(QPoint& start,QPoint& end)
 
 }
 
-StaffParamExtraction::StaffParamExtraction(const QImage& originalImage, ProcessQueue *queue) :
+StaffParamExtraction::StaffParamExtraction(const QImage& originalImage,
+        bool drawGraph,
+        ProcessQueue *queue) :
     ProcessStep(originalImage, queue),
-    m_staffSpaceHeight(5),
-    m_staffLineHeight(2)
+    m_staffSpaceHeight(4,6),
+    m_staffLineHeight(1, 3),
+    m_drawGraph(drawGraph)
+{
+    Q_ASSERT(originalImage.format() == QImage::Format_Mono);
+    // Ensure non zero dimension;
+    Q_ASSERT(originalImage.height() * originalImage.width() > 0);
+}
+
+StaffParamExtraction::StaffParamExtraction(const QImage& originalImage,
+        ProcessQueue *queue) :
+    ProcessStep(originalImage, queue),
+    m_staffSpaceHeight(4,6),
+    m_staffLineHeight(1, 3),
+    m_drawGraph(true)
 {
     Q_ASSERT(originalImage.format() == QImage::Format_Mono);
     // Ensure non zero dimension;
@@ -1709,81 +1724,141 @@ void StaffParamExtraction::process()
         }
     }
 
-    QDir().mkdir("test_output");
-    QString fileNames[2];
-    fileNames[Black] = QString("test_output/Black");
-    fileNames[White] = QString("test_output/White");
+    int maxFreqs[2] = {0, 0};
+    int maxRunLengths[2] = {0, 0};
+    Range<int> maxRunLengthsRanges[2];
 
-    QString labels[2];
-    labels[Black] = QString("StaffLineHeight");
-    labels[White] = QString("StaffSpaceHeight");
+    QList<int> mapKeys[2];
 
-    for (int i = 0; i < 2; ++i) {
-        int maxRun = 0, maxValue = 0;
-        QFile file(fileNames[i] + QString(".dat"));
-        file.open(QIODevice::WriteOnly | QIODevice::Text);
+    for (int i = 0; i <= 1; ++i) {
+        mapKeys[i] = m_runLengths[i].keys();
+        qSort(mapKeys[i]);
 
-        QTextStream stream(&file);
-        QList<int> keys = m_runLengths[i].keys();
-        qSort(keys);
+        for (int k = 0; k < mapKeys[i].count(); ++k) {
+            const int &runLength = mapKeys[i][k];
+            const int &freq = m_runLengths[i][runLength];
 
-        foreach (int k, keys) {
-            stream << k << " " << m_runLengths[i][k] << endl;
-            if (m_runLengths[i][k] > maxRun) {
-                maxValue = k;
-                maxRun = m_runLengths[i][k];
+            if (freq > maxFreqs[i]) {
+                maxFreqs[i] = freq;
+                maxRunLengths[i] = runLength;
             }
         }
-        if (i == White) {
-            m_staffSpaceHeight = maxValue;
+
+        if (maxRunLengths[i] == 1) {
+            maxRunLengthsRanges[i].min = 1;
+            maxRunLengthsRanges[i].max = 2;
         } else {
-            m_staffLineHeight = maxValue;
+            int interval = int(qRound(.1 * maxRunLengths[i]));
+            if (interval == 0) {
+                interval = 1;
+            }
+
+            maxRunLengthsRanges[i].min = maxRunLengths[i] - interval;
+            maxRunLengthsRanges[i].max = maxRunLengths[i] + interval;
         }
-        file.close();
-
-        QStringList args;
-        args << "-e";
-        args << QString("set terminal png;"
-                        "set output '%1.png';"
-                        "set label '  %2 = %3 (%4 freq)' at %5, %6 point;"
-                        "set yrange[0:%7];"
-                        "plot '%8.dat' using 1:2 with impulses;")
-                .arg(fileNames[i])
-                .arg(labels[i])
-                .arg(maxValue)
-                .arg(maxRun)
-                .arg(maxValue)
-                .arg(maxRun)
-                .arg(maxRun + 250)
-                .arg(fileNames[i]);
-
-        QProcess::execute(QString("gnuplot"), args);
     }
 
-    QImage plots[2];
-    plots[Black].load(fileNames[Black] + QString(".png"));
-    plots[White].load(fileNames[White] + QString(".png"));
+    m_staffSpaceHeight = maxRunLengthsRanges[White];
+    m_staffLineHeight = maxRunLengthsRanges[Black];
 
-    QSize sz;
-    sz.setWidth(qMax(plots[0].width(), plots[1].width()));
-    sz.setHeight(plots[0].height() + 50 + plots[1].height());
-    m_processedImage = QImage(sz, QImage::Format_ARGB32_Premultiplied);
-    m_processedImage.fill(0xffffffff);
+    qDebug() << Q_FUNC_INFO;
+    qDebug() << "StaffSpaceHeight:" << m_staffSpaceHeight;
+    qDebug() << "StaffLineHeight:" << m_staffLineHeight;
 
-    QPainter p(&m_processedImage);
-    p.drawImage(QPoint(0, 0), plots[0]);
-    p.drawImage(QPoint(0, plots[0].height() + 50), plots[1]);
-    p.end();
+    if (m_drawGraph) {
+        bool pruneForClarity = true;
+
+        QDir().mkdir("test_output");
+        QString fileNames[2];
+        fileNames[Black] = QString("test_output/Black");
+        fileNames[White] = QString("test_output/White");
+
+        QString labels[2];
+        labels[Black] = QString("StaffLineHeight");
+        labels[White] = QString("StaffSpaceHeight");
+
+        for (int i = 0; i <= 1; ++i) {
+            QFile file(fileNames[i] + QString(".dat"));
+            file.open(QIODevice::WriteOnly | QIODevice::Text);
+
+            QTextStream stream(&file);
+
+            const int xLimit = 50;
+            if (pruneForClarity) {
+                for (int k = 0; k < mapKeys[i].size(); ++k) {
+                    if (mapKeys[i][k] >= xLimit) {
+                        int newSize = qMin(mapKeys[i].size(), 2 * k);
+                        if (newSize != mapKeys[i].size()) {
+                            qDebug() << "Old: " << mapKeys[i].size()
+                                << "New: " << newSize;
+                            mapKeys[i].erase(mapKeys[i].begin() + (k + 1),
+                                    mapKeys[i].end());
+                        }
+                        break;
+                    }
+                }
+            }
+            foreach (int k, mapKeys[i]) {
+                stream << k << " " << m_runLengths[i][k] << endl;
+            }
+            file.close();
+
+            const int y = int(qRound(maxFreqs[i]/3.0));
+            QStringList args;
+            args << "-e";
+            args << QString("set terminal png;"
+                    "set output '%1.png';"
+                    "set label '  %2 = %3 (%4 freq)' at %5, %6 point;"
+                    "set label '  A' at %7, %8 point;"
+                    "set label '  B' at %9, %10 point;"
+                    "set yrange[0:%11];"
+                    "plot '%12.dat' using 1:2 with lines;")
+                .arg(fileNames[i]) //1
+                .arg(labels[i]) //2
+                .arg(maxRunLengths[i]) //3
+                .arg(maxFreqs[i]) //4
+                .arg(maxRunLengths[i]) //5
+                .arg(maxFreqs[i]) //6
+                .arg(maxRunLengthsRanges[i].min) //7
+                .arg(y) //8
+                .arg(maxRunLengthsRanges[i].max) //9
+                .arg(y) //10
+                .arg(maxFreqs[i] + 250) //11
+                .arg(fileNames[i]); // 12
+
+            QProcess::execute(QString("gnuplot"), args);
+        }
+
+        QImage plots[2];
+        plots[Black].load(fileNames[Black] + QString(".png"));
+        plots[White].load(fileNames[White] + QString(".png"));
+
+        QSize sz;
+        sz.setWidth(qMax(plots[0].width(), plots[1].width()));
+        sz.setHeight(plots[0].height() + 50 + plots[1].height());
+        m_processedImage = QImage(sz, QImage::Format_ARGB32_Premultiplied);
+        m_processedImage.fill(0xffffffff);
+
+        QPainter p(&m_processedImage);
+        p.drawImage(QPoint(0, 0), plots[0]);
+        p.drawImage(QPoint(0, plots[0].height() + 50), plots[1]);
+        p.end();
+    }
 
     emit ended();
 }
 
-int StaffParamExtraction::staffSpaceHeight() const
+void StaffParamExtraction::setDrawGraph(bool b)
+{
+    m_drawGraph = b;
+}
+
+Range<int> StaffParamExtraction::staffSpaceHeight() const
 {
     return m_staffSpaceHeight;
 }
 
-int StaffParamExtraction::staffLineHeight() const
+Range<int> StaffParamExtraction::staffLineHeight() const
 {
     return m_staffLineHeight;
 }
@@ -1928,21 +2003,11 @@ void SymbolAreaExtraction::process()
 {
     emit started();
 
-    m_processedImage = QImage(m_originalImage.size(), QImage::Format_ARGB32_Premultiplied);
-    m_processedImage.fill(0xffffffff);
-
     const int Black = m_originalImage.color(0) == 0xffffffff ? 1 : 0;
-    for (int x = 0; x < m_originalImage.width(); ++x) {
-        for (int y = 0; y < m_originalImage.height(); ++y) {
-            if (m_originalImage.pixelIndex(x, y) == Black) {
-                m_processedImage.setPixel(x, y, QColor(Qt::black).rgb());
-            }
-        }
-    }
 
     DataWarehouse *dw = DataWarehouse::instance();
     QList<Staff> staffList = dw->staffList();
-#if 1
+
     const int spacing = 50;
     QSize size(0, 0);
     foreach (const Staff& s, staffList) {
@@ -1959,13 +2024,18 @@ void SymbolAreaExtraction::process()
     int y = 0;
     QPainter p(&m_processedImage);
     foreach (const Staff& s, staffList) {
-        QRect r = s.boundingRect();
-        QRect target(QPoint(0, y), r.size());
-        p.drawImage(target, m_originalImage, r);
+        QRect bigger = s.boundingRect();
+
+        QRect r = s.staffBoundingRect();
+        r.setLeft(bigger.left());
+        r.setRight(bigger.right());
+
+        QRect target(QPoint(0, y), bigger.size());
+        p.drawImage(target, m_originalImage, bigger);
         p.fillRect(target, QColor(60, 60, 60, 100));
 
-        y += r.height() + .5 * spacing;
-        QRect projectionRect = r.translated(QPoint(0, y) - r.topLeft());
+        y += bigger.height() + .5 * spacing;
+        QRect projectionRect = bigger.translated(QPoint(0, y) - bigger.topLeft());
         p.setPen(QColor(Qt::blue));
         p.drawRect(projectionRect.adjusted(-2, -2, 2, 2));
         p.setPen(QColor(Qt::red));
@@ -1989,39 +2059,40 @@ void SymbolAreaExtraction::process()
             counts << 5;
         }
 
-        int staffSpaceHeight = -1;
+        int staffLineHeight = -1;
         {
-            StaffParamExtraction *param = new StaffParamExtraction(m_originalImage, 0);
+            StaffParamExtraction *param =
+                new StaffParamExtraction(m_originalImage, false, 0);
             param->process();
-            staffSpaceHeight = param->staffLineHeight();
+            Range<int> range = param->staffLineHeight();
+            if (range.size() == 1) {
+                staffLineHeight = range.min;
+            } else {
+                staffLineHeight = int(qRound(.5 * (range.min + range.max)));
+            }
             delete param;
         }
 
-        {
-            QColor c(Qt::darkYellow);
-            //c.setAlpha(150);
-            p.setPen(c);
-        }
+        QColor symbolColor(Qt::darkYellow);
+        symbolColor.setAlpha(90);
+
+        QColor nonSymbolColor(Qt::darkGray);
+
+        int top = target.top() + (r.top() - bigger.top());
+        int bottom = target.bottom() - (bigger.bottom() - r.bottom());
         for (int i = 0; i < counts.size(); ++i) {
-            if (counts[i] <= 5 * staffSpaceHeight) {
-                p.drawLine(target.left() + i, target.top(),
-                        target.left() + i, target.bottom());
+            if (counts[i] > 5 * staffLineHeight) {
+                p.setPen(symbolColor);
+            } else {
+                p.setPen(nonSymbolColor);
             }
+            p.drawLine(target.left() + i, top, target.left() + i, bottom);
         }
         mDebug() << Q_FUNC_INFO << counts;
 
 
-        y += r.height() + .5 * spacing;
+        y += bigger.height() + .5 * spacing;
     }
-
-
-#else
-    QPainter p(&m_processedImage);
-    foreach (const Staff& s, staffList) {
-        p.setPen(randColor());
-        p.drawRect(s.boundingRect());
-    }
-#endif
 
     emit ended();
 }
