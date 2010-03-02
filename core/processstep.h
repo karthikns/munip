@@ -192,6 +192,8 @@ namespace Munip {
 
 
     private:
+        void addDebugInfoToProcessedImage();
+
         QList<StaffLine> m_lineList;
         QList<Segment> m_maxPaths;
         QPixmap m_lineRemovedTracker;

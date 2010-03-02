@@ -439,10 +439,76 @@ namespace Munip
             for(int y = 0; y< m_symbolMap.height();y++)
                 if(m_symbolMap.pixelIndex(x,y) == Black)
                     p.drawPoint(x,y);
+        p.end();
+
+        QImage newProcessedImage(m_processedImage.size(), QImage::Format_ARGB32_Premultiplied);
+        newProcessedImage.fill(0xffffffff);
+        for(int x = 0; x < newProcessedImage.width(); x++)
+            for(int y = 0; y< newProcessedImage.height();y++)
+                if(m_processedImage.pixelIndex(x,y) == Black)
+                    newProcessedImage.setPixel(x, y, qRgb(0, 0, 0));
+
+        m_processedImage = newProcessedImage;
+
+        addDebugInfoToProcessedImage();
+
         MainWindow::instance()->addSubWindow(new ImageWidget(m_rectTracker.toImage()));
         MainWindow::instance()->addSubWindow(new ImageWidget(m_symbolMap));
 
         emit ended();
+    }
+
+    void StaffLineDetect::addDebugInfoToProcessedImage()
+    {
+        const int Black = m_originalImage.color(0) == 0xffffffff ? 1 : 0;
+        QPainter p;
+        p.begin(&m_processedImage);
+        QColor color(Qt::yellow);
+        color.setAlpha(90);
+        p.setPen(color);
+        //p.setPen(Qt::NoPen);
+        //p.setBrush(color);
+        const QList<Staff> staffList = DataWarehouse::instance()->staffList();
+        foreach (const Staff& staff, staffList) {
+            const QList<StaffLine> staffLines = staff.staffLines();
+            foreach (const StaffLine& staffLine, staffLines) {
+                QRect r = staffLine.segmentsBound();
+                static const int sliceWidth = 20;
+                static const qreal linePercentage = .60;
+
+                for (int x = r.left(); x <= r.right(); x += sliceWidth) {
+                    for (int y = r.top(); y <= r.bottom(); ++y) {
+                        int count = 0;
+                        for (int xx = x; xx <= qMin(x + sliceWidth, r.right()); ++xx) {
+                            count += (m_originalImage.pixelIndex(xx, y) == Black);
+                        }
+
+                        if (qreal(count)/sliceWidth > linePercentage) {
+                            p.setPen(Qt::black);
+                            p.drawLine(x, y, x + sliceWidth, y);
+                        } else {
+                            p.setPen(Qt::white);
+                            for (int xx = x; xx <= qMin(x + sliceWidth, r.right()); ++xx) {
+                                bool aboveSymbol = (y > 0 ?
+                                        m_originalImage.pixelIndex(xx, y-1) == Black : false);
+                                bool belowSymbol = (y != m_originalImage.height()-1 ?
+                                        m_originalImage.pixelIndex(xx, y+1) == Black : false);
+                                if (!aboveSymbol && !belowSymbol) {
+                                    p.drawPoint(xx, y);
+                                }
+                            }
+                        }
+
+                    }
+                }
+
+                p.setPen(Qt::NoPen);
+                p.setBrush(color);
+                p.drawRect(r);
+
+            }
+        }
+        p.end();
     }
 
     bool StaffLineDetect::checkDiscontinuity(int countWhite)
