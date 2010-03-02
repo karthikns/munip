@@ -9,7 +9,7 @@
 #include <QPen>
 #include <QRgb>
 #include <QSet>
-#include <QVector>
+#include <QList>
 #include <cmath>
 
 
@@ -127,7 +127,7 @@ namespace Munip
          *and scrutinise
 
         int i = 0,j = 0;
-        QVector<Segment> segmentList = line.segments();
+        QList<Segment> segmentList = line.segments();
         while( i < m_segmentList.size() && j < segmentList.size())
         {
             if(m_segmentList[i].isConnected(segmentList[j]))
@@ -145,7 +145,7 @@ namespace Munip
 
         if(this->isAdjacent(line))
         {
-           QVector<Segment> segmentList = line.segments();
+           QList<Segment> segmentList = line.segments();
            this->addSegmentList(segmentList);
            return true;
         }
@@ -169,7 +169,7 @@ namespace Munip
 
     }
 
-    void StaffLine::addSegmentList(QVector<Segment> &segmentList)
+    void StaffLine::addSegmentList(QList<Segment> &segmentList)
     {
         foreach(Segment s,segmentList)
            if(s.isValid())
@@ -183,7 +183,7 @@ namespace Munip
            }
     }
 
-    QVector<Segment> StaffLine::segments() const
+    QList<Segment> StaffLine::segments() const
     {
         return m_segmentList;
     }
@@ -251,7 +251,7 @@ namespace Munip
         m_endPos = point;
     }
 
-    QVector<StaffLine> Staff::staffLines() const
+    QList<StaffLine> Staff::staffLines() const
     {
         return m_staffLines;
     }
@@ -262,7 +262,7 @@ namespace Munip
         constructStaffBoundingRect();
     }
 
-    void Staff::addStaffLineList(const QVector<StaffLine>& list)
+    void Staff::addStaffLineList(const QList<StaffLine>& list)
     {
         m_staffLines = list;
         constructStaffBoundingRect();
@@ -316,7 +316,7 @@ namespace Munip
         for (int i = 0; i <= 1; ++i) {
             const StaffLine& line = boundaryLines[i];
 
-            const QVector<Segment> segments = line.segments();
+            const QList<Segment> segments = line.segments();
             foreach (const Segment& segment, segments) {
                 QRect segRect(segment.startPos(), segment.endPos());
                 if (r.isNull()) {

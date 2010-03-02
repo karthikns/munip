@@ -3,7 +3,7 @@
 
 
 #include<QPoint>
-#include<QVector>
+#include<QList>
 
 
 namespace Munip
@@ -35,8 +35,8 @@ namespace Munip
 
         bool isValid() const;
 
-        QVector<Segment> getConnectedSegments(QVector<Segment> list);
-        Segment getSegment(const QPoint &pos,const QVector<Segment> &list);
+        QList<Segment> getConnectedSegments(QList<Segment> list);
+        Segment getSegment(const QPoint &pos,const QList<Segment> &list);
 
         Segment maxPath(const Segment &segment);
 

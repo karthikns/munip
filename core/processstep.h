@@ -192,13 +192,13 @@ namespace Munip {
 
 
     private:
-        QVector<StaffLine> m_lineList;
-        QVector<Segment> m_maxPaths;
+        QList<StaffLine> m_lineList;
+        QList<Segment> m_maxPaths;
         QPixmap m_lineRemovedTracker;
         QPixmap m_rectTracker;
         QImage m_symbolMap;
         QImage m_lineMap;
-        QVector<Segment> m_segments[5000];
+        QList<Segment> m_segments[5000];
         QHash<Segment,Segment> m_lookUpTable;
         int  m_connectedComponentID;
         //int m_imageMap[5000][5000];
@@ -238,7 +238,7 @@ namespace Munip {
         void removeStaffLines();
         bool canBeRemoved(QPoint& p);
         void followLine(QPoint& p,int& count);
-        QVector<Staff> fillDataStructures();
+        QList<Staff> fillDataStructures();
         void removeFirstLine(QPoint& start,QPoint& end);
         void removeLastLine(QPoint& start,QPoint& end);
 

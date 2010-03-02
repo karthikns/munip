@@ -3,7 +3,7 @@
 
 #include <QPoint>
 #include <QRect>
-#include <QVector>
+#include <QList>
 #include <QHash>
 
 #include "segments.h"
@@ -51,8 +51,8 @@ namespace Munip {
         int length();
 
         void addSegment(const Segment& segment);
-        void addSegmentList(QVector<Segment> &segmentList);
-        QVector<Segment> segments() const;
+        void addSegmentList(QList<Segment> &segmentList);
+        QList<Segment> segments() const;
 
         bool isValid() const;
 
@@ -71,7 +71,7 @@ namespace Munip {
         QPoint m_endPos;
         int m_lineWidth; // width between the current line and the next. -1 if last line
         int m_staffLineID; // The Staff Number To Which The Line Belongs
-        QVector<Segment> m_segmentList;
+        QList<Segment> m_segmentList;
         QRect m_boundingBox;
         // int error; //Contains The Error Code incase of Parallax
         // int paralax;
@@ -90,10 +90,10 @@ namespace Munip {
         QPoint endPos() const;
         void setEndPos(const QPoint& point);
 
-        QVector<StaffLine> staffLines() const;
+        QList<StaffLine> staffLines() const;
         void addStaffLine(const StaffLine& staffLine);
 
-        void addStaffLineList(const QVector<StaffLine>& list) ;
+        void addStaffLineList(const QList<StaffLine>& list) ;
 
         bool operator<(Staff& other);
 
@@ -110,7 +110,7 @@ namespace Munip {
         void constructStaffBoundingRect();
 
     private:
-        QVector<StaffLine> m_staffLines;
+        QList<StaffLine> m_staffLines;
         QPoint m_startPos;
         QPoint m_endPos;
         QRect m_boundingRect;

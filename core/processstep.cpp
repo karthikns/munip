@@ -22,7 +22,7 @@
 #include <QSet>
 #include <QStack>
 #include <QTextStream>
-#include <QVector>
+#include <QList>
 
 #include <iostream>
 #include <cmath>
@@ -524,7 +524,7 @@ namespace Munip
             }
 
         QList<Segment> segmentList = m_lookUpTable.uniqueKeys();
-        QVector<Segment> paths;
+        QList<Segment> paths;
         foreach(Segment p,segmentList)
             paths.push_back(p);
 
@@ -539,7 +539,7 @@ namespace Munip
         while (i < paths.size() && paths[i].weight() >= (int)(0.9*maxWeightPath.weight()))
             i++;
 
-        paths.remove(i,paths.size()-i);
+        paths.erase(paths.begin() + i, paths.end());
 
         // Now construct the lines from optimal segments
 
@@ -609,15 +609,15 @@ Segment StaffLineDetect::findMaxPath(Segment segment)
         return segment;
     }
 
-    QVector<Segment> segments;
+    QList<Segment> segments;
     /*
        segments.push_back(segment.getSegment(QPoint(segment.endPos().x()+1,segment.endPos().y()+1),m_segments[segment.endPos().y()+1]));
        segments.push_back(segment.getSegment(QPoint(segment.endPos().x()+1,segment.endPos().y()-1),m_segments[segment.endPos().y()-1]));
        */
     const int yPlus1 = segment.endPos().y() + 1;
-    const QVector<Segment> yPlus1Segments = m_segments[yPlus1];
+    const QList<Segment> yPlus1Segments = m_segments[yPlus1];
     const int yMinus1 = segment.endPos().y() - 1;
-    const QVector<Segment> yMinus1Segments = m_segments[yMinus1];
+    const QList<Segment> yMinus1Segments = m_segments[yMinus1];
     const int startX = segment.endPos().x() + 1;
 
     const int White = m_originalImage.color(0) == 0xffffffff ? 0 : 1;
@@ -946,7 +946,7 @@ QRect StaffLineDetect::aggregateSymbolRects( QRect symbolRect1, QRect symbolRect
 void StaffLineDetect::aggregateSymbolRegion()
 {
 
-    QVector<QRect> symbolRegions = m_symbolRegions.toVector();
+    QList<QRect> symbolRegions = m_symbolRegions;
     for(int i = 0; i < symbolRegions.size()-1 ; i++)
     {
         if(symbolRegions[i] == QRect(QPoint(-1,-1),QPoint(-1,-1)))
@@ -1410,10 +1410,10 @@ void StaffLineRemoval::followLine(QPoint& p,int& count)
 
 }
 
-QVector<Staff> StaffLineRemoval::fillDataStructures()
+QList<Staff> StaffLineRemoval::fillDataStructures()
 {
-    QVector<StaffLine> staves;
-    QVector<Staff> staffList;
+    QList<StaffLine> staves;
+    QList<Staff> staffList;
     int thickness = 0;
     int countAddedLines = 0;
 
@@ -1500,10 +1500,10 @@ bool StaffLineRemoval::canBeRemoved(QPoint& p)
 
 void StaffLineRemoval::removeStaffLines()
 {
-    QVector<Staff> pageStaffList = fillDataStructures();
+    QList<Staff> pageStaffList = fillDataStructures();
     for(int i = 0; i < pageStaffList.size(); i++)
     {
-        QVector<StaffLine> staves = pageStaffList[i].staffLines();
+        QList<StaffLine> staves = pageStaffList[i].staffLines();
         for(int j = 0; j < staves.size(); j++)
         {
             StaffLine staffline = staves[j];
