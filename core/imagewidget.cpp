@@ -11,10 +11,10 @@
 #include <cmath>
 
 ImageItem::ImageItem(const QImage& image, QGraphicsItem* parent) :
-    QGraphicsItem(parent),
-    m_image(image),
-    m_pixmap(QPixmap::fromImage(image))
+    QGraphicsItem(parent)
 {
+    setFlag(QGraphicsItem::ItemHasNoContents, true);
+    setImage(image);
 }
 
 ImageItem::~ImageItem()
@@ -28,14 +28,50 @@ QImage ImageItem::image() const
 
 void ImageItem::setImage(const QImage& image)
 {
-    prepareGeometryChange();
     m_image = image;
-    m_pixmap = QPixmap::fromImage(image);
+
+    qDeleteAll(m_tiles);
+    m_tiles.clear();
+
+    if (m_image.size().isEmpty()) {
+        return;
+    }
+
+    int tileWidth = image.width() >> 1;
+    int tileHeight = image.height() >> 1;
+
+    static const int MaxTileDimension = 50;
+    if (tileWidth > MaxTileDimension) {
+        tileWidth = MaxTileDimension;
+    }
+
+    if (tileHeight > MaxTileDimension) {
+        tileHeight = MaxTileDimension;
+    }
+
+    for (int y = 0; y < image.height(); y += tileHeight) {
+        for (int x = 0; x < image.width(); x += tileWidth) {
+            int w = qMin(tileWidth, image.width() - x);
+            int h = qMin(tileHeight, image.height() - y);
+            QRect srcRect(x, y, w, h);
+            QRect destRect(0, 0, w, h);
+            QPixmap pix(w, h);
+
+            QPainter p(&pix);
+            p.drawImage(destRect, image, srcRect, Qt::ColorOnly);
+            p.end();
+
+            QGraphicsPixmapItem *item = new QGraphicsPixmapItem(pix, this);
+            item->setShapeMode(QGraphicsPixmapItem::BoundingRectShape);
+            item->setPos(x, y);
+            m_tiles << item;
+        }
+    }
 }
 
 QRectF ImageItem::boundingRect() const
 {
-    return QRectF(m_image.rect());
+    return QRectF();
 }
 
 QPainterPath ImageItem::shape() const
@@ -43,16 +79,8 @@ QPainterPath ImageItem::shape() const
     return QGraphicsItem::shape();
 }
 
-void ImageItem::paint(QPainter *painter, const QStyleOptionGraphicsItem* opt, QWidget* )
+void ImageItem::paint(QPainter *, const QStyleOptionGraphicsItem* , QWidget* )
 {
-    const QRectF& exposed = opt->exposedRect;
-    QRect rect;
-    rect.setLeft(std::floor(exposed.left()));
-    rect.setTop(std::floor(exposed.top()));
-    rect.setRight(std::ceil(exposed.right()));
-    rect.setBottom(std::ceil(exposed.bottom()));
-
-    painter->drawPixmap(rect, m_pixmap, rect);
 }
 
 const qreal RulerItem::Thickness = 10;
@@ -109,36 +137,15 @@ void RulerItem::hoverLeaveEvent(QGraphicsSceneHoverEvent *)
 
 ImageWidget::ImageWidget(const QImage& image, QWidget *parent) : QGraphicsView(parent)
 {
-    init();
-    m_imageItem->setImage(image);
-    m_ruler = new RulerItem(m_imageItem->sceneBoundingRect(), m_imageItem);
-    m_ruler->setZValue(10);
-    scene()->addItem(m_ruler);
-
-    m_boundaryItem = scene()->addRect(m_imageItem->sceneBoundingRect());
-    m_boundaryItem->setZValue(5);
+    init(image);
 }
 
 ImageWidget::ImageWidget(const QString& fileName, QWidget *parent) : QGraphicsView(parent)
 {
-    init();
-    QFileInfo info(fileName);
-    if (info.exists() && info.isReadable()) {
-        m_fileName = fileName;
-        m_imageItem->setImage(QImage(m_fileName));
-    }
-    else {
-        QMessageBox::warning(0, tr("Couldn't load image"),
-                             tr("Either file %1 does not exists or is not readable").arg(fileName));
-    }
-    m_ruler = new RulerItem(m_imageItem->sceneBoundingRect(), m_imageItem);
-    m_ruler->setZValue(10);
-    scene()->addItem(m_ruler);
-    m_boundaryItem = scene()->addRect(m_imageItem->sceneBoundingRect());
-    m_boundaryItem->setZValue(5);
+    init(QImage(fileName));
 }
 
-void ImageWidget::init()
+void ImageWidget::init(const QImage& image)
 {
     m_scale = 1.0;
     m_showGrid = true;
@@ -149,16 +156,25 @@ void ImageWidget::init()
     dummy.fill(Qt::white);
 
     QGraphicsScene *scene = new QGraphicsScene(this);
+
     m_imageItem = new ImageItem(dummy);
-    //m_imageItem->setShapeMode(QGraphicsPixmapItem::BoundingRectShape);
+    m_imageItem->setImage(image);
 
     scene->addItem(m_imageItem);
+
+    QRectF itemRect = m_imageItem->childrenBoundingRect();
+    itemRect = m_imageItem->mapRectToScene(itemRect);
+
+    m_ruler = new RulerItem(itemRect, m_imageItem);
+    m_ruler->setZValue(10);
+
+    m_boundaryItem = scene->addRect(itemRect);
+    m_boundaryItem->setZValue(5);
+
     setScene(scene);
 
     setDragMode(ScrollHandDrag);
     viewport()->setCursor(QCursor(Qt::ArrowCursor));
-
-    m_skewDetector = 0;
 
     MainWindow *instance = MainWindow::instance();
     if (instance) {
@@ -180,11 +196,6 @@ QString ImageWidget::fileName() const
 {
     return m_fileName;
 }
-
-// QPixmap ImageWidget::pixmap() const
-// {
-//     return QPixmap::fromImage(m_imageItem->image());
-// }
 
 QImage ImageWidget::image() const
 {
@@ -306,6 +317,13 @@ void ImageWidget::drawForeground(QPainter *painter, const QRectF& rect)
     }
 }
 
+void ImageWidget::mouseMoveEvent(QMouseEvent *event)
+{
+    m_mousePos = event->pos();
+    updateStatusMessage();
+    QGraphicsView::mouseMoveEvent(event);
+}
+
 void ImageWidget::wheelEvent(QWheelEvent *event)
 {
     if (event->orientation() == Qt::Vertical &&
@@ -317,11 +335,11 @@ void ImageWidget::wheelEvent(QWheelEvent *event)
         qreal scale = m_scale;
         if (numSteps > 0) {
             while(numSteps--)
-                scale *= 2.;
+                scale *= 1.1;
         }
         else {
             while(numSteps++)
-                scale /= 2.;
+                scale /= 1.1;
         }
         setScale(scale);
     }
@@ -330,74 +348,19 @@ void ImageWidget::wheelEvent(QWheelEvent *event)
     }
 }
 
-void ImageWidget::mousePressEvent(QMouseEvent *event)
-{
-    QPoint pf = m_imageItem->mapFromScene(mapToScene(event->pos())).toPoint();
-
-    if (event->buttons().testFlag(Qt::MidButton)) {
-        if (m_skewDetector) {
-            if (m_skewDetector->pen().color() == QColor(Qt::green)) {
-                delete m_skewDetector;
-                m_skewDetector = 0;
-            } else {
-                QLineF line = m_skewDetector->line();
-                line.setP2(pf);
-                m_skewDetector->setLine(line);
-                m_skewDetector->setPen(QPen(Qt::green, 1));
-            }
-        } else {
-            m_skewDetector = new QGraphicsLineItem(m_imageItem);
-            m_skewDetector->setLine(QLineF(pf, pf));
-            m_skewDetector->setPen(QPen(Qt::blue, 1));
-            scene()->addItem(m_skewDetector);
-        }
-        updateStatusMessage();
-    }
-    QGraphicsView::mousePressEvent(event);
-}
-
-void ImageWidget::mouseMoveEvent(QMouseEvent *event)
-{
-    m_mousePos = m_imageItem->mapFromScene(mapToScene(event->pos())).toPoint();
-    if (m_skewDetector && m_skewDetector->pen().color() != QColor(Qt::green)) {
-        QLineF line = m_skewDetector->line();
-        line.setP2(m_mousePos);
-        m_skewDetector->setLine(line);
-    }
-    updateStatusMessage();
-    QGraphicsView::mouseMoveEvent(event);
-}
-
-void ImageWidget::keyPressEvent(QKeyEvent *event)
-{
-    if (event->key() == Qt::Key_Escape) {
-        delete m_skewDetector;
-        m_skewDetector = 0;
-        updateStatusMessage();
-    }
-}
-
 void ImageWidget::setScale(qreal scale)
 {
-    if (scale != 0) {
-        m_scale = scale;
-        QTransform transform;
-        transform.scale(m_scale, m_scale);
-        m_imageItem->setTransform(transform);
-        m_boundaryItem->setTransform(transform);
-        setSceneRect(transform.map(m_imageItem->boundingRect()).boundingRect());
-
+    if (qFuzzyCompare(scale, 0.0)) {
+        return;
     }
+    m_scale = scale;
+    QTransform tranform;
+    tranform.scale(scale, scale);
+    setTransform(tranform);
 }
 
 void ImageWidget::updateStatusMessage()
 {
     QString msg = QString("%1, %2").arg(m_mousePos.x()).arg(m_mousePos.y());
-    if (m_skewDetector) {
-        qreal angle = m_skewDetector->line().angle();
-        while (angle > 180.0) angle -= 360.0;
-
-        msg += QString("Skew: %1)").arg(angle);
-    }
     emit statusMessage(msg);
 }

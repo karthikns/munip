@@ -20,7 +20,7 @@ public:
 
 private:
     QImage m_image;
-    QPixmap m_pixmap;
+    QList<QGraphicsPixmapItem*> m_tiles;
 };
 
 class RulerItem : public QGraphicsItem
@@ -54,7 +54,6 @@ public:
     bool showGrid() const;
 
     QString fileName() const;
-    // QPixmap pixmap() const;
     QImage image() const;
 
     int widgetID() const;
@@ -80,13 +79,11 @@ Q_SIGNALS:
 
 protected:
     void drawForeground(QPainter *painter, const QRectF& rect);
-    void wheelEvent(QWheelEvent *event);
-    void mousePressEvent(QMouseEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
-    void keyPressEvent(QKeyEvent *event);
+    void wheelEvent(QWheelEvent *event);
 
 private:
-    void init();
+    void init(const QImage& image);
     void setScale(qreal scale);
     void updateStatusMessage();
 
@@ -100,7 +97,6 @@ private:
 
     RulerItem *m_ruler;
     QGraphicsRectItem *m_boundaryItem;
-    QGraphicsLineItem *m_skewDetector;
     QPoint m_mousePos;
 };
 
