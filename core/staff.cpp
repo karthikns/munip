@@ -213,6 +213,20 @@ namespace Munip
 
     }
 
+    QRect StaffLine::segmentsBound() const
+    {
+        QRect r;
+        foreach (const Segment& seg, m_segmentList) {
+            QRect segRect(seg.startPos(), seg.endPos());
+            if (r.isNull()) {
+                r = segRect;
+            } else {
+                r |= segRect;
+            }
+        }
+        return r;
+    }
+
     Staff::Staff(const QPoint& vStart, const QPoint& vEnd)
     {
         m_startPos = vStart;

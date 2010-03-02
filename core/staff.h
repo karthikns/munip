@@ -62,6 +62,8 @@ namespace Munip {
 
         bool findSegment(Segment& s) const;
 
+        QRect segmentsBound() const;
+
         //bool operator<(StaffLine line);
         //bool operator==(StaffLine line);
 
