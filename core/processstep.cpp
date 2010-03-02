@@ -2040,18 +2040,41 @@ void SymbolAreaExtraction::process()
         p.drawRect(projectionRect.adjusted(-2, -2, 2, 2));
         p.setPen(QColor(Qt::red));
 
+        QList<int> aboveStaffCounts;
         QList<int> counts;
+        QList<int> belowStaffCounts;
         for (int x = r.left(), X = projectionRect.left(); x <= r.right(); ++x, ++X) {
+            if (x >= m_originalImage.width()) {
+                continue;
+            }
             int count = 0;
-            for (int y = r.top(); y < r.bottom(); ++y) {
-                if (m_originalImage.pixelIndex(x, y) == Black) {
-                    count++;
+            for (int y = r.top(); y <= r.bottom(); ++y) {
+                if (y < m_originalImage.height()) {
+                    if (m_originalImage.pixelIndex(x, y) == Black) {
+                        count++;
+                    }
                 }
             }
             if (count) {
                 p.drawLine(X, projectionRect.bottom(), X, projectionRect.bottom() - count);
             }
             counts << count;
+
+            int aboveStaffCount = 0;
+            for (int y = bigger.top(); y < r.top(); ++y) {
+                if (m_originalImage.pixelIndex(x, y) == Black) {
+                    aboveStaffCount++;
+                }
+            }
+            aboveStaffCounts << aboveStaffCount;
+
+            int belowStaffCount = 0;
+            for (int y = r.bottom()+1; y <= bigger.bottom(); ++y) {
+                if (m_originalImage.pixelIndex(x, y) == Black) {
+                    belowStaffCount++;
+                }
+            }
+            belowStaffCounts << belowStaffCount;
         }
 
         // Just a random push so that there is no crash on empty list.
@@ -2087,6 +2110,22 @@ void SymbolAreaExtraction::process()
                 p.setPen(nonSymbolColor);
             }
             p.drawLine(target.left() + i, top, target.left() + i, bottom);
+
+            if (aboveStaffCounts[i] > 0) {
+                p.setPen(symbolColor);
+            } else {
+                p.setPen(nonSymbolColor);
+            }
+            p.drawLine(target.left() + i, target.top(), target.left() + i,
+                    top-1);
+
+            if (belowStaffCounts[i] > 0) {
+                p.setPen(symbolColor);
+            } else {
+                p.setPen(nonSymbolColor);
+            }
+            p.drawLine(target.left() + i, bottom+1, target.left() + i,
+                    target.bottom());
         }
         mDebug() << Q_FUNC_INFO << counts;
 
