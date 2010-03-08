@@ -170,19 +170,21 @@ namespace Munip
 
     QList<ProcessStepAction*> ProcessStepFactory::actions(QObject *parent)
     {
-        QList<ProcessStepAction*> actions;
-        QByteArray classes[] =
+        static QList<ProcessStepAction*> actions;
+        static QByteArray classes[] =
         {
             "GrayScaleConversion", "MonoChromeConversion", "SkewCorrection",
             "StaffParamExtraction", "StaffLineDetect", "StaffLineRemoval",
             "SymbolAreaExtraction", "ImageCluster", "ImageRotation"
         };
 
-        int size = (int)((sizeof(classes))/(sizeof(QByteArray)));
-        for (int i = 0; i < size; ++i) {
-            ProcessStepAction *newAction = new ProcessStepAction(classes[i]);
-            newAction->setParent(parent);
-            actions << newAction;
+        if (actions.isEmpty()) {
+            int size = (int)((sizeof(classes))/(sizeof(QByteArray)));
+            for (int i = 0; i < size; ++i) {
+                ProcessStepAction *newAction = new ProcessStepAction(classes[i]);
+                newAction->setParent(parent);
+                actions << newAction;
+            }
         }
 
         return actions;
