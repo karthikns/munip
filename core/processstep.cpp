@@ -427,13 +427,15 @@ namespace Munip
         m_rectTracker.fill(QColor(Qt::white));
         m_symbolMap = m_processedImage;
         detectLines();
-        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
-        const int Black = 1 - White;
 
         //removeStaffLines();
         constructStaff();
 
        // m_processedImage = m_lineRemovedTracker.toImage();
+#if 0
+        const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
+        const int Black = 1 - White;
+
         QPainter p(&m_rectTracker);
         for(int x = 0; x < m_symbolMap.width(); x++)
             for(int y = 0; y< m_symbolMap.height();y++)
@@ -454,6 +456,7 @@ namespace Munip
 
         MainWindow::instance()->addSubWindow(new ImageWidget(m_rectTracker.toImage()));
         MainWindow::instance()->addSubWindow(new ImageWidget(m_symbolMap));
+#endif
 
         emit ended();
     }
@@ -758,10 +761,10 @@ void StaffLineDetect::constructStaff()
 
         DataWarehouse ::instance()->appendStaff(s);
         //mDebug() <<Q_FUNC_INFO<<s.boundingRect().topLeft()<<s.boundingRect().bottomRight()<<s.boundingRect();
+#if 0
         identifySymbolRegions(s);
+#endif
         i+=5;
-
-
     }
 
 }
@@ -1231,9 +1234,6 @@ void StaffLineDetect::StaffCleanUp(const Staff &staff)
             }
         }
     }
-
-
-
 }
 
 
