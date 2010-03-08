@@ -19,15 +19,17 @@ namespace Munip
         }
     };
 
-    template <typename X>
     struct Range
     {
-        Range(const X& _min = 0, const X& _max = 0) { min = _min, max = _max; }
+        Range(int _min = 0, int _max = 0) { min = _min, max = _max; }
 
         int size() const { return max - min; }
+        int dominantValue() const {
+            return size() == 1 ? min : int(qRound(.5 * (max + min)));
+        }
 
-        X min;
-        X max;
+        int min;
+        int max;
     };
 
     QImage convertToMonochrome(const QImage& image, int threshold = 200);
@@ -45,8 +47,7 @@ namespace Munip
     double normalizedLineTheta(const QLineF& line);
 }
 
-template<typename X>
-inline QDebug& operator<<(QDebug& dbg, const Munip::Range<X>& range)
+inline QDebug& operator<<(QDebug& dbg, const Munip::Range& range)
 {
     dbg << "Range(" << range.min << "-->" << range.max <<") = " << range.size();
     return dbg.space();

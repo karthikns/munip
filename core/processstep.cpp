@@ -1792,7 +1792,7 @@ void StaffParamExtraction::process()
 
     int maxFreqs[2] = {0, 0};
     int maxRunLengths[2] = {0, 0};
-    Range<int> maxRunLengthsRanges[2];
+    Range maxRunLengthsRanges[2];
 
     QList<int> mapKeys[2];
 
@@ -1919,12 +1919,12 @@ void StaffParamExtraction::setDrawGraph(bool b)
     m_drawGraph = b;
 }
 
-Range<int> StaffParamExtraction::staffSpaceHeight() const
+Range StaffParamExtraction::staffSpaceHeight() const
 {
     return m_staffSpaceHeight;
 }
 
-Range<int> StaffParamExtraction::staffLineHeight() const
+Range StaffParamExtraction::staffLineHeight() const
 {
     return m_staffLineHeight;
 }
@@ -2153,7 +2153,7 @@ void SymbolAreaExtraction::process()
             StaffParamExtraction *param =
                 new StaffParamExtraction(m_originalImage, false, 0);
             param->process();
-            Range<int> range = param->staffLineHeight();
+            Range range = param->staffLineHeight();
             if (range.size() == 1) {
                 staffLineHeight = range.min;
             } else {

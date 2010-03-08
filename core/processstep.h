@@ -265,12 +265,12 @@ namespace Munip {
 
         void setDrawGraph(bool status);
 
-        Range<int> staffSpaceHeight() const;
-        Range<int> staffLineHeight() const;
+        Range staffSpaceHeight() const;
+        Range staffLineHeight() const;
 
     private:
-        Range<int> m_staffSpaceHeight;
-        Range<int> m_staffLineHeight;
+        Range m_staffSpaceHeight;
+        Range m_staffLineHeight;
 
         bool m_drawGraph;
         QMap<int, int> m_runLengths[2];
