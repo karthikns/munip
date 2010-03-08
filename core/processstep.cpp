@@ -1355,7 +1355,7 @@ void StaffLineRemoval::crudeRemove()
 
     foreach (const Staff& staff, staffList) {
         const QList<StaffLine> staffLines = staff.staffLines();
-        QRect r = staff.boundingRect();
+        QRect r = staff.staffBoundingRect();
 
         for (int x = r.left(); x <= r.right(); ++x) {
             for (int y = r.top(); y <= r.bottom(); ++y) {
@@ -1371,23 +1371,27 @@ void StaffLineRemoval::crudeRemove()
                 y = runEnd + 1;
                 int runLength = runEnd - runStart + 1;
                 int aboveBlackPixels = 0, belowBlackPixels = 0;
+
+                static const int margin =
+                    staffLineHeight == 1 ? 1 : (staffLineHeight - 1);
+
                 for (int yy = runStart - 1; yy >= 0; --yy) {
                     if (m_processedImage.pixel(x, yy) == WhiteColor) break;
                     ++aboveBlackPixels;
-                    if (aboveBlackPixels > 3) break;
+                    if (aboveBlackPixels > margin) break;
                 }
 
                 for (int yy = runEnd + 1; yy < m_processedImage.height(); ++yy) {
                     if (m_processedImage.pixel(x, yy) == WhiteColor) break;
                     ++belowBlackPixels;
-                    if (belowBlackPixels > 3) break;
+                    if (belowBlackPixels >= margin) break;
                 }
 
                 y += belowBlackPixels - 1;
 
                 if (runLength <= staffLineHeight) {
-                    if (aboveBlackPixels < 4 && belowBlackPixels < 4 &&
-                            ((aboveBlackPixels + belowBlackPixels) < 4)) {
+                    if (aboveBlackPixels < margin && belowBlackPixels < margin &&
+                            ((aboveBlackPixels + belowBlackPixels) < margin)) {
                         p.setPen(Qt::white);
                         p.drawLine(x, runStart, x, runEnd);
                     }
@@ -1403,36 +1407,36 @@ void StaffLineRemoval::cleanupNoise()
 {
     // Note these aren't indices but color instead.
     const QRgb BlackColor = QColor(Qt::black).rgb();
-    qDebug() << endl << Q_FUNC_INFO << endl << "Black: " << BlackColor << endl;
 
     QImage yetAnotherImage = m_processedImage;
     QPainter p;
     p.begin(&yetAnotherImage);
 
-    const QList<Staff> staffList = DataWarehouse::instance()->staffList();
-    QSet<int> runLengths;
-    QSet<QRgb> colors;
+    DataWarehouse *dw = DataWarehouse::instance();
+    const QList<Staff> staffList = dw->staffList();
+
+    int noiseLength = dw->staffLineHeight().dominantValue()-1;
+    if (noiseLength < 2) {
+        noiseLength = 2;
+    }
 
     foreach (const Staff& staff, staffList) {
-        QRect r = staff.boundingRect();
+        QRect r = staff.staffBoundingRect();
         for (int x = r.left(); x <= r.right(); ++x) {
             for (int y = r.top(); y <= r.bottom(); ++y) {
-                colors << m_processedImage.pixel(x, y);
                 if (m_processedImage.pixel(x, y) != BlackColor)  continue;
 
                 int runStart = y;
                 int runEnd = y;
                 for (int yy = y+1; yy <= r.bottom(); ++yy) {
-                    colors << m_processedImage.pixel(x, yy);
                     if (m_processedImage.pixel(x, yy) != BlackColor) break;
                     runEnd = yy;
                 }
 
                 y = runEnd+1;
                 int runLength = (runEnd - runStart) + 1;
-                runLengths << runLength;
 
-                if (runLength <= 2) {
+                if (runLength <= noiseLength) {
                     p.setPen(Qt::white);
                     p.drawLine(x, runStart, x, runEnd);
                 }
@@ -1570,8 +1574,6 @@ void StaffParamExtraction::process()
                     if (mapKeys[i][k] >= xLimit) {
                         int newSize = qMin(mapKeys[i].size(), 2 * k);
                         if (newSize != mapKeys[i].size()) {
-                            qDebug() << "Old: " << mapKeys[i].size()
-                                << "New: " << newSize;
                             mapKeys[i].erase(mapKeys[i].begin() + (k + 1),
                                     mapKeys[i].end());
                         }
@@ -1882,7 +1884,7 @@ void SymbolAreaExtraction::process()
             }
             p.drawLine(target.left() + i, top, target.left() + i, bottom);
 
-            if (aboveStaffCounts[i] > 0) {
+            if (aboveStaffCounts[i] > 2) {
                 p.setPen(symbolColor);
             } else {
                 p.setPen(nonSymbolColor);
@@ -1890,7 +1892,7 @@ void SymbolAreaExtraction::process()
             p.drawLine(target.left() + i, target.top(), target.left() + i,
                     top-1);
 
-            if (belowStaffCounts[i] > 0) {
+            if (belowStaffCounts[i] > 2) {
                 p.setPen(symbolColor);
             } else {
                 p.setPen(nonSymbolColor);
@@ -1906,4 +1908,6 @@ void SymbolAreaExtraction::process()
 
     emit ended();
 }
+
+
 }
