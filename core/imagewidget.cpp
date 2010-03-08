@@ -291,17 +291,14 @@ void ImageWidget::slotSaveAs()
 
 void ImageWidget::drawForeground(QPainter *painter, const QRectF& rect)
 {
-    if (!m_showGrid) {
+    if (!m_showGrid || m_scale < 3.0) {
         QGraphicsView::drawForeground(painter, rect);
         return;
     }
 
-    int gridWidth = int(m_scale);
-    if (gridWidth <= 2) {
-        return;
-    }
+    int gridWidth = 1;
 
-    QRect r = rect.toRect();
+    QRect r = rect.toRect().adjusted(-2, -2, +2, +2);
     int startX = r.left() + (gridWidth - (r.left() % gridWidth));
     int startY = r.top() + (gridWidth - (r.top() % gridWidth));
     int endX = r.right() - (r.right() % gridWidth);
@@ -319,7 +316,7 @@ void ImageWidget::drawForeground(QPainter *painter, const QRectF& rect)
 
 void ImageWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    m_mousePos = event->pos();
+    m_mousePos = mapToScene(event->pos()).toPoint();
     updateStatusMessage();
     QGraphicsView::mouseMoveEvent(event);
 }
