@@ -433,6 +433,32 @@ namespace Munip
         //removeStaffLines();
         constructStaff();
 
+        bool drawSegments = true;
+        if (drawSegments) {
+            m_processedImage = QImage(m_originalImage.size(), QImage::Format_ARGB32_Premultiplied);
+
+            for(int x = 0; x < m_processedImage.width(); x++)
+                for(int y = 0; y< m_processedImage.height();y++)
+                    m_processedImage.setPixel(x, y, m_originalImage.pixel(x, y));
+
+
+            QPainter p(&m_processedImage);
+            QColor color(Qt::cyan);
+            color.setAlpha(100);
+            p.setPen(color);
+            DataWarehouse *dw = DataWarehouse::instance();
+            const QList<Staff> staffList = dw->staffList();
+            foreach (const Staff& staff, staffList) {
+                const QList<StaffLine> staffLines = staff.staffLines();
+                foreach (const StaffLine& staffLine, staffLines) {
+                    const QList<Segment> segments = staffLine.segments();
+                    foreach (const Segment& seg, segments) {
+                        p.drawLine(seg.startPos(), seg.endPos());
+                    }
+                }
+            }
+        }
+
        // m_processedImage = m_lineRemovedTracker.toImage();
 #if 0
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
