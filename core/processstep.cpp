@@ -1946,138 +1946,42 @@ void SymbolAreaExtraction::process()
 {
     emit started();
 
-    const int Black = m_originalImage.color(0) == 0xffffffff ? 1 : 0;
-
     DataWarehouse *dw = DataWarehouse::instance();
-    QList<Staff> staffList = dw->staffList();
+    const QList<Staff> staffList = dw->staffList();
 
-    const int spacing = 50;
-    QSize size(0, 0);
-    foreach (const Staff& s, staffList) {
-        QRect r = s.boundingRect();
-        size.rheight() += 2 * r.height() + spacing;
-        if (size.width() < r.width()) {
-            size.setWidth(r.width());
-        }
+    QList<StaffData*> staffDatas;
+    QSize sz;
+    foreach (const Staff& staff, staffList) {
+        StaffData *sd = new StaffData(m_originalImage, staff);
+        sd->findSymbolRegions();
+        sd->findMaxProjections();
+        //sd->findNoteHeads();
+        //sd->findStems();
+        staffDatas << sd;
+
+        sz.rwidth() = qMax(sz.width(), staff.staffBoundingRect().width());
+        sz.rheight() += staff.boundingRect().height() * 2 + 100;
     }
 
-    m_processedImage = QImage(size, QImage::Format_ARGB32_Premultiplied);
+    m_processedImage = QImage(sz, QImage::Format_ARGB32_Premultiplied);
     m_processedImage.fill(0xffffffff);
+    QPainter p(&m_processedImage);
 
     int y = 0;
-    QPainter p(&m_processedImage);
-    foreach (const Staff& s, staffList) {
-        QRect bigger = s.boundingRect();
+    foreach (StaffData *sd, staffDatas) {
+        p.drawImage(QPoint(0, y), sd->staffImage());
+        int sh = sd->staff.boundingRect().height();
 
-        QRect r = s.staffBoundingRect();
-        r.setLeft(bigger.left());
-        r.setRight(bigger.right());
+        y += sh + 50;
 
-        QRect target(QPoint(0, y), bigger.size());
-        p.drawImage(target, m_originalImage, bigger);
-        p.fillRect(target, QColor(60, 60, 60, 100));
+        p.drawImage(QPoint(0, y), sd->projectionImage());
 
-        y += bigger.height() + .5 * spacing;
-        QRect projectionRect = bigger.translated(QPoint(0, y) - bigger.topLeft());
-        p.setPen(QColor(Qt::blue));
-        p.drawRect(projectionRect.adjusted(-2, -2, 2, 2));
-        p.setPen(QColor(Qt::red));
-
-        QList<int> aboveStaffCounts;
-        QList<int> counts;
-        QList<int> belowStaffCounts;
-        for (int x = r.left(), X = projectionRect.left(); x <= r.right(); ++x, ++X) {
-            if (x >= m_originalImage.width()) {
-                continue;
-            }
-            int count = 0;
-            for (int y = r.top(); y <= r.bottom(); ++y) {
-                if (y < m_originalImage.height()) {
-                    if (m_originalImage.pixelIndex(x, y) == Black) {
-                        count++;
-                    }
-                }
-            }
-            if (count) {
-                p.drawLine(X, projectionRect.bottom(), X, projectionRect.bottom() - count);
-            }
-            counts << count;
-
-            int aboveStaffCount = 0;
-            for (int y = bigger.top(); y < r.top(); ++y) {
-                if (m_originalImage.pixelIndex(x, y) == Black) {
-                    aboveStaffCount++;
-                }
-            }
-            aboveStaffCounts << aboveStaffCount;
-
-            int belowStaffCount = 0;
-            for (int y = r.bottom()+1; y <= bigger.bottom(); ++y) {
-                if (m_originalImage.pixelIndex(x, y) == Black) {
-                    belowStaffCount++;
-                }
-            }
-            belowStaffCounts << belowStaffCount;
-        }
-
-        // Just a random push so that there is no crash on empty list.
-        if (counts.isEmpty()) {
-            counts << 5;
-        }
-
-        int staffLineHeight = -1;
-        {
-            StaffParamExtraction *param =
-                new StaffParamExtraction(m_originalImage, false, 0);
-            param->process();
-            Range range = DataWarehouse::instance()->staffLineHeight();
-            if (range.size() == 1) {
-                staffLineHeight = range.min;
-            } else {
-                staffLineHeight = int(qRound(.5 * (range.min + range.max)));
-            }
-            delete param;
-        }
-
-        QColor symbolColor(Qt::darkYellow);
-        symbolColor.setAlpha(90);
-
-        QColor nonSymbolColor(Qt::darkGray);
-
-        int top = target.top() + (r.top() - bigger.top());
-        int bottom = target.bottom() - (bigger.bottom() - r.bottom());
-        for (int i = 0; i < counts.size(); ++i) {
-            if (counts[i] > 5 * staffLineHeight) {
-                p.setPen(symbolColor);
-            } else {
-                p.setPen(nonSymbolColor);
-            }
-            p.drawLine(target.left() + i, top, target.left() + i, bottom);
-
-            if (aboveStaffCounts[i] > 2) {
-                p.setPen(symbolColor);
-            } else {
-                p.setPen(nonSymbolColor);
-            }
-            p.drawLine(target.left() + i, target.top(), target.left() + i,
-                    top-1);
-
-            if (belowStaffCounts[i] > 2) {
-                p.setPen(symbolColor);
-            } else {
-                p.setPen(nonSymbolColor);
-            }
-            p.drawLine(target.left() + i, bottom+1, target.left() + i,
-                    target.bottom());
-        }
-        mDebug() << Q_FUNC_INFO << counts;
-
-
-        y += bigger.height() + .5 * spacing;
+        y += sh + 50;
     }
 
     emit ended();
 }
+
 
 
 }

@@ -4,6 +4,7 @@
 #include "cluster.h"
 #include "segments.h"
 #include "staff.h"
+#include "symbol.h"
 #include "tools.h"
 
 #include <QAction>
@@ -296,6 +297,7 @@ namespace Munip {
         SymbolAreaExtraction(const QImage& originalImage,
                 int staffSpaceHeight = SymbolAreaExtraction::InvalidStaffSpaceHeight,
                 ProcessQueue *queue = 0);
+        void extraStuff();
         virtual void process();
 
     private:

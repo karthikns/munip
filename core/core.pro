@@ -13,7 +13,8 @@ HEADERS += datawarehouse.h \
     sidebar.h \
     staff.h \
     tools.h \
-    cluster.h
+    cluster.h \
+    symbol.h
 SOURCES += datawarehouse.cpp \
     horizontalrunlengthimage.cpp \
     imagewidget.cpp \
@@ -24,6 +25,8 @@ SOURCES += datawarehouse.cpp \
     sidebar.cpp \
     staff.cpp \
     tools.cpp \
-    cluster.cpp
+    cluster.cpp \
+    symbol.cpp \
+    unused.cpp
 
 include(../munip.pri)
