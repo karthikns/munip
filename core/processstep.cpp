@@ -1417,6 +1417,7 @@ void StaffLineRemoval::process()
     crudeRemove();
     yellowToBlack();
     cleanupNoise();
+    staffCleanUp();
 
     emit ended();
 }
@@ -1535,6 +1536,98 @@ void StaffLineRemoval::yellowToBlack()
         for (int y = 0; y < m_processedImage.height(); ++y) {
             if (m_processedImage.pixel(x, y) == YellowColor) {
                 m_processedImage.setPixel(x, y, BlackColor);
+            }
+        }
+    }
+}
+
+void StaffLineRemoval::staffCleanUp()
+{
+    DataWarehouse *dw = DataWarehouse::instance();
+    const QList<Staff> staffList = dw->staffList();
+    foreach (const Staff& staff, staffList) {
+        const QRgb White = QColor(Qt::white).rgb();
+        const QRgb Black = QColor(Qt::black).rgb();
+        QPoint removeMatrix[4][3];
+        for(int i =0; i < 4; i++)
+            for(int j =0; j <3;j++)
+                removeMatrix[i][j] = QPoint(-1,-1);
+
+        for(int y = staff.boundingRect().topLeft().y(); y <= staff.boundingRect().bottomRight().y(); y++)
+        {
+            for(int x = staff.boundingRect().topLeft().x(); x <= staff.boundingRect().bottomRight().x(); x++)
+            {
+                if(m_processedImage.pixel(x,y) == Black)
+                {
+
+                    /*
+                     * THE MATRIX APPROACH-- A WOW ALGO FOR CLEANUP BUT NEEDS REFINEMENT*/
+
+
+                    removeMatrix[1][1] = QPoint(x,y);
+                    bool firstRowEmpty = true;
+                    bool lastRowEmpty = true;
+
+                    if(y-1 > 0)
+                    {
+                        if(x-1 > 0 && m_processedImage.pixel(x-1,y-1) == Black)
+                        {
+                            removeMatrix[0][0] = QPoint(x-1,y-1);
+                            firstRowEmpty = false;
+                        }
+                        if(m_processedImage.pixel(x,y-1) == Black)
+                        {
+                            removeMatrix[0][1] = QPoint(x,y-1);
+                            firstRowEmpty = false;
+                        }
+                        if(x+1 < m_processedImage.width() && m_processedImage.pixel(x+1,y-1) == Black)
+                        {
+                            removeMatrix[0][2] = QPoint(x+1,y-1);
+                            firstRowEmpty = false;
+                        }
+                    }
+
+                    if(y+1 < m_processedImage.height())
+                    {
+                        if(x-1 > 0 && m_processedImage.pixel(x-1,y+1) == Black)
+                            removeMatrix[2][0] = QPoint(x-1,y+1);
+                        if(m_processedImage.pixel(x,y+1) == Black)
+                            removeMatrix[2][1] = QPoint(x,y+1);
+                        if(x+1 < m_processedImage.height() && m_processedImage.pixel(x+1,y+1) == Black)
+                            removeMatrix[2][2] = QPoint(x+1,y+1);
+                    }
+
+                    if(y+2 < m_processedImage.height())
+                    {
+                        if(x-1 > 0 && m_processedImage.pixel(x-1,y+2) == Black)
+                        {
+                            removeMatrix[3][0] = QPoint(x-1,y+2);
+                            lastRowEmpty = false;
+                        }
+                        if(m_processedImage.pixel(x,y+2) == Black)
+                        {
+                            removeMatrix[3][1] = QPoint(x,y+2);
+                            lastRowEmpty = false;
+                        }
+                        if(x+1 < m_processedImage.height() && m_processedImage.pixel(x+1,y+2) == Black)
+                        {
+                            removeMatrix[3][2] = QPoint(x+1,y+2);
+                            lastRowEmpty = false;
+                        }
+                    }
+
+                    if(firstRowEmpty && lastRowEmpty)
+                    {
+
+                        if(removeMatrix[2][1] != QPoint(-1,-1))
+                            m_processedImage.setPixel(removeMatrix[2][1],White);
+                        m_processedImage.setPixel(x,y,White);
+                    }
+                    for(int i = 0; i < 4; i++)
+                        for(int j =0;j<3;j++)
+                            removeMatrix[i][j] = QPoint(-1,-1);
+
+                }
             }
         }
     }
