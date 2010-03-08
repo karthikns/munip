@@ -443,12 +443,37 @@ namespace Munip
 
 
             QPainter p(&m_processedImage);
-            QColor color(Qt::cyan);
-            color.setAlpha(100);
+            QColor color(Qt::darkGreen);
             p.setPen(color);
             DataWarehouse *dw = DataWarehouse::instance();
             const QList<Staff> staffList = dw->staffList();
             foreach (const Staff& staff, staffList) {
+                const QRect staffBound = staff.staffBoundingRect();
+                const int staffLength = staffBound.width();
+
+                const int stepWidth = 50;
+
+                const int Black = m_originalImage.color(0) == 0xffffffff ? 1 : 0;
+
+                p.setPen(Qt::darkYellow);
+                p.setBrush(Qt::NoBrush);
+
+                for (int y = staffBound.top(); y <= staffBound.bottom(); ++y) {
+                    for (int startX = staffBound.left(); startX <= staffBound.right();
+                            startX += stepWidth) {
+                        int count = 0;
+                        int right = startX + qMin(stepWidth, (staffBound.right() - startX)) - 1;
+                        int width = qMin(stepWidth, right - startX);
+                        for (int x = startX; x <= right; ++x) {
+                            count += (m_originalImage.pixelIndex(x, y) == Black);
+                        }
+                        if (count >= int(qRound(.8 * width))) {
+                            p.drawLine(startX, y, right, y);
+                        }
+                    }
+                }
+
+                p.setPen(Qt::darkYellow);
                 const QList<StaffLine> staffLines = staff.staffLines();
                 foreach (const StaffLine& staffLine, staffLines) {
                     const QList<Segment> segments = staffLine.segments();
@@ -457,6 +482,9 @@ namespace Munip
                     }
                 }
             }
+
+            estimateStaffParametersFromYellowAreas();
+
         }
 
        // m_processedImage = m_lineRemovedTracker.toImage();
@@ -731,9 +759,93 @@ void StaffLineDetect::constructStaff()
 #endif
         i+=5;
     }
-
 }
 
+void StaffLineDetect::estimateStaffParametersFromYellowAreas()
+{
+    DataWarehouse *dw = DataWarehouse::instance();
+    const QList<Staff> staffList = dw->staffList();
+    const QRgb yellowColor = QColor(Qt::darkYellow).rgb();
+    const QRgb whiteColor = QColor(Qt::white).rgb();
+
+    QMap<int, int> yellowRunLengths, whiteRunLengths;
+
+    foreach (const Staff& staff, staffList) {
+        QRect r = staff.staffBoundingRect();
+        for (int x = r.left(); x <= r.right(); ++x) {
+            for (int y = r.top(); y <= r.bottom(); ++y) {
+                if (m_processedImage.pixel(x, y) == yellowColor) {
+                    int endY = y;
+                    while (endY <= r.bottom() &&
+                            m_processedImage.pixel(x, endY) == yellowColor) {
+                        ++endY;
+                    }
+
+                    int runLength = endY - y;
+                    yellowRunLengths[runLength]++;
+                    y = endY - 1;
+                } else if (m_processedImage.pixel(x, y) == whiteColor) {
+                    int endY = y;
+                    while (endY <= r.bottom() &&
+                            m_processedImage.pixel(x, endY) == whiteColor) {
+                        ++endY;
+                    }
+
+                    int runLength = endY - y;
+                    whiteRunLengths[runLength]++;
+                    y = endY - 1;
+
+                }
+            }
+        }
+
+    }
+
+    qDebug() << endl << Q_FUNC_INFO;
+    qDebug() << "Yellow";
+
+    int yellowMax = 0;
+    QList<int> keys = yellowRunLengths.keys();
+    Range yellowRange;
+    foreach (int runLength, keys) {
+        if (yellowRunLengths[runLength] > yellowRunLengths[yellowMax]) {
+            yellowMax = runLength;
+        }
+        qDebug() << runLength << yellowRunLengths[runLength];
+    }
+    qDebug() << endl;
+    if (yellowMax == 1) {
+        yellowRange = Range(1, 2);
+    } else {
+        int interval = int(qRound(.1 * yellowMax));
+        yellowRange = Range(yellowMax - interval, yellowMax + interval);
+    }
+
+    qDebug() << "White";
+
+    int whiteMax = 0;
+    keys = whiteRunLengths.keys();
+    Range whiteRange;
+    foreach (int runLength, keys) {
+        if (whiteRunLengths[runLength] > whiteRunLengths[whiteMax]) {
+            whiteMax = runLength;
+        }
+        qDebug() << runLength << whiteRunLengths[runLength];
+    }
+    qDebug() << endl;
+    if (whiteMax == 1) {
+        whiteRange = Range(1, 2);
+    } else {
+        int interval = int(qRound(.1 * whiteMax));
+        whiteRange = Range(whiteMax - interval, whiteMax + interval);
+    }
+
+    dw->setStaffLineHeight(yellowRange);
+    dw->setStaffSpaceHeight(whiteRange);
+
+    qDebug() << "StaffLineHeight" << yellowRange;
+    qDebug() << "StaffSpaceHeight" << whiteRange;
+}
 
 QRect StaffLineDetect::findStaffBoundingRect(const Staff& s)
 {
@@ -1295,50 +1407,18 @@ QList<Segment> StaffLineDetect::findAdjacentSymbolSegments(Segment segment,QImag
 StaffLineRemoval::StaffLineRemoval(const QImage& originalImage, ProcessQueue *queue) :
     ProcessStep(originalImage, queue)
 {
-    Q_ASSERT(originalImage.format() == QImage::Format_Mono);
+    Q_ASSERT(originalImage.format() == QImage::Format_ARGB32_Premultiplied);
 }
 
 void StaffLineRemoval::process()
 {
     emit started();
 
-    addDebugInfoToProcessedImage();
     crudeRemove();
     yellowToBlack();
     cleanupNoise();
 
     emit ended();
-}
-
-void StaffLineRemoval::addDebugInfoToProcessedImage()
-{
-    const int Black = m_processedImage.color(0) == 0xffffffff ? 1 : 0;
-    QImage newProcessedImage(m_processedImage.size(), QImage::Format_ARGB32_Premultiplied);
-    newProcessedImage.fill(0xffffffff);
-    for(int x = 0; x < newProcessedImage.width(); x++)
-        for(int y = 0; y< newProcessedImage.height();y++)
-            if(m_processedImage.pixelIndex(x,y) == Black)
-                newProcessedImage.setPixel(x, y, qRgb(0, 0, 0));
-
-    m_processedImage = newProcessedImage;
-
-    QPainter p;
-    p.begin(&m_processedImage);
-    QColor color(Qt::darkYellow);
-    p.setPen(color);
-
-    const QList<Staff> staffList = DataWarehouse::instance()->staffList();
-
-    foreach (const Staff& staff, staffList) {
-        const QList<StaffLine> staffLines = staff.staffLines();
-        foreach (const StaffLine& staffLine, staffLines) {
-            const QList<Segment> segments = staffLine.segments();
-            foreach (const Segment& seg, segments) {
-                p.drawLine(seg.startPos(), seg.endPos());
-            }
-        }
-    }
-    p.end();
 }
 
 void StaffLineRemoval::crudeRemove()
@@ -1372,8 +1452,7 @@ void StaffLineRemoval::crudeRemove()
                 int runLength = runEnd - runStart + 1;
                 int aboveBlackPixels = 0, belowBlackPixels = 0;
 
-                static const int margin =
-                    staffLineHeight == 1 ? 1 : (staffLineHeight - 1);
+                static const int margin = staffLineHeight > 1 ? 1 : 0;
 
                 for (int yy = runStart - 1; yy >= 0; --yy) {
                     if (m_processedImage.pixel(x, yy) == WhiteColor) break;
@@ -1384,17 +1463,15 @@ void StaffLineRemoval::crudeRemove()
                 for (int yy = runEnd + 1; yy < m_processedImage.height(); ++yy) {
                     if (m_processedImage.pixel(x, yy) == WhiteColor) break;
                     ++belowBlackPixels;
-                    if (belowBlackPixels >= margin) break;
+                    if (belowBlackPixels > margin) break;
                 }
 
                 y += belowBlackPixels - 1;
 
-                if (runLength <= staffLineHeight) {
-                    if (aboveBlackPixels < margin && belowBlackPixels < margin &&
-                            ((aboveBlackPixels + belowBlackPixels) < margin)) {
-                        p.setPen(Qt::white);
-                        p.drawLine(x, runStart, x, runEnd);
-                    }
+                if (aboveBlackPixels <= margin && belowBlackPixels <= margin &&
+                        ((aboveBlackPixels + belowBlackPixels) <= 2 * margin)) {
+                    p.setPen(Qt::white);
+                    p.drawLine(x, runStart, x, runEnd);
                 }
             }
         }
@@ -1413,12 +1490,12 @@ void StaffLineRemoval::cleanupNoise()
     p.begin(&yetAnotherImage);
 
     DataWarehouse *dw = DataWarehouse::instance();
+    if (dw->staffLineHeight().dominantValue() == 1) {
+        return;
+    }
     const QList<Staff> staffList = dw->staffList();
 
-    int noiseLength = dw->staffLineHeight().dominantValue()-1;
-    if (noiseLength < 2) {
-        noiseLength = 2;
-    }
+    int noiseLength = 1;
 
     foreach (const Staff& staff, staffList) {
         QRect r = staff.staffBoundingRect();

@@ -185,6 +185,7 @@ namespace Munip {
         void detectLines();
         Segment findMaxPath(Segment segment);
         void constructStaff();
+        void estimateStaffParametersFromYellowAreas();
         QRect findStaffBoundingRect(const Staff &s);
         void removeLines();
         void identifySymbolRegions(const Staff &s);
