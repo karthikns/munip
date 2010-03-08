@@ -40,16 +40,6 @@ float DataWarehouse::pageSkewPrecison() const
     return m_pageSkewPrecision;
 }
 
-void DataWarehouse::setLineSize(uint size )
-{
-    m_lineSize = size;
-}
-
-uint DataWarehouse::lineSize() const
-{
-    return m_lineSize;
-}
-
 QSize DataWarehouse::resolution() const
 {
     MainWindow* t = MainWindow::instance();
@@ -80,4 +70,24 @@ QImage DataWarehouse::workImage() const
 void DataWarehouse::setWorkImage(const QImage &image)
 {
     m_workImage = image;
+}
+
+Range DataWarehouse::staffSpaceHeight() const
+{
+    return m_staffSpaceHeight;
+}
+
+void DataWarehouse::setStaffSpaceHeight(const Range& value)
+{
+    m_staffSpaceHeight = value;
+}
+
+Range DataWarehouse::staffLineHeight() const
+{
+    return m_staffLineHeight;
+}
+
+void DataWarehouse::setStaffLineHeight(const Range& value)
+{
+    m_staffLineHeight = value;
 }
