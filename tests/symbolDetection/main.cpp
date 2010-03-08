@@ -1,11 +1,14 @@
-#include <QtTest/QtTest>
+#include "datawarehouse.h"
+#include "processstep.h"
+
+#include <QDir>
+#include <QFileInfo>
 #include <QImage>
 #include <QScopedPointer>
+#include <QTest>
 #include <QTextStream>
 
 #include <cmath>
-
-#include "processstep.h"
 
 class tst_SymbolDetection : public QObject
 {
@@ -101,7 +104,7 @@ void tst_SymbolDetection::clusterDetect()
     param->process();
 
     QScopedPointer<Munip::ImageCluster> cluster(new Munip::ImageCluster(image,
-                param->staffSpaceHeight().min));
+                Munip::DataWarehouse::instance()->staffSpaceHeight().min));
     cluster->process();
     image = cluster->processedImage();
 

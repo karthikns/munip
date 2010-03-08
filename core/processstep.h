@@ -250,15 +250,8 @@ namespace Munip {
 
         void setDrawGraph(bool status);
 
-        Range staffSpaceHeight() const;
-        Range staffLineHeight() const;
-
     private:
-        Range m_staffSpaceHeight;
-        Range m_staffLineHeight;
-
         bool m_drawGraph;
-        QMap<int, int> m_runLengths[2];
     };
 
     class ImageRotation : public ProcessStep

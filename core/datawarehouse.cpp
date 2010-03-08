@@ -11,6 +11,8 @@ DataWarehouse::DataWarehouse()
 {
     m_pageSkewPrecision = 0.3f;
     m_lineSize = (int)qRound(resolution().width()*0.05);
+    m_staffSpaceHeight = Range(4, 6);
+    m_staffLineHeight = Range(1, 2);
 }
 
 DataWarehouse* DataWarehouse::instance()

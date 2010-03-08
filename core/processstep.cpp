@@ -1346,8 +1346,6 @@ StaffParamExtraction::StaffParamExtraction(const QImage& originalImage,
         bool drawGraph,
         ProcessQueue *queue) :
     ProcessStep(originalImage, queue),
-    m_staffSpaceHeight(4,6),
-    m_staffLineHeight(1, 3),
     m_drawGraph(drawGraph)
 {
     Q_ASSERT(originalImage.format() == QImage::Format_Mono);
@@ -1358,8 +1356,6 @@ StaffParamExtraction::StaffParamExtraction(const QImage& originalImage,
 StaffParamExtraction::StaffParamExtraction(const QImage& originalImage,
         ProcessQueue *queue) :
     ProcessStep(originalImage, queue),
-    m_staffSpaceHeight(4,6),
-    m_staffLineHeight(1, 3),
     m_drawGraph(true)
 {
     Q_ASSERT(originalImage.format() == QImage::Format_Mono);
@@ -1375,8 +1371,7 @@ void StaffParamExtraction::process()
     const int White = 1 - Black;
 
 
-    m_runLengths[0].clear();
-    m_runLengths[1].clear();
+    QMap<int, int> runLengths[2];
 
     for (int x = 0; x < m_originalImage.width(); ++x) {
         int runLength = 0;
@@ -1385,7 +1380,7 @@ void StaffParamExtraction::process()
             if (m_originalImage.pixelIndex(x, y) == currentColor) {
                 runLength++;
             } else {
-                m_runLengths[currentColor][runLength]++;
+                runLengths[currentColor][runLength]++;
                 currentColor = m_originalImage.pixelIndex(x, y);
                 runLength = 1;
             }
@@ -1399,12 +1394,12 @@ void StaffParamExtraction::process()
     QList<int> mapKeys[2];
 
     for (int i = 0; i <= 1; ++i) {
-        mapKeys[i] = m_runLengths[i].keys();
+        mapKeys[i] = runLengths[i].keys();
         qSort(mapKeys[i]);
 
         for (int k = 0; k < mapKeys[i].count(); ++k) {
             const int &runLength = mapKeys[i][k];
-            const int &freq = m_runLengths[i][runLength];
+            const int &freq = runLengths[i][runLength];
 
             if (freq > maxFreqs[i]) {
                 maxFreqs[i] = freq;
@@ -1426,12 +1421,13 @@ void StaffParamExtraction::process()
         }
     }
 
-    m_staffSpaceHeight = maxRunLengthsRanges[White];
-    m_staffLineHeight = maxRunLengthsRanges[Black];
+    DataWarehouse *dw = DataWarehouse::instance();
+    dw->setStaffSpaceHeight(maxRunLengthsRanges[White]);
+    dw->setStaffLineHeight(maxRunLengthsRanges[Black]);
 
     qDebug() << Q_FUNC_INFO;
-    qDebug() << "StaffSpaceHeight:" << m_staffSpaceHeight;
-    qDebug() << "StaffLineHeight:" << m_staffLineHeight;
+    qDebug() << "StaffSpaceHeight:" << dw->staffSpaceHeight();
+    qDebug() << "StaffLineHeight:" << dw->staffLineHeight();
 
     if (m_drawGraph) {
         bool pruneForClarity = true;
@@ -1467,7 +1463,7 @@ void StaffParamExtraction::process()
                 }
             }
             foreach (int k, mapKeys[i]) {
-                stream << k << " " << m_runLengths[i][k] << endl;
+                stream << k << " " << runLengths[i][k] << endl;
             }
             file.close();
 
@@ -1476,9 +1472,9 @@ void StaffParamExtraction::process()
             args << "-e";
             args << QString("set terminal png;"
                     "set output '%1.png';"
-                    "set label '  %2 = %3 (%4 freq)' at %5, %6 point;"
-                    "set label '  A' at %7, %8 point;"
-                    "set label '  B' at %9, %10 point;"
+                    "set label '\n\n  %2 = %3 (%4 freq)' at %5, %6 point;"
+                    "set label '\n  A' at %7, %8 point;"
+                    "set label '\n  B' at %9, %10 point;"
                     "set yrange[0:%11];"
                     "plot '%12.dat' using 1:2 with lines;")
                 .arg(fileNames[i]) //1
@@ -1519,16 +1515,6 @@ void StaffParamExtraction::process()
 void StaffParamExtraction::setDrawGraph(bool b)
 {
     m_drawGraph = b;
-}
-
-Range StaffParamExtraction::staffSpaceHeight() const
-{
-    return m_staffSpaceHeight;
-}
-
-Range StaffParamExtraction::staffLineHeight() const
-{
-    return m_staffLineHeight;
 }
 
 const qreal ImageRotation::InvalidAngle = -753;
@@ -1755,7 +1741,7 @@ void SymbolAreaExtraction::process()
             StaffParamExtraction *param =
                 new StaffParamExtraction(m_originalImage, false, 0);
             param->process();
-            Range range = param->staffLineHeight();
+            Range range = DataWarehouse::instance()->staffLineHeight();
             if (range.size() == 1) {
                 staffLineHeight = range.min;
             } else {
