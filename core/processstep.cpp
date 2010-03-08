@@ -174,8 +174,8 @@ namespace Munip
         QByteArray classes[] =
         {
             "GrayScaleConversion", "MonoChromeConversion", "SkewCorrection",
-            "StaffLineDetect", "StaffLineRemoval", "StaffParamExtraction",
-            "ImageRotation", "ImageCluster", "SymbolAreaExtraction"
+            "StaffParamExtraction", "StaffLineDetect", "StaffLineRemoval",
+            "SymbolAreaExtraction", "ImageCluster", "ImageRotation"
         };
 
         int size = (int)((sizeof(classes))/(sizeof(QByteArray)));
