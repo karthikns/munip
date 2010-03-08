@@ -443,17 +443,6 @@ namespace Munip
                     p.drawPoint(x,y);
         p.end();
 
-        QImage newProcessedImage(m_processedImage.size(), QImage::Format_ARGB32_Premultiplied);
-        newProcessedImage.fill(0xffffffff);
-        for(int x = 0; x < newProcessedImage.width(); x++)
-            for(int y = 0; y< newProcessedImage.height();y++)
-                if(m_processedImage.pixelIndex(x,y) == Black)
-                    newProcessedImage.setPixel(x, y, qRgb(0, 0, 0));
-
-        m_processedImage = newProcessedImage;
-
-        addDebugInfoToProcessedImage();
-
         MainWindow::instance()->addSubWindow(new ImageWidget(m_rectTracker.toImage()));
         MainWindow::instance()->addSubWindow(new ImageWidget(m_symbolMap));
 #endif
@@ -461,58 +450,6 @@ namespace Munip
         emit ended();
     }
 
-    void StaffLineDetect::addDebugInfoToProcessedImage()
-    {
-        const int Black = m_originalImage.color(0) == 0xffffffff ? 1 : 0;
-        QPainter p;
-        p.begin(&m_processedImage);
-        QColor color(Qt::yellow);
-        color.setAlpha(90);
-        p.setPen(color);
-        //p.setPen(Qt::NoPen);
-        //p.setBrush(color);
-        const QList<Staff> staffList = DataWarehouse::instance()->staffList();
-        foreach (const Staff& staff, staffList) {
-            const QList<StaffLine> staffLines = staff.staffLines();
-            foreach (const StaffLine& staffLine, staffLines) {
-                QRect r = staffLine.segmentsBound();
-                static const int sliceWidth = 20;
-                static const qreal linePercentage = .60;
-
-                for (int x = r.left(); x <= r.right(); x += sliceWidth) {
-                    for (int y = r.top(); y <= r.bottom(); ++y) {
-                        int count = 0;
-                        for (int xx = x; xx <= qMin(x + sliceWidth, r.right()); ++xx) {
-                            count += (m_originalImage.pixelIndex(xx, y) == Black);
-                        }
-
-                        if (qreal(count)/sliceWidth > linePercentage) {
-                            p.setPen(Qt::black);
-                            p.drawLine(x, y, x + sliceWidth, y);
-                        } else {
-                            p.setPen(Qt::white);
-                            for (int xx = x; xx <= qMin(x + sliceWidth, r.right()); ++xx) {
-                                bool aboveSymbol = (y > 0 ?
-                                        m_originalImage.pixelIndex(xx, y-1) == Black : false);
-                                bool belowSymbol = (y != m_originalImage.height()-1 ?
-                                        m_originalImage.pixelIndex(xx, y+1) == Black : false);
-                                if (!aboveSymbol && !belowSymbol) {
-                                    p.drawPoint(xx, y);
-                                }
-                            }
-                        }
-
-                    }
-                }
-
-                p.setPen(Qt::NoPen);
-                p.setBrush(color);
-                p.drawRect(r);
-
-            }
-        }
-        p.end();
-    }
 
     bool StaffLineDetect::checkDiscontinuity(int countWhite)
     {
@@ -1337,10 +1274,162 @@ void StaffLineRemoval::process()
 {
     emit started();
 
+    addDebugInfoToProcessedImage();
+    crudeRemove();
+    yellowToBlack();
+    cleanupNoise();
 
     emit ended();
 }
 
+void StaffLineRemoval::addDebugInfoToProcessedImage()
+{
+    const int Black = m_processedImage.color(0) == 0xffffffff ? 1 : 0;
+    QImage newProcessedImage(m_processedImage.size(), QImage::Format_ARGB32_Premultiplied);
+    newProcessedImage.fill(0xffffffff);
+    for(int x = 0; x < newProcessedImage.width(); x++)
+        for(int y = 0; y< newProcessedImage.height();y++)
+            if(m_processedImage.pixelIndex(x,y) == Black)
+                newProcessedImage.setPixel(x, y, qRgb(0, 0, 0));
+
+    m_processedImage = newProcessedImage;
+
+    QPainter p;
+    p.begin(&m_processedImage);
+    QColor color(Qt::darkYellow);
+    p.setPen(color);
+
+    const QList<Staff> staffList = DataWarehouse::instance()->staffList();
+
+    foreach (const Staff& staff, staffList) {
+        const QList<StaffLine> staffLines = staff.staffLines();
+        foreach (const StaffLine& staffLine, staffLines) {
+            const QList<Segment> segments = staffLine.segments();
+            foreach (const Segment& seg, segments) {
+                p.drawLine(seg.startPos(), seg.endPos());
+            }
+        }
+    }
+    p.end();
+}
+
+void StaffLineRemoval::crudeRemove()
+{
+    // Note these aren't indices but color instead.
+    const QRgb YellowColor = QColor(Qt::darkYellow).rgb();
+    const QRgb WhiteColor = QColor(Qt::white).rgb();
+
+    QPainter p;
+    p.begin(&m_processedImage);
+
+    const int staffLineHeight = DataWarehouse::instance()->staffLineHeight().dominantValue();
+    const QList<Staff> staffList = DataWarehouse::instance()->staffList();
+
+    foreach (const Staff& staff, staffList) {
+        const QList<StaffLine> staffLines = staff.staffLines();
+        QRect r = staff.boundingRect();
+
+        for (int x = r.left(); x <= r.right(); ++x) {
+            for (int y = r.top(); y <= r.bottom(); ++y) {
+                if (m_processedImage.pixel(x, y) != YellowColor)  continue;
+
+                int runStart = y;
+                int runEnd = y;
+                for (int yy = y+1; yy < m_processedImage.height(); ++yy) {
+                    if (m_processedImage.pixel(x, yy) != YellowColor) break;
+                    runEnd = yy;
+                }
+
+                y = runEnd + 1;
+                int runLength = runEnd - runStart + 1;
+                int aboveBlackPixels = 0, belowBlackPixels = 0;
+                for (int yy = runStart - 1; yy >= 0; --yy) {
+                    if (m_processedImage.pixel(x, yy) == WhiteColor) break;
+                    ++aboveBlackPixels;
+                    if (aboveBlackPixels > 3) break;
+                }
+
+                for (int yy = runEnd + 1; yy < m_processedImage.height(); ++yy) {
+                    if (m_processedImage.pixel(x, yy) == WhiteColor) break;
+                    ++belowBlackPixels;
+                    if (belowBlackPixels > 3) break;
+                }
+
+                y += belowBlackPixels - 1;
+
+                if (runLength <= staffLineHeight) {
+                    if (aboveBlackPixels < 4 && belowBlackPixels < 4 &&
+                            ((aboveBlackPixels + belowBlackPixels) < 4)) {
+                        p.setPen(Qt::white);
+                        p.drawLine(x, runStart, x, runEnd);
+                    }
+                }
+            }
+        }
+
+    }
+
+}
+
+void StaffLineRemoval::cleanupNoise()
+{
+    // Note these aren't indices but color instead.
+    const QRgb BlackColor = QColor(Qt::black).rgb();
+    qDebug() << endl << Q_FUNC_INFO << endl << "Black: " << BlackColor << endl;
+
+    QImage yetAnotherImage = m_processedImage;
+    QPainter p;
+    p.begin(&yetAnotherImage);
+
+    const QList<Staff> staffList = DataWarehouse::instance()->staffList();
+    QSet<int> runLengths;
+    QSet<QRgb> colors;
+
+    foreach (const Staff& staff, staffList) {
+        QRect r = staff.boundingRect();
+        for (int x = r.left(); x <= r.right(); ++x) {
+            for (int y = r.top(); y <= r.bottom(); ++y) {
+                colors << m_processedImage.pixel(x, y);
+                if (m_processedImage.pixel(x, y) != BlackColor)  continue;
+
+                int runStart = y;
+                int runEnd = y;
+                for (int yy = y+1; yy <= r.bottom(); ++yy) {
+                    colors << m_processedImage.pixel(x, yy);
+                    if (m_processedImage.pixel(x, yy) != BlackColor) break;
+                    runEnd = yy;
+                }
+
+                y = runEnd+1;
+                int runLength = (runEnd - runStart) + 1;
+                runLengths << runLength;
+
+                if (runLength <= 2) {
+                    p.setPen(Qt::white);
+                    p.drawLine(x, runStart, x, runEnd);
+                }
+            }
+        }
+    }
+
+    p.end();
+
+    m_processedImage = yetAnotherImage;
+}
+
+void StaffLineRemoval::yellowToBlack()
+{
+    const QRgb YellowColor = QColor(Qt::darkYellow).rgb();
+    const QRgb BlackColor = QColor(Qt::black).rgb();
+
+    for (int x = 0; x < m_processedImage.width(); ++x) {
+        for (int y = 0; y < m_processedImage.height(); ++y) {
+            if (m_processedImage.pixel(x, y) == YellowColor) {
+                m_processedImage.setPixel(x, y, BlackColor);
+            }
+        }
+    }
+}
 
 StaffParamExtraction::StaffParamExtraction(const QImage& originalImage,
         bool drawGraph,
