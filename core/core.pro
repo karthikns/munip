@@ -29,4 +29,14 @@ SOURCES += datawarehouse.cpp \
     symbol.cpp \
     unused.cpp
 
-include(../munip.pri)
+MOC_DIR = .tmp
+UI_DIR = .tmp
+RCC_DIR = .tmp
+OBJECTS_DIR = .tmp
+
+CONFIG += debug qtestlib
+win32 {
+    CONFIG += console
+}
+
+DESTDIR = ..

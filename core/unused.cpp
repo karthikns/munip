@@ -29,6 +29,7 @@
 namespace Munip
 {
 
+#if 0
 void SymbolAreaExtraction::extraStuff()
 {
     emit started();
@@ -218,5 +219,6 @@ void SymbolAreaExtraction::extraStuff()
     MainWindow::instance()->addSubWindow(new ImageWidget(newImage));
     emit ended();
 }
+#endif
 
 } // namespace Munip
