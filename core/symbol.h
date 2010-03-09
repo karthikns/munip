@@ -9,6 +9,7 @@
 
 namespace Munip
 {
+    class Range;
 
     struct StaffData
     {
@@ -20,10 +21,10 @@ namespace Munip
         void findStems();
         int determinePeakHValueFrom(const QList<int> &horProjValues);
 
-        QHash<int, int> extract(int width);
+        QHash<int, int> filter(Range width, Range height);
 
         QImage staffImage() const;
-        QImage projectionImage() const;
+        QImage projectionImage(const QHash<int, int> &hash) const;
 
         static const int SlidingWindowSize;
 

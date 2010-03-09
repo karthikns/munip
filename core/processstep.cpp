@@ -232,7 +232,8 @@ namespace Munip
 
     MonoChromeConversion::MonoChromeConversion(const QImage& originalImage, ProcessQueue *queue) :
         ProcessStep(originalImage, queue),
-        m_threshold(240)
+        // TODO: Scanned images require a threshold of 240.
+        m_threshold(200)
     {
     }
 
@@ -458,17 +459,19 @@ namespace Munip
                 p.setPen(Qt::darkYellow);
                 p.setBrush(Qt::NoBrush);
 
-                for (int y = staffBound.top(); y <= staffBound.bottom(); ++y) {
-                    for (int startX = staffBound.left(); startX <= staffBound.right();
-                            startX += stepWidth) {
-                        int count = 0;
-                        int right = startX + qMin(stepWidth, (staffBound.right() - startX)) - 1;
-                        int width = qMin(stepWidth, right - startX);
-                        for (int x = startX; x <= right; ++x) {
-                            count += (m_originalImage.pixelIndex(x, y) == Black);
-                        }
-                        if (count >= int(qRound(.8 * width))) {
-                            p.drawLine(startX, y, right, y);
+                if (0) {
+                    for (int y = staffBound.top(); y <= staffBound.bottom(); ++y) {
+                        for (int startX = staffBound.left(); startX <= staffBound.right();
+                                startX += stepWidth) {
+                            int count = 0;
+                            int right = startX + qMin(stepWidth, (staffBound.right() - startX)) - 1;
+                            int width = qMin(stepWidth, right - startX);
+                            for (int x = startX; x <= right; ++x) {
+                                count += (m_originalImage.pixelIndex(x, y) == Black);
+                            }
+                            if (count >= int(qRound(.8 * width))) {
+                                p.drawLine(startX, y, right, y);
+                            }
                         }
                     }
                 }
@@ -1955,8 +1958,8 @@ void SymbolAreaExtraction::process()
         StaffData *sd = new StaffData(m_originalImage, staff);
         sd->findSymbolRegions();
         sd->findMaxProjections();
-        //sd->findNoteHeads();
-        //sd->findStems();
+        sd->findNoteHeads();
+        sd->findStems();
         staffDatas << sd;
 
         sz.rwidth() = qMax(sz.width(), staff.staffBoundingRect().width());
@@ -1974,7 +1977,7 @@ void SymbolAreaExtraction::process()
 
         y += sh + 50;
 
-        p.drawImage(QPoint(0, y), sd->projectionImage());
+        p.drawImage(QPoint(0, y), sd->projectionImage(sd->maxProjections));
 
         y += sh + 50;
     }

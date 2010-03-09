@@ -1,5 +1,6 @@
 #include "symbol.h"
 #include "datawarehouse.h"
+#include "tools.h"
 
 #include <QColor>
 #include <QDebug>
@@ -55,6 +56,7 @@ namespace Munip
     {
         QRect r = staff.boundingRect();
         const QRgb BlackColor = QColor(Qt::black).rgb();
+        DataWarehouse *dw = DataWarehouse::instance();
 
         foreach (const QRect &sr, symbolRects) {
             if (sr.width() < SlidingWindowSize) continue;
@@ -79,6 +81,7 @@ namespace Munip
             }
         }
 
+        return;
         qDebug() << Q_FUNC_INFO;
         QList<int> keys = maxProjections.keys();
         qSort(keys);
@@ -92,13 +95,17 @@ namespace Munip
     void StaffData::findNoteHeads()
     {
         DataWarehouse *dw = DataWarehouse::instance();
-        noteProjections = extract(dw->staffSpaceHeight().dominantValue());
+        int n1_2 = 2 * (dw->staffLineHeight().max);
+        noteProjections = filter(Range(1, 100),
+                Range(n1_2, n1_2 + dw->staffSpaceHeight().min));
     }
 
     void StaffData::findStems()
     {
         DataWarehouse *dw = DataWarehouse::instance();
-        stemsProjections = extract(dw->staffLineHeight().dominantValue());
+        int n1_2 = 2 * (dw->staffLineHeight().max);
+        stemsProjections = filter(Range(1, 100),
+                Range(n1_2 + dw->staffSpaceHeight().max, 100));
     }
 
     int StaffData::determinePeakHValueFrom(const QList<int>& horProjValues)
@@ -111,7 +118,7 @@ namespace Munip
 
             int runLength = 0;
             for (; (i + runLength) < horProjValues.size(); ++runLength) {
-                if (horProjValues[i+runLength] != horProjValues[i]) break;
+                if (horProjValues[i+runLength] < peak) break;//!= horProjValues[i]) break;
             }
 
             i += runLength - 1;
@@ -135,9 +142,9 @@ namespace Munip
         return img;
     }
 
-    QImage StaffData::projectionImage() const
+    QImage StaffData::projectionImage(const QHash<int, int> &hash) const
     {
-        qDebug() << Q_FUNC_INFO;
+        //qDebug() << Q_FUNC_INFO;
         const QRect r = staff.boundingRect();
         DataWarehouse *dw = DataWarehouse::instance();
 
@@ -149,11 +156,9 @@ namespace Munip
 
         QPainter p(&img);
         p.setPen(Qt::red);
-        const int limit = dw->staffSpaceHeight().dominantValue() + 0.5 * dw->staffLineHeight().min;
         for (int x = r.left(); x <= r.right(); ++x) {
             QLineF line(x + xOffset, r.bottom() + yOffset,
-                    x + xOffset, r.bottom() + yOffset - maxProjections[x]);
-            if (maxProjections[x] < limit) continue;
+                    x + xOffset, r.bottom() + yOffset - hash[x]);
             p.drawLine(line);
         }
         p.end();
@@ -161,26 +166,26 @@ namespace Munip
         return img;
     }
 
-    QHash<int, int> StaffData::extract(int width)
+    QHash<int, int> StaffData::filter(Range width, Range height)
     {
         QList<int> allKeys = maxProjections.keys();
         qSort(allKeys);
 
         QHash<int, int> retval;
 
+        //qDebug() << Q_FUNC_INFO;
+        //qDebug() << height.min << height.max;
+
         for (int i = 0; i < allKeys.size(); ++i) {
-            int runLength = 1;
-            for (; (i + runLength) < allKeys.size(); ++runLength) {
-                if (maxProjections[allKeys[i+runLength]] < maxProjections[allKeys[i]])
-                    break;
+            if (maxProjections[allKeys[i]] < height.min) continue;
+            if (maxProjections[allKeys[i]] > height.max) {
+                retval[allKeys[i]] = retval[allKeys[i]-1];
+            } else {
+                retval[allKeys[i]] = maxProjections[allKeys[i]];
             }
-            if (runLength >= width) {
-                for (int j = 0; j < runLength; ++j) {
-                    retval[i+j] = maxProjections[allKeys[i+j]];
-                }
-            }
-            i += runLength - 1;
         }
+        //qDebug() << retval;
+
         return retval;
     }
 }
