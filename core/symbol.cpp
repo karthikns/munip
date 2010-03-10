@@ -101,7 +101,45 @@ namespace Munip
         noteProjections = filter(Range(1, 100),
                 Range(n1_2 + dw->staffSpaceHeight().min - dw->staffLineHeight().min, 100),
                 noteProjections);
-        //qDebug() << Q_FUNC_INFO << noteProjections.values();
+
+        // Removal of false positives.
+        QList<int> keys = noteProjections.keys();
+        qSort(keys);
+
+        int lineHeight = dw->staffLineHeight().min;
+        for (int i = 1; i < keys.size(); ++i) {
+            int diff = keys[i] - keys[i-1];
+            if (diff == 0) {
+                continue;
+            }
+            if (diff <= (lineHeight>>1)) {
+                int valueToInsert = qMin(noteProjections[keys[i]], noteProjections[keys[i-1]]);
+                for (int j = keys[i-1] + 1; j < keys[i]; ++j) {
+                    noteProjections[j] = valueToInsert;
+                }
+            }
+
+        }
+        for (int i = 0; i < keys.size(); ++i) {
+            int runlength = 0;
+            int key = keys[i];
+            if (noteProjections.value(key) == 0) continue;
+            while (i+runlength < keys.size() &&
+                    noteProjections.value(keys[i]+runlength, 0) != 0) {
+                ++runlength;
+            }
+
+            if (runlength < (dw->staffSpaceHeight().min >>1)
+                    || runlength >= (dw->staffSpaceHeight().max << 1)) {
+                for (int j = 0; j<runlength;j++) {
+                    noteProjections[j+keys[i]] = 0;
+                }
+            }
+            i += runlength - 1;
+
+        }
+
+
     }
 
     QHash<int, int> StaffData::filter(Range , Range height,
