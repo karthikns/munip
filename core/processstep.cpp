@@ -441,7 +441,7 @@ namespace Munip
             for(int y = 0; y< m_processedImage.height();y++)
                 m_processedImage.setPixel(x, y, m_originalImage.pixel(x, y));
 
-        bool drawSegments = false;
+        bool drawSegments = true;
         if (drawSegments) {
             m_processedImage = QImage(m_originalImage.size(), QImage::Format_ARGB32_Premultiplied);
 
@@ -497,7 +497,7 @@ namespace Munip
 
         }
 
-        bool drawLineList = true;
+        bool drawLineList = false;
         if (drawLineList) {
             QColor colors[3] = { QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen) };
             int currentIndex = 0;
@@ -778,7 +778,7 @@ void StaffLineDetect::constructStaff()
 
         DataWarehouse ::instance()->appendStaff(s);
         qDebug() << "staff contructed when i = " << i;
-        //mDebug() <<Q_FUNC_INFO<<s.boundingRect().topLeft()<<s.boundingRect().bottomRight()<<s.boundingRect();
+        mDebug() <<Q_FUNC_INFO<<s.boundingRect().topLeft()<<s.boundingRect().bottomRight()<<s.boundingRect();
 #if 0
         identifySymbolRegions(s);
 #endif
@@ -819,7 +819,6 @@ void StaffLineDetect::estimateStaffParametersFromYellowAreas()
                     int runLength = endY - y;
                     whiteRunLengths[runLength]++;
                     y = endY - 1;
-
                 }
             }
         }
@@ -2014,7 +2013,7 @@ void SymbolAreaExtraction::process()
 
         y += sh + 50;
 
-        p.drawImage(QPoint(0, y), sd->projectionImage(sd->maxProjections));
+        p.drawImage(QPoint(0, y), sd->projectionImage(sd->noteProjections));
 
         y += sh + 50;
     }

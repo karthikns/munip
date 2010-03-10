@@ -21,12 +21,12 @@ namespace Munip
         void findStems();
         int determinePeakHValueFrom(const QList<int> &horProjValues);
 
-        QHash<int, int> filter(Range width, Range height);
+        QHash<int, int> filter(Range width, Range height, const QHash<int, int> &hash);
 
         QImage staffImage() const;
         QImage projectionImage(const QHash<int, int> &hash) const;
 
-        static const int SlidingWindowSize;
+        int SlidingWindowSize;
 
         Staff staff;
         QList<QRect> symbolRects;

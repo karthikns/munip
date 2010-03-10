@@ -8,12 +8,11 @@
 
 namespace Munip
 {
-    const int StaffData::SlidingWindowSize = 3;
-
     StaffData::StaffData(const QImage& img, const Staff& stf) :
         staff(stf),
         image(img)
     {
+        SlidingWindowSize = DataWarehouse::instance()->staffLineHeight().max;
     }
 
     void StaffData::findSymbolRegions()
@@ -97,7 +96,11 @@ namespace Munip
         DataWarehouse *dw = DataWarehouse::instance();
         int n1_2 = 2 * (dw->staffLineHeight().max);
         noteProjections = filter(Range(1, 100),
-                Range(n1_2, n1_2 + dw->staffSpaceHeight().min));
+                Range(n1_2, n1_2 + dw->staffSpaceHeight().max),
+                maxProjections);
+        noteProjections = filter(Range(1, 100),
+                Range(n1_2 + dw->staffSpaceHeight().min - dw->staffLineHeight().min, 100),
+                noteProjections);
     }
 
     void StaffData::findStems()
@@ -105,7 +108,32 @@ namespace Munip
         DataWarehouse *dw = DataWarehouse::instance();
         int n1_2 = 2 * (dw->staffLineHeight().max);
         stemsProjections = filter(Range(1, 100),
-                Range(n1_2 + dw->staffSpaceHeight().max, 100));
+                Range(n1_2 + dw->staffSpaceHeight().max, 100),
+                maxProjections);
+    }
+
+    QHash<int, int> StaffData::filter(Range width, Range height,
+            const QHash<int, int> &hash)
+    {
+        QList<int> allKeys = hash.keys();
+        qSort(allKeys);
+
+        QHash<int, int> retval;
+
+        //qDebug() << Q_FUNC_INFO;
+        //qDebug() << height.min << height.max;
+
+        for (int i = 0; i < allKeys.size(); ++i) {
+            if (hash[allKeys[i]] < height.min) continue;
+            if (hash[allKeys[i]] > height.max) {
+                retval[allKeys[i]] = retval[allKeys[i]-1];
+            } else {
+                retval[allKeys[i]] = hash[allKeys[i]];
+            }
+        }
+        //qDebug() << retval;
+
+        return retval;
     }
 
     int StaffData::determinePeakHValueFrom(const QList<int>& horProjValues)
@@ -166,26 +194,4 @@ namespace Munip
         return img;
     }
 
-    QHash<int, int> StaffData::filter(Range width, Range height)
-    {
-        QList<int> allKeys = maxProjections.keys();
-        qSort(allKeys);
-
-        QHash<int, int> retval;
-
-        //qDebug() << Q_FUNC_INFO;
-        //qDebug() << height.min << height.max;
-
-        for (int i = 0; i < allKeys.size(); ++i) {
-            if (maxProjections[allKeys[i]] < height.min) continue;
-            if (maxProjections[allKeys[i]] > height.max) {
-                retval[allKeys[i]] = retval[allKeys[i]-1];
-            } else {
-                retval[allKeys[i]] = maxProjections[allKeys[i]];
-            }
-        }
-        //qDebug() << retval;
-
-        return retval;
-    }
 }

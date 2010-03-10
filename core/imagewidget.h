@@ -26,7 +26,7 @@ private:
 class RulerItem : public QGraphicsItem
 {
 public:
-    RulerItem(const QRectF& constrainedRect, QGraphicsItem *parent = 0);
+    RulerItem(Qt::Orientation o, const QRectF& constrainedRect, QGraphicsItem *parent = 0);
 
     QRectF boundingRect() const;
 
@@ -39,6 +39,7 @@ protected:
 
 private:
     static const qreal Thickness;
+    Qt::Orientation m_orientation;
     QRectF m_constrainedRect;
     int m_alpha;
 };
@@ -95,7 +96,6 @@ private:
     int m_widgetID;
     ImageWidget *m_processorWidget;
 
-    RulerItem *m_ruler;
     QGraphicsRectItem *m_boundaryItem;
     QPoint m_mousePos;
 };

@@ -85,8 +85,9 @@ void ImageItem::paint(QPainter *, const QStyleOptionGraphicsItem* , QWidget* )
 
 const qreal RulerItem::Thickness = 10;
 
-RulerItem::RulerItem(const QRectF& constrainedRect, QGraphicsItem *parent) :
+RulerItem::RulerItem(Qt::Orientation o, const QRectF& constrainedRect, QGraphicsItem *parent) :
     QGraphicsItem(parent),
+    m_orientation(o),
     m_constrainedRect(constrainedRect),
     m_alpha(200)
 {
@@ -100,7 +101,11 @@ RulerItem::RulerItem(const QRectF& constrainedRect, QGraphicsItem *parent) :
 QRectF RulerItem::boundingRect() const
 {
     QRectF r = m_constrainedRect;
-    r.setBottom(r.top() + RulerItem::Thickness);
+    if (m_orientation == Qt::Horizontal) {
+        r.setBottom(r.top() + RulerItem::Thickness);
+    } else {
+        r.setRight(r.left() + RulerItem::Thickness);
+    }
     return r;
 }
 
@@ -115,9 +120,16 @@ QVariant RulerItem::itemChange(GraphicsItemChange change, const QVariant& value)
 {
     if (change == ItemPositionChange) {
         const QRectF constrainedRect = transform().map(m_constrainedRect).boundingRect();
-        QPointF p(x(), value.toPointF().y());
-        p.ry() = qMax(constrainedRect.top(), p.y());
-        p.ry() = qMin(constrainedRect.bottom()-RulerItem::Thickness, p.y());
+        QPointF p;
+        if (m_orientation == Qt::Horizontal) {
+            p = QPointF(x(), value.toPointF().y());
+            p.ry() = qMax(constrainedRect.top(), p.y());
+            p.ry() = qMin(constrainedRect.bottom()-RulerItem::Thickness, p.y());
+        } else {
+            p = QPointF(value.toPointF().x(), y());
+            p.rx() = qMax(constrainedRect.left(), p.x());
+            p.rx() = qMin(constrainedRect.right()-RulerItem::Thickness, p.x());
+        }
         return p;
     }
     return QGraphicsItem::itemChange(change, value);
@@ -165,8 +177,11 @@ void ImageWidget::init(const QImage& image)
     QRectF itemRect = m_imageItem->childrenBoundingRect();
     itemRect = m_imageItem->mapRectToScene(itemRect);
 
-    m_ruler = new RulerItem(itemRect, m_imageItem);
-    m_ruler->setZValue(10);
+    RulerItem *ruler = new RulerItem(Qt::Horizontal, itemRect, m_imageItem);
+    ruler->setZValue(10);
+
+    ruler = new RulerItem(Qt::Vertical, itemRect, m_imageItem);
+    ruler->setZValue(10);
 
     m_boundaryItem = scene->addRect(itemRect);
     m_boundaryItem->setZValue(5);
