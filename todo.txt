@@ -1,0 +1,9 @@
+* Vertical detection from note heads
+* Eliminate false positives for note heads (sharp symbol, Bass cleff)
+* Beam detection.
+* Chord detections.
+* Flags detection.
+* Ties and slurs detections.
+* Remove ledger lines
+* Check if accidentals can be detected.
+* Whole note and half note detection to be done and corresponding verticals to be detected
