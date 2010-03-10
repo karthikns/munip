@@ -164,7 +164,7 @@ namespace Munip
                 m_startPos.setX(segment.startPos().x());
             if( segment.endPos().x() > m_endPos.x() )
                 m_endPos.setX(segment.endPos().x());
-            //m_boundingBox |= QRect(segment.startPos(), segment.endPos());
+            m_boundingBox |= QRect(segment.startPos(), segment.endPos());
         }
 
     }
@@ -179,7 +179,7 @@ namespace Munip
                     m_startPos.setX(s.startPos().x());
                 if( s.endPos().x() > m_endPos.x() )
                     m_endPos.setX(s.endPos().x());
-                //m_boundingBox |= QRect(s.startPos(), s.endPos());
+                m_boundingBox |= QRect(s.startPos(), s.endPos());
            }
     }
 
