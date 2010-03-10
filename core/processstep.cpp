@@ -2017,7 +2017,7 @@ void SymbolAreaExtraction::process()
             p.setBrush(color);
             p.setPen(Qt::NoPen);
 
-            QPoint delta(sd->staff.staffBoundingRect().topLeft());
+            QPoint delta(sd->staff.boundingRect().topLeft());
 
             foreach (const NoteHeadSegment& n, sd->noteHeadSegments) {
                 QRect r = n.rect;
