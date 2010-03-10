@@ -183,6 +183,7 @@ namespace Munip
             for (int i = 0; i < size; ++i) {
                 ProcessStepAction *newAction = new ProcessStepAction(classes[i]);
                 newAction->setParent(parent);
+                newAction->setShortcut(QString("Ctrl+%1").arg(i+1));
                 actions << newAction;
             }
         }
