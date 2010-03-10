@@ -101,6 +101,7 @@ namespace Munip
         noteProjections = filter(Range(1, 100),
                 Range(n1_2 + dw->staffSpaceHeight().min - dw->staffLineHeight().min, 100),
                 noteProjections);
+        //qDebug() << Q_FUNC_INFO << noteProjections.values();
     }
 
     void StaffData::findStems()
@@ -112,7 +113,7 @@ namespace Munip
                 maxProjections);
     }
 
-    QHash<int, int> StaffData::filter(Range width, Range height,
+    QHash<int, int> StaffData::filter(Range , Range height,
             const QHash<int, int> &hash)
     {
         QList<int> allKeys = hash.keys();
@@ -155,6 +156,40 @@ namespace Munip
 
         //qDebug() << Q_FUNC_INFO << maxRun << endl;
         return maxRun;
+    }
+
+    void StaffData::extractNoteHeadSegments()
+    {
+        noteHeadSegments.clear();
+        QList<int> noteKeys = noteProjections.keys();
+        qSort(noteKeys);
+
+        int top = staff.boundingRect().top();
+        int height = staff.boundingRect().height();
+        int noteWidth = 2 * DataWarehouse::instance()->staffSpaceHeight().min;
+
+        //qDebug() << Q_FUNC_INFO;
+        for (int i = 0; i < noteKeys.size(); ++i) {
+            int runlength = 0;
+            int key = noteKeys[i];
+            if (noteProjections.value(key) == 0) continue;
+            while (i+runlength < noteKeys.size() &&
+                    noteProjections.value(noteKeys[i]+runlength, 0) != 0) {
+                ++runlength;
+            }
+
+            i += runlength - 1;
+
+            int xCenter = key + (runlength >> 1);
+            NoteHead n;
+            // n.rect = QRect(xCenter - noteWidth, top, noteWidth * 2, height);
+            n.rect = QRect(key, top, runlength, height);
+            noteHeadSegments << n;
+        }
+
+        qSort(noteHeadSegments);
+        //qDebug() << noteProjections.keys();
+        //qDebug() << noteProjections.values();
     }
 
     QImage StaffData::staffImage() const

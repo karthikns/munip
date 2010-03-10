@@ -11,6 +11,15 @@ namespace Munip
 {
     class Range;
 
+    struct NoteHead
+    {
+        QRect rect;
+
+        bool operator<(const NoteHead& other) const {
+            return rect.left() < other.rect.left();
+        }
+    };
+
     struct StaffData
     {
         StaffData(const QImage& img, const Staff& staff);
@@ -23,6 +32,8 @@ namespace Munip
 
         QHash<int, int> filter(Range width, Range height, const QHash<int, int> &hash);
 
+        void extractNoteHeadSegments();
+
         QImage staffImage() const;
         QImage projectionImage(const QHash<int, int> &hash) const;
 
@@ -33,6 +44,8 @@ namespace Munip
         QHash<int, int> maxProjections;
         QHash<int, int> noteProjections;
         QHash<int, int> stemsProjections;
+
+        QList<NoteHead> noteHeadSegments;
 
         const QImage& image;
     };
