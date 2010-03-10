@@ -435,7 +435,13 @@ namespace Munip
         //removeStaffLines();
         constructStaff();
 
-        bool drawSegments = true;
+        m_processedImage = QImage(m_originalImage.size(), QImage::Format_ARGB32_Premultiplied);
+
+        for(int x = 0; x < m_processedImage.width(); x++)
+            for(int y = 0; y< m_processedImage.height();y++)
+                m_processedImage.setPixel(x, y, m_originalImage.pixel(x, y));
+
+        bool drawSegments = false;
         if (drawSegments) {
             m_processedImage = QImage(m_originalImage.size(), QImage::Format_ARGB32_Premultiplied);
 
@@ -490,6 +496,19 @@ namespace Munip
             estimateStaffParametersFromYellowAreas();
 
         }
+
+        bool drawLineList = true;
+        if (drawLineList) {
+            QColor colors[3] = { QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen) };
+            int currentIndex = 0;
+            QPainter p(&m_processedImage);
+            foreach (const StaffLine& line, m_lineList) {
+                p.setBrush(colors[currentIndex]);
+                p.drawRect(line.segmentsBound());
+                currentIndex = (currentIndex + 1) % 3;
+            }
+        }
+
 
        // m_processedImage = m_lineRemovedTracker.toImage();
 #if 0
@@ -742,6 +761,7 @@ void StaffLineDetect::constructStaff()
 
     int i = 0;
     DataWarehouse::instance()->clearStaff();
+    qDebug() << Q_FUNC_INFO;
     while (i < m_lineList.size())
     {
         Staff s;
@@ -757,6 +777,7 @@ void StaffLineDetect::constructStaff()
         s.setBoundingRect(findStaffBoundingRect(s));
 
         DataWarehouse ::instance()->appendStaff(s);
+        qDebug() << "staff contructed when i = " << i;
         //mDebug() <<Q_FUNC_INFO<<s.boundingRect().topLeft()<<s.boundingRect().bottomRight()<<s.boundingRect();
 #if 0
         identifySymbolRegions(s);
@@ -1423,6 +1444,21 @@ void StaffLineRemoval::process()
     cleanupNoise();
     staffCleanUp();
 
+    bool debugStaffLineRemoval = false;
+    if (debugStaffLineRemoval) {
+        DataWarehouse *dw = DataWarehouse::instance();
+        QPainter p(&m_processedImage);
+        QColor colors[3] = { QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen) };
+        int colorIndex = 0;
+        qDebug() << Q_FUNC_INFO;
+        foreach (const Staff& staff, dw->staffList()) {
+            p.setBrush(colors[colorIndex]);
+            p.drawRect(staff.boundingRect());
+            colorIndex = (colorIndex + 1) % 3;
+            qDebug() << staff.boundingRect().topLeft() << staff.boundingRect().bottomRight();
+        }
+
+    }
     emit ended();
 }
 
