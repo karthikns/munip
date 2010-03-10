@@ -91,7 +91,7 @@ namespace Munip
         qDebug() << endl;
     }
 
-    void StaffData::findNoteHeads()
+    void StaffData::findNoteHeadSegments()
     {
         DataWarehouse *dw = DataWarehouse::instance();
         int n1_2 = 2 * (dw->staffLineHeight().max);
@@ -102,15 +102,6 @@ namespace Munip
                 Range(n1_2 + dw->staffSpaceHeight().min - dw->staffLineHeight().min, 100),
                 noteProjections);
         //qDebug() << Q_FUNC_INFO << noteProjections.values();
-    }
-
-    void StaffData::findStems()
-    {
-        DataWarehouse *dw = DataWarehouse::instance();
-        int n1_2 = 2 * (dw->staffLineHeight().max);
-        stemsProjections = filter(Range(1, 100),
-                Range(n1_2 + dw->staffSpaceHeight().max, 100),
-                maxProjections);
     }
 
     QHash<int, int> StaffData::filter(Range , Range height,
@@ -160,6 +151,7 @@ namespace Munip
 
     void StaffData::extractNoteHeadSegments()
     {
+        const QRgb BlackColor = QColor(Qt::black).rgb();
         noteHeadSegments.clear();
         QList<int> noteKeys = noteProjections.keys();
         qSort(noteKeys);
@@ -181,15 +173,74 @@ namespace Munip
             i += runlength - 1;
 
             int xCenter = key + (runlength >> 1);
-            NoteHead n;
+            NoteHeadSegment n;
             // n.rect = QRect(xCenter - noteWidth, top, noteWidth * 2, height);
-            n.rect = QRect(key, top, runlength, height);
+            n.rect = QRect(xCenter - (noteWidth >> 1), top, noteWidth, height);
+            // TODO: BoundingRect should include beams, but thats not being drawn. Check that.
+            //n.rect = QRect(key, top, runlength, height);
+
             noteHeadSegments << n;
         }
 
         qSort(noteHeadSegments);
         //qDebug() << noteProjections.keys();
         //qDebug() << noteProjections.values();
+    }
+
+    void StaffData::extractStemSegments()
+    {
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+        DataWarehouse *dw = DataWarehouse::instance();
+        const int lineHeight = dw->staffLineHeight().min * 2;
+
+        foreach (const NoteHeadSegment& seg, noteHeadSegments) {
+            QList<int> projData;
+            int maxCountIndex = -1;
+            QRect rect = seg.rect;
+            rect.setLeft(qMax(0, rect.left() - lineHeight));
+            rect.setRight(qMin(image.width(), rect.right() + lineHeight));
+
+            for (int x = rect.left(); x <= rect.right(); ++x) {
+                int count = 0;
+                for (int y = rect.top(); y <= rect.bottom(); ++y) {
+                    count += (image.pixel(x, y) == BlackColor);
+                }
+                projData << count;
+                if (maxCountIndex < 0) {
+                    maxCountIndex = x - rect.left();
+                } else {
+                    if (count > projData[maxCountIndex]) {
+                        maxCountIndex = x - rect.left();
+                    }
+                }
+            }
+
+            QRect stemRect(maxCountIndex + rect.left(), staff.boundingRect().top(),
+                    1, staff.boundingRect().height());
+            int margin = dw->staffSpaceHeight().min >> 1;
+            for (int x = maxCountIndex; x < qMin(maxCountIndex + lineHeight, projData.size()-1); ++x) {
+                if (qAbs(projData[x] - projData[maxCountIndex]) <= margin) {
+                    stemRect.setRight(x + rect.left());
+                } else {
+                    break;
+                }
+            }
+
+            for (int x = maxCountIndex; x >= qMax(maxCountIndex - lineHeight, 0); --x) {
+                if (qAbs(projData[x] - projData[maxCountIndex]) <= margin) {
+                    stemRect.setLeft(x + rect.left());
+                } else {
+                    break;
+                }
+            }
+
+            StemSegment stemSeg;
+            stemSeg.boundingRect = stemRect;
+            stemSegments << stemSeg;
+
+        }
+
+        qSort(stemSegments);
     }
 
     QImage StaffData::staffImage() const

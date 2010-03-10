@@ -1994,8 +1994,9 @@ void SymbolAreaExtraction::process()
         StaffData *sd = new StaffData(m_originalImage, staff);
         sd->findSymbolRegions();
         sd->findMaxProjections();
-        sd->findNoteHeads();
+        sd->findNoteHeadSegments();
         sd->extractNoteHeadSegments();
+        sd->extractStemSegments();
         staffDatas << sd;
 
         sz.rwidth() = qMax(sz.width(), staff.staffBoundingRect().width());
@@ -2016,13 +2017,21 @@ void SymbolAreaExtraction::process()
             p.setBrush(color);
             p.setPen(Qt::NoPen);
 
-            qDebug() << Q_FUNC_INFO;
-            foreach (const NoteHead& n, sd->noteHeadSegments) {
-                qDebug() << n.rect.topLeft() << n.rect.topRight();
-            }
             QPoint delta(sd->staff.staffBoundingRect().topLeft());
-            foreach (const NoteHead& n, sd->noteHeadSegments) {
+
+            foreach (const NoteHeadSegment& n, sd->noteHeadSegments) {
                 QRect r = n.rect;
+                r.translate(-delta.x(), -delta.y());
+                p.drawRect(r);
+            }
+
+            color = QColor(Qt::darkGreen);
+            color.setAlpha(100);
+            p.setBrush(color);
+            qDebug() << Q_FUNC_INFO;
+            foreach (const StemSegment& s, sd->stemSegments) {
+                QRect r = s.boundingRect;
+                qDebug() << r.topLeft() << r.bottomRight();
                 r.translate(-delta.x(), -delta.y());
                 p.drawRect(r);
             }
