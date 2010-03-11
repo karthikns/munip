@@ -157,7 +157,6 @@ namespace Munip
                 p.drawRect(stemSegments[i].boundingRect);
             }
         }
-        image.save("test.png");
 
 
         for (int i = 0; i < stemSegments.size(); ++i) {
@@ -210,8 +209,154 @@ namespace Munip
                 }
             }
         }
+    }
+
+    StemSegment StaffData::stemSegmentForPoint(const QPoint& p, bool &validOutput)
+    {
+        for (int i = 0; i < stemSegments.size(); ++i) {
+            StemSegment seg = stemSegments.at(i);
+            QRect rect = seg.boundingRect;
+            rect.setLeft(rect.left() - 2);
+            rect.setWidth(4);
+            if (rect.contains(p)) {
+                validOutput = true;
+                return seg;
+            }
+        }
+        validOutput = false;
+        return StemSegment();
+    }
+
+    void StaffData::findBeamsUsingShortestPathApproach()
+    {
+        DataWarehouse *dw = DataWarehouse::instance();
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+
+        QImage image = this->image;
+        {
+            QPainter p(&image);
+            p.setBrush(QColor(Qt::white));
+            p.setPen(Qt::NoPen);
+
+            for (int i = 0; i < stemSegments.size(); ++i) {
+                p.drawRect(stemSegments[i].boundingRect);
+            }
+        }
 
 
+        int id = 0;
+
+        for (int i = 0; i < stemSegments.size(); ++i) {
+            const StemSegment& seg = stemSegments.at(i);
+
+            QRect rect = seg.boundingRect;
+            const int yStart = (seg.beamAtTop ? rect.top() : rect.bottom());
+            const int yEnd = (seg.beamAtTop ? (rect.bottom()) : (rect.top()));
+            const int yStep = (seg.beamAtTop ? +1 : -1);
+
+            QSet<QPoint> visited;
+
+            for (int x = qMin(rect.right() + 1, image.width() - 1);
+                    x <= qMin(rect.right() + 2, image.width() - 1); ++x) {
+
+                for (int y = yStart; (seg.beamAtTop ? (y <= yEnd) : (y >= yEnd)); y += yStep) {
+                    const QPoint p(x, y);
+
+                    if (image.pixel(p) != BlackColor) continue;
+
+                    if (visited.contains(p)) continue;
+
+                    // if (beamPoints.contains(p)) continue;
+
+                    QList<QPoint> pathPoints;
+                    pathPoints << p;
+                    visited << p;
+
+                    bool valid = false;
+                    StemSegment rightSegment;
+
+                    while (1) {
+                        QPoint lastPoint = pathPoints.last();
+                        QPoint newp = QPoint(lastPoint.x() + 1, lastPoint.y());
+                        if (newp.x() < image.width() && image.pixel(newp) == BlackColor
+                                && !visited.contains(newp)) {
+                            pathPoints << newp;
+                            visited << newp;
+                            continue;
+                        }
+
+                        newp = QPoint(lastPoint.x(), lastPoint.y() - 1);
+                        if (newp.y() >= 0 && image.pixel(newp) == BlackColor
+                                && !visited.contains(newp)) {
+                            pathPoints << newp;
+                            visited << newp;
+                            continue;
+                        }
+
+                        newp = QPoint(lastPoint.x(), lastPoint.y() + 1);
+                        if (newp.y() < image.height() && image.pixel(newp) == BlackColor
+                                && !visited.contains(newp)) {
+                            pathPoints << newp;
+                            visited << newp;
+                            continue;
+                        }
+
+                        break;
+                    }
+
+                    rightSegment = stemSegmentForPoint(pathPoints.last(), valid);
+                    if (valid) {
+                        QList<QPoint> result = solidifyPath(pathPoints, seg, rightSegment, visited);
+                        foreach (const QPoint& resultPt, result) {
+                            beamPoints.insert(resultPt, id);
+                        }
+                        ++id;
+                    }
+                }
+            }
+        }
+
+        qDebug() << Q_FUNC_INFO << "Num of stems = " << id;
+    }
+
+    QList<QPoint> StaffData::solidifyPath(const QList<QPoint> &pathPoints,
+            const StemSegment& left, const StemSegment& right,
+            QSet<QPoint> &visited)
+    {
+        QList<QPoint> result;
+        QList<QPoint> lastPassPoints = pathPoints;
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+
+        while (1) {
+            QList<QPoint> nextPassPoints;
+
+            foreach (const QPoint& p, lastPassPoints) {
+                result << p;
+                QPoint l = p, t = p, r = p, b = p;
+                l.rx()--; t.ry()--; r.rx()++; b.ry()++;
+
+                // Construct neighbors.
+                QList<QPoint> pts;
+                pts << l << t << r << b;
+
+                foreach (const QPoint& pt, pts) {
+                    if (pt.x() > left.boundingRect.right() &&
+                            pt.x() < right.boundingRect.left() &&
+                            pt.y() >= 0 &&
+                            pt.y() < image.height() &&
+                            image.pixel(pt) == BlackColor &&
+                            !visited.contains(pt)) {
+                        visited << pt;
+                        nextPassPoints << pt;
+                    }
+                }
+            }
+
+            if (nextPassPoints.isEmpty()) break;
+            lastPassPoints = nextPassPoints;
+        }
+
+        return result;
     }
 
     QHash<int, int> StaffData::filter(Range , Range height,

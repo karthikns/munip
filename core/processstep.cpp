@@ -1999,7 +1999,7 @@ void SymbolAreaExtraction::process()
         sd->findNoteHeadSegments();
         sd->extractNoteHeadSegments();
         sd->extractStemSegments();
-        sd->findBeams();
+        sd->findBeamsUsingShortestPathApproach();
         staffDatas << sd;
 
         sz.rwidth() = qMax(sz.width(), staff.staffBoundingRect().width());
@@ -2030,30 +2030,36 @@ void SymbolAreaExtraction::process()
             }
             */
 
+            // Draw beam points
+            if (1) {
+                p.setBrush(Qt::NoBrush);
+                QHash<QPoint, int>::const_iterator it = sd->beamPoints.constBegin();
+                QColor colors_beam[5] = {
+                    QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
+                    QColor(Qt::red), QColor(Qt::darkCyan)
+                };
+                while (it != sd->beamPoints.constEnd()) {
+                    p.setPen(colors_beam[it.value() % 5]);
+                    p.drawPoint(it.key() - delta);
+                    ++it;
+                }
+            }
+
+            // Draw stems
             color = QColor(Qt::white);
             //color.setAlpha(100);
             p.setBrush(color);
-            qDebug() << Q_FUNC_INFO;
+            p.setPen(Qt::NoPen);
             QColor colors[3] = { QColor(Qt::red), QColor(Qt::darkCyan), QColor(Qt::green) };
             int currentIndex = 0;
             foreach (const StemSegment& s, sd->stemSegments) {
                 QRect r = s.boundingRect;
-                qDebug() << r.topLeft() << r.bottomRight();
                 r.translate(-delta.x(), -delta.y());
                 p.setBrush(colors[currentIndex]);
                 p.drawRect(r);
                 currentIndex = (currentIndex + 1) % 3;
             }
 
-            // Draw beam points
-            p.setBrush(Qt::NoBrush);
-            QHash<QPoint, int>::const_iterator it = sd->beamPoints.constBegin();
-            QColor colors_beam[3] = { QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen) };
-            while (it != sd->beamPoints.constEnd()) {
-                p.setPen(colors_beam[it.value() % 3]);
-                p.drawPoint(it.key() - delta);
-                ++it;
-            }
 
 
             p.end();

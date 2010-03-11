@@ -10,3 +10,5 @@
 * Fix bug in staff line detection (staff bound rect, line aggregation)
 * Try to use shortest path for beam detection rather than blind implementatin of connected
   components.
+* Stems' actual coordinates not correctly determined yet (top and bottom are that of StaffBoundRect)
+    Fix this!! This is very important for robustifying beam detection.

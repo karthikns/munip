@@ -8,6 +8,8 @@
 #include <QRect>
 #include <QImage>
 
+class QImage;
+
 namespace Munip
 {
     class Range;
@@ -43,9 +45,14 @@ namespace Munip
         void findMaxProjections();
         void findNoteHeadSegments();
         void findBeams();
+        void findBeamsUsingShortestPathApproach();
         void extractNoteHeadSegments();
         void extractStemSegments();
 
+        StemSegment stemSegmentForPoint(const QPoint& p, bool &validOutput);
+        QList<QPoint> solidifyPath(const QList<QPoint> &pathPoints,
+                const StemSegment& left, const StemSegment& right,
+                QSet<QPoint> &visited);
         QImage staffImage() const;
         QImage projectionImage(const QHash<int, int> &hash) const;
         int determinePeakHValueFrom(const QList<int> &horProjValues);
