@@ -4,14 +4,6 @@
 #include <QPainter>
 #include <cmath>
 
-
-//! A simple hash function for use with QHash<QPoint>.
-// Assumption: p is +ve and p.x() value is <= 4000
-static uint qHash(const QPoint& p)
-{
-    return p.x() * 4000 + p.y();
-}
-
 using namespace Munip;
 
 ClusterSet::ClusterSet(int radius, int minPts) :

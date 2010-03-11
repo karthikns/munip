@@ -1451,7 +1451,9 @@ void StaffLineRemoval::process()
         int colorIndex = 0;
         qDebug() << Q_FUNC_INFO;
         foreach (const Staff& staff, dw->staffList()) {
-            p.setBrush(colors[colorIndex]);
+            QColor c = colors[colorIndex];
+            c.setAlpha(100);
+            p.setBrush(c);
             p.drawRect(staff.boundingRect());
             colorIndex = (colorIndex + 1) % 3;
             qDebug() << staff.boundingRect().topLeft() << staff.boundingRect().bottomRight();
@@ -1997,6 +1999,7 @@ void SymbolAreaExtraction::process()
         sd->findNoteHeadSegments();
         sd->extractNoteHeadSegments();
         sd->extractStemSegments();
+        sd->findBeams();
         staffDatas << sd;
 
         sz.rwidth() = qMax(sz.width(), staff.staffBoundingRect().width());
@@ -2019,22 +2022,40 @@ void SymbolAreaExtraction::process()
 
             QPoint delta(sd->staff.boundingRect().topLeft());
 
+            /*
             foreach (const NoteHeadSegment& n, sd->noteHeadSegments) {
                 QRect r = n.rect;
                 r.translate(-delta.x(), -delta.y());
                 p.drawRect(r);
             }
+            */
 
-            color = QColor(Qt::darkGreen);
-            color.setAlpha(100);
+            color = QColor(Qt::white);
+            //color.setAlpha(100);
             p.setBrush(color);
             qDebug() << Q_FUNC_INFO;
+            QColor colors[3] = { QColor(Qt::red), QColor(Qt::darkCyan), QColor(Qt::green) };
+            int currentIndex = 0;
             foreach (const StemSegment& s, sd->stemSegments) {
                 QRect r = s.boundingRect;
                 qDebug() << r.topLeft() << r.bottomRight();
                 r.translate(-delta.x(), -delta.y());
+                p.setBrush(colors[currentIndex]);
                 p.drawRect(r);
+                currentIndex = (currentIndex + 1) % 3;
             }
+
+            // Draw beam points
+            p.setBrush(Qt::NoBrush);
+            QHash<QPoint, int>::const_iterator it = sd->beamPoints.constBegin();
+            QColor colors_beam[3] = { QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen) };
+            while (it != sd->beamPoints.constEnd()) {
+                p.setPen(colors_beam[it.value() % 3]);
+                p.drawPoint(it.key() - delta);
+                ++it;
+            }
+
+
             p.end();
 
         }

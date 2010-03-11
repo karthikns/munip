@@ -1,10 +1,10 @@
 #include "symbol.h"
 #include "datawarehouse.h"
-#include "tools.h"
 
 #include <QColor>
 #include <QDebug>
 #include <QPainter>
+#include <QStack>
 
 namespace Munip
 {
@@ -142,6 +142,78 @@ namespace Munip
 
     }
 
+    void StaffData::findBeams()
+    {
+        DataWarehouse *dw = DataWarehouse::instance();
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+
+        QImage image = this->image;
+        {
+            QPainter p(&image);
+            p.setBrush(QColor(Qt::white));
+            p.setPen(Qt::NoPen);
+
+            for (int i = 0; i < stemSegments.size(); ++i) {
+                p.drawRect(stemSegments[i].boundingRect);
+            }
+        }
+        image.save("test.png");
+
+
+        for (int i = 0; i < stemSegments.size(); ++i) {
+            const StemSegment& seg = stemSegments.at(i);
+            const int id = i;
+
+            QRect rect = seg.boundingRect;
+            for (int x = qMin(rect.right() + 1, image.width() - 1);
+                    x <= qMin(rect.right() + 2, image.width() - 1); ++x) {
+
+                int space = dw->staffSpaceHeight().max * 2;
+                int yStart = (seg.beamAtTop ? rect.top() : rect.bottom());
+                int yEnd = (seg.beamAtTop ? (rect.top() + space) : (rect.bottom() - space));
+                int yStep = (seg.beamAtTop ? +1 : -1);
+
+                for (int y = yStart; (seg.beamAtTop ? (y <= yEnd) : (y >= yEnd)); y += yStep) {
+                    const QPoint p(x, y);
+
+                    if (image.pixel(p) != BlackColor) continue;
+
+                    if (beamPoints.contains(p)) continue;
+
+                    QStack<QPoint> stack;
+                    stack.push(p);
+
+                    while (!stack.isEmpty()) {
+                        QPoint pop = stack.pop();
+                        if (beamPoints.contains(pop)) continue;
+
+                        beamPoints.insert(pop, id);
+                        QPoint l = pop, t = pop, r = pop, b = pop;
+                        l.rx() = qMax(x, l.x()-1);
+                        t.ry() = qMax(0, t.y()-1);
+                        r.rx() = qMin(image.width()-1, r.x()+1);
+                        b.ry() = qMin(image.height()-1, b.y()+1);
+
+                        if (image.pixel(l) == BlackColor && !beamPoints.contains(l)) {
+                            stack.push(l);
+                        }
+                        if (image.pixel(t) == BlackColor && !beamPoints.contains(t)) {
+                            stack.push(t);
+                        }
+                        if (image.pixel(r) == BlackColor && !beamPoints.contains(r)) {
+                            stack.push(r);
+                        }
+                        if (image.pixel(b) == BlackColor && !beamPoints.contains(b)) {
+                            stack.push(b);
+                        }
+                    }
+                }
+            }
+        }
+
+
+    }
+
     QHash<int, int> StaffData::filter(Range , Range height,
             const QHash<int, int> &hash)
     {
@@ -274,6 +346,13 @@ namespace Munip
 
             StemSegment stemSeg;
             stemSeg.boundingRect = stemRect;
+            stemSeg.noteHeadSegment = seg;
+
+            int lDist = qAbs(seg.rect.left() - stemSeg.boundingRect.left());
+            int rDist = qAbs(seg.rect.right() - stemSeg.boundingRect.left());
+
+            // == cond not thought, but guess not needed.
+            stemSeg.beamAtTop = (lDist > rDist);
             stemSegments << stemSeg;
 
         }

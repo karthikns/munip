@@ -1,6 +1,8 @@
 #ifndef CLUSTER_H
 #define CLUSTER_H
 
+#include "tools.h"
+
 #include <QPoint>
 #include <QList>
 #include <QHash>

@@ -2,6 +2,7 @@
 #define SYMBOL_H
 
 #include "staff.h"
+#include "tools.h"
 
 #include <QList>
 #include <QRect>
@@ -24,6 +25,10 @@ namespace Munip
     struct StemSegment
     {
         QRect boundingRect;
+        NoteHeadSegment noteHeadSegment;
+        bool beamAtTop;
+
+        StemSegment() { beamAtTop = true; }
 
         bool operator<(const StemSegment& other) const {
             return boundingRect.left() < other.boundingRect.left();
@@ -37,6 +42,7 @@ namespace Munip
         void findSymbolRegions();
         void findMaxProjections();
         void findNoteHeadSegments();
+        void findBeams();
         void extractNoteHeadSegments();
         void extractStemSegments();
 
@@ -55,6 +61,7 @@ namespace Munip
 
         QList<NoteHeadSegment> noteHeadSegments;
         QList<StemSegment> stemSegments;
+        QHash<QPoint, int> beamPoints;
 
         const QImage& image;
     };

@@ -53,4 +53,11 @@ inline QDebug& operator<<(QDebug& dbg, const Munip::Range& range)
     return dbg.space();
 }
 
+//! A simple hash function for use with QHash<QPoint>.
+// Assumption: p is +ve and p.x() value is <= 4000
+inline uint qHash(const QPoint& p)
+{
+    return p.x() * 4000 + p.y();
+}
+
 #endif
