@@ -2,6 +2,7 @@ libcore.a
 Makefile
 .my-setup
 .tmp
+tags
 
 *.swp
 *.user

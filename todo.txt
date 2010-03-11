@@ -7,3 +7,4 @@
 * Remove ledger lines
 * Check if accidentals can be detected.
 * Whole note and half note detection to be done and corresponding verticals to be detected
+* Fix bug in staff line detection (staff bound rect, line aggregation)
