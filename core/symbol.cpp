@@ -55,7 +55,6 @@ namespace Munip
     {
         QRect r = staff.boundingRect();
         const QRgb BlackColor = QColor(Qt::black).rgb();
-        DataWarehouse *dw = DataWarehouse::instance();
 
         foreach (const QRect &sr, symbolRects) {
             if (sr.width() < SlidingWindowSize) continue;
@@ -229,7 +228,6 @@ namespace Munip
 
     void StaffData::findBeamsUsingShortestPathApproach()
     {
-        DataWarehouse *dw = DataWarehouse::instance();
         const QRgb BlackColor = QColor(Qt::black).rgb();
 
         QImage image = this->image;
@@ -406,7 +404,6 @@ namespace Munip
 
     void StaffData::extractNoteHeadSegments()
     {
-        const QRgb BlackColor = QColor(Qt::black).rgb();
         noteHeadSegments.clear();
         QList<int> noteKeys = noteProjections.keys();
         qSort(noteKeys);
@@ -522,7 +519,6 @@ namespace Munip
     {
         //qDebug() << Q_FUNC_INFO;
         const QRect r = staff.boundingRect();
-        DataWarehouse *dw = DataWarehouse::instance();
 
         QImage img(r.size(), QImage::Format_ARGB32_Premultiplied);
         img.fill(0xffffffff);

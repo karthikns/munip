@@ -173,9 +173,9 @@ namespace Munip
         static QList<ProcessStepAction*> actions;
         static QByteArray classes[] =
         {
-            "GrayScaleConversion", "MonoChromeConversion", "SkewCorrection",
-            "StaffParamExtraction", "StaffLineDetect", "StaffLineRemoval",
-            "SymbolAreaExtraction", "ImageCluster", "ImageRotation"
+            "MonoChromeConversion", "SkewCorrection", "StaffLineDetect",
+            "StaffLineRemoval", "SymbolAreaExtraction","StaffParamExtraction",
+            "ImageCluster", "GrayScaleConversion", "ImageRotation"
         };
 
         if (actions.isEmpty()) {
@@ -456,17 +456,16 @@ namespace Munip
             DataWarehouse *dw = DataWarehouse::instance();
             const QList<Staff> staffList = dw->staffList();
             foreach (const Staff& staff, staffList) {
-                const QRect staffBound = staff.staffBoundingRect();
-                const int staffLength = staffBound.width();
+                bool thickenSegments = false;
+                if (thickenSegments) {
+                    const QRect staffBound = staff.staffBoundingRect();
+                    const int stepWidth = 50;
 
-                const int stepWidth = 50;
+                    const int Black = m_originalImage.color(0) == 0xffffffff ? 1 : 0;
 
-                const int Black = m_originalImage.color(0) == 0xffffffff ? 1 : 0;
+                    p.setPen(Qt::darkYellow);
+                    p.setBrush(Qt::NoBrush);
 
-                p.setPen(Qt::darkYellow);
-                p.setBrush(Qt::NoBrush);
-
-                if (0) {
                     for (int y = staffBound.top(); y <= staffBound.bottom(); ++y) {
                         for (int startX = staffBound.left(); startX <= staffBound.right();
                                 startX += stepWidth) {
@@ -1443,23 +1442,10 @@ void StaffLineRemoval::process()
     cleanupNoise();
     staffCleanUp();
 
-    bool debugStaffLineRemoval = false;
-    if (debugStaffLineRemoval) {
-        DataWarehouse *dw = DataWarehouse::instance();
-        QPainter p(&m_processedImage);
-        QColor colors[3] = { QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen) };
-        int colorIndex = 0;
-        qDebug() << Q_FUNC_INFO;
-        foreach (const Staff& staff, dw->staffList()) {
-            QColor c = colors[colorIndex];
-            c.setAlpha(100);
-            p.setBrush(c);
-            p.drawRect(staff.boundingRect());
-            colorIndex = (colorIndex + 1) % 3;
-            qDebug() << staff.boundingRect().topLeft() << staff.boundingRect().bottomRight();
-        }
+    MonoChromeConversion mono(m_processedImage, 0);
+    mono.process();
+    m_processedImage = mono.processedImage();
 
-    }
     emit ended();
 }
 
@@ -1491,7 +1477,6 @@ void StaffLineRemoval::crudeRemove()
                 }
 
                 y = runEnd + 1;
-                int runLength = runEnd - runStart + 1;
                 int aboveBlackPixels = 0, belowBlackPixels = 0;
 
                 static const int margin = staffLineHeight > 1 ? 1 : 0;
