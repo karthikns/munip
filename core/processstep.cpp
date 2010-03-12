@@ -2000,20 +2000,9 @@ void SymbolAreaExtraction::process()
         QImage img = sd->staffImage();
         {
             QPainter p(&img);
-            QColor color(Qt::darkYellow);
-            color.setAlpha(100);
-            p.setBrush(color);
-            p.setPen(Qt::NoPen);
 
             QPoint delta(sd->staff.boundingRect().topLeft());
 
-            /*
-            foreach (const NoteHeadSegment& n, sd->noteHeadSegments) {
-                QRect r = n.rect;
-                r.translate(-delta.x(), -delta.y());
-                p.drawRect(r);
-            }
-            */
 
             // Draw beam points
             if (1) {
@@ -2031,21 +2020,28 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw stems
-            color = QColor(Qt::white);
-            //color.setAlpha(100);
+            QColor color = QColor(Qt::gray);
             p.setBrush(color);
             p.setPen(Qt::NoPen);
-            QColor colors[3] = { QColor(Qt::red), QColor(Qt::darkCyan), QColor(Qt::green) };
             int currentIndex = 0;
             foreach (const StemSegment& s, sd->stemSegments) {
                 QRect r = s.boundingRect;
                 r.translate(-delta.x(), -delta.y());
-                p.setBrush(colors[currentIndex]);
                 p.drawRect(r);
                 currentIndex = (currentIndex + 1) % 3;
             }
 
 
+            // Draw note regions.
+            color = QColor(Qt::darkYellow);
+            color.setAlpha(100);
+            p.setBrush(color);
+            p.setPen(Qt::NoPen);
+            foreach (const NoteHeadSegment& n, sd->noteHeadSegments) {
+                QRect r = n.rect;
+                r.translate(-delta.x(), -delta.y());
+                p.drawRect(r);
+            }
 
             p.end();
 
@@ -2056,7 +2052,7 @@ void SymbolAreaExtraction::process()
 
         y += sh + 50;
 
-        p.drawImage(QPoint(0, y), sd->projectionImage(sd->noteProjections));
+        p.drawImage(QPoint(0, y), sd->projectionImage(sd->maxProjections));
 
         y += sh + 50;
     }
