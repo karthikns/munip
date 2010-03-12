@@ -15,34 +15,27 @@
 
 namespace Munip
 {
-
-    StaffLine::StaffLine(const QPoint& start, const QPoint& end, int thickness)
+    StaffLine::StaffLine(const QPoint& start = QPoint(-1, -1),
+            const QPoint& end = QPoint(-1, -1))
     {
         m_startPos = start;
         m_endPos = end;
-        m_lineWidth = thickness;
         m_staffLineID = -1;	 // still to be set
-        constructBoundingRect();
-    }
 
-    StaffLine::StaffLine()
-    {
+        if (start != QPoint(-1, -1)) {
+            QPoint minPoint,maxPoint;
+            minPoint.setX(qMin(m_startPos.x(),m_endPos.x()));
+            minPoint.setY(qMin(m_startPos.y(),m_endPos.y()));
+            maxPoint.setX(qMax(m_startPos.x(),m_endPos.x()));
+            maxPoint.setY(qMax(m_startPos.y(),m_endPos.y()));
+            m_boundingRect.setTopLeft(minPoint);
+            m_boundingRect.setBottomRight(maxPoint);
+        }
     }
 
     StaffLine::~StaffLine()
     {
 
-    }
-
-    void StaffLine::constructBoundingRect()
-    {
-        QPoint minPoint,maxPoint;
-        minPoint.setX(qMin(m_startPos.x(),m_endPos.x()));
-        minPoint.setY(qMin(m_startPos.y(),m_endPos.y()));
-        maxPoint.setX(qMax(m_startPos.x(),m_endPos.x()));
-        maxPoint.setY(qMax(m_startPos.y(),m_endPos.y()));
-        m_boundingBox.setTopLeft(minPoint);
-        m_boundingBox.setBottomRight(maxPoint);
     }
 
     QPoint StaffLine::startPos() const
@@ -75,29 +68,9 @@ namespace Munip
         m_staffLineID = id;
     }
 
-    int StaffLine::lineWidth() const
-    {
-        return m_lineWidth;
-    }
-
-    void StaffLine::setLineWidth(int wid)
-    {
-        m_lineWidth = wid;
-    }
-
-    void StaffLine::setMaxPosition(const QPoint &maxPos)
-    {
-        m_boundingBox.setBottomRight(maxPos);
-    }
-
-    void StaffLine::setMinPosition(const QPoint &minPos)
-    {
-        m_boundingBox.setTopLeft(minPos);
-    }
-
     QRect StaffLine::boundingBox() const
     {
-        return m_boundingBox;
+        return m_boundingRect;
     }
 
     int StaffLine::length()
@@ -105,7 +78,7 @@ namespace Munip
         return (m_endPos.x() - m_startPos.x());
     }
 
-    bool StaffLine::contains(const Segment &segment)
+    bool StaffLine::contains(const Segment &segment) const
     {
        for(int i = 0; i < m_segmentList.size();i++)
            if( m_segmentList[i] == segment)
@@ -115,7 +88,7 @@ namespace Munip
 
     bool StaffLine::isAdjacent(const StaffLine &line)
     {
-        return qAbs(m_boundingBox.bottom() -
+        return qAbs(m_boundingRect.bottom() -
                 line.boundingBox().top()) == 1;
     }
 
@@ -150,9 +123,6 @@ namespace Munip
            return true;
         }
        return false;
-
-
-
     }
 
     void StaffLine::addSegment(const Segment &segment)
@@ -164,7 +134,7 @@ namespace Munip
                 m_startPos.setX(segment.startPos().x());
             if( segment.endPos().x() > m_endPos.x() )
                 m_endPos.setX(segment.endPos().x());
-            m_boundingBox |= QRect(segment.startPos(), segment.endPos());
+            m_boundingRect |= QRect(segment.startPos(), segment.endPos());
         }
 
     }
@@ -179,18 +149,13 @@ namespace Munip
                     m_startPos.setX(s.startPos().x());
                 if( s.endPos().x() > m_endPos.x() )
                     m_endPos.setX(s.endPos().x());
-                m_boundingBox |= QRect(s.startPos(), s.endPos());
+                m_boundingRect |= QRect(s.startPos(), s.endPos());
            }
     }
 
     QList<Segment> StaffLine::segments() const
     {
         return m_segmentList;
-    }
-
-    bool StaffLine::isValid() const
-    {
-        return !( m_startPos == QPoint(-1,-1) || m_endPos == QPoint(-1,-1) || m_lineWidth == -1);
     }
 
     void StaffLine::displaySegments()
@@ -204,45 +169,16 @@ namespace Munip
         qSort(m_segmentList.begin(),m_segmentList.end(),segmentSortByPosition);
     }
 
-    bool StaffLine::findSegment(Segment& s) const
-    {
-        for(int i = 0; i < m_segmentList.size();i++)
-            if(m_segmentList[i] == s)
-                return true;
-        return false;
-
-    }
-
-    QRect StaffLine::segmentsBound() const
-    {
-        QRect r;
-        foreach (const Segment& seg, m_segmentList) {
-            QRect segRect(seg.startPos(), seg.endPos());
-            if (r.isNull()) {
-                r = segRect;
-            } else {
-                r |= segRect;
-            }
-        }
-        return r;
-    }
-
     Staff::Staff(const QPoint& vStart, const QPoint& vEnd)
     {
         m_startPos = vStart;
         m_endPos = vEnd;
     }
 	
-    Staff::Staff()
-    {
-
-    }
-
     Staff::~Staff()
     {
 
     }
-
 
     QPoint Staff::startPos() const
     {
@@ -253,7 +189,6 @@ namespace Munip
     {
         m_startPos = point;
     }
-
 
     QPoint Staff::endPos() const
     {
@@ -282,7 +217,7 @@ namespace Munip
         constructStaffBoundingRect();
     }
 
-    bool Staff::operator<(Staff& other)
+    bool Staff::operator<(const Staff& other) const
     {
         return m_startPos.y() < other.m_startPos.y();
     }
@@ -290,16 +225,6 @@ namespace Munip
     void Staff::clear()
     {
         m_staffLines.clear();
-    }
-
-    int Staff::distance( int index )
-    {
-        qDebug() << Q_FUNC_INFO << " " << index << m_staffLines.size();
-        if( index == 0 || index > 5 )  // TODO must be extensible
-            return -1;
-        int distance = m_staffLines[index].endPos().y() - m_staffLines[index-1].endPos().y();
-        distance -= m_staffLines[index-1].lineWidth();
-        return distance;
     }
 
     QRect Staff::boundingRect() const

@@ -503,7 +503,7 @@ namespace Munip
             QPainter p(&m_processedImage);
             foreach (const StaffLine& line, m_lineList) {
                 p.setBrush(colors[currentIndex]);
-                p.drawRect(line.segmentsBound());
+                p.drawRect(line.boundingBox());
                 currentIndex = (currentIndex + 1) % 3;
             }
         }
@@ -641,7 +641,7 @@ namespace Munip
             {
                 int ID = paths[i].connectedComponentID();
                 int weight = paths[i].weight();
-                StaffLine line(paths[i].startPos(),paths[i].destinationPos(),1);
+                StaffLine line(paths[i].startPos(),paths[i].destinationPos());
 
                 while (i+k < paths.size() && paths[i+k].connectedComponentID() == ID && paths[i+k].weight() == weight)
                 {
