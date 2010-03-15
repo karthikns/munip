@@ -65,6 +65,7 @@ namespace Munip
         void findBeamsUsingShortestPathApproach();
         void extractNoteHeadSegments();
         void extractStemSegments();
+        void extractChords();
 
         StemSegment stemSegmentForPoint(const QPoint& p, bool &validOutput);
         QList<QPoint> solidifyPath(const QList<QPoint> &pathPoints,
@@ -72,6 +73,7 @@ namespace Munip
                 QSet<QPoint> &visited);
         QImage staffImage() const;
         QImage projectionImage(const QHash<int, int> &hash) const;
+        QImage noteHeadHorizontalProjectioNImage() const;
         int determinePeakHValueFrom(const QList<int> &horProjValues);
         QHash<int, int> filter(Range width, Range height, const QHash<int, int> &hash);
 

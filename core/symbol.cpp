@@ -496,4 +496,165 @@ namespace Munip
         return img;
     }
 
+    void StaffData::extractChords()
+    {
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+        const QRect r = staff.boundingRect();
+        const QPoint delta(-r.left(), -r.top());
+        QImage modifiedImage(r.size(), QImage::Format_ARGB32_Premultiplied);
+        if (1)
+        {
+            // Erase beam points
+            QPainter p(&modifiedImage);
+            p.drawImage(QRect(0, 0, r.width(), r.height()), image, r);
+            p.setBrush(QColor(Qt::white));
+            p.setPen(QColor(Qt::white));
+            QHash<QPoint, int>::const_iterator it = beamPoints.constBegin();
+            while (it != beamPoints.constEnd()) {
+                p.drawPoint(it.key() + delta);
+                ++it;
+            }
+
+            // Draw stems
+            foreach (const StemSegment& s, stemSegments) {
+                QRect r = s.boundingRect.adjusted(-1, 0, +1, 0);
+                r.translate(delta.x(), delta.y());
+                p.drawRect(r);
+            }
+            p.end();
+        }
+
+        DataWarehouse *dw = DataWarehouse::instance();
+        const int margin = dw->staffSpaceHeight().min;
+        int verticalMargin = dw->staffSpaceHeight().min;
+        qDebug() << "Margins: " << margin << verticalMargin;
+
+        QList<NoteHeadSegment>::iterator it = noteHeadSegments.begin();
+        for (; it != noteHeadSegments.end(); ++it) {
+            NoteHeadSegment &seg = *it;
+            QRect segRect = seg.rect.translated(delta);
+            QList<int> projHelper;
+            for (int y = segRect.top(); y <= segRect.bottom(); ++y) {
+                int count = 0;
+                for (int x = segRect.left(); x <= segRect.right(); ++x) {
+                    count += (modifiedImage.pixel(x, y) == BlackColor);
+                }
+                if (count < margin) {
+                    projHelper << 0;
+                } else {
+                    projHelper << count;
+                }
+            }
+
+            for (int i = 0; i < projHelper.size(); ++i) {
+                if (projHelper.at(i) == 0) continue;
+                int runlength = 0;
+                while ((i + runlength) < projHelper.size()) {
+                    if (projHelper.at(i+runlength) == 0) break;
+                    ++runlength;
+                }
+
+                if (runlength < verticalMargin) {
+                    for (int j = 0; j < runlength; ++j) {
+                        projHelper[i+j] = 0;
+                    }
+
+                } else {
+                    int midY = segRect.top() + i + (runlength >> 1);
+                    QRect rect(segRect.left(), midY - margin, segRect.width(),
+                            margin * 2);
+                    rect.translate(-delta.x(), -delta.y());
+                    seg.noteRects << rect;
+                }
+
+                i += runlength - 1;
+            }
+        }
+    }
+
+    QImage StaffData::noteHeadHorizontalProjectioNImage() const
+    {
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+        const QRect r = staff.boundingRect();
+        const QPoint delta(-r.left(), -r.top());
+        QImage modifiedImage(r.size(), QImage::Format_ARGB32_Premultiplied);
+        if (1)
+        {
+            // Erase beam points
+            QPainter p(&modifiedImage);
+            p.drawImage(QRect(0, 0, r.width(), r.height()), image, r);
+            p.setBrush(QColor(Qt::white));
+            p.setPen(QColor(Qt::white));
+            QHash<QPoint, int>::const_iterator it = beamPoints.constBegin();
+            while (it != beamPoints.constEnd()) {
+                p.drawPoint(it.key() + delta);
+                ++it;
+            }
+
+            // Draw stems
+            foreach (const StemSegment& s, stemSegments) {
+                QRect r = s.boundingRect.adjusted(-1, 0, +1, 0);
+                r.translate(delta.x(), delta.y());
+                p.drawRect(r);
+            }
+            p.end();
+        }
+
+        QImage img(r.size(), QImage::Format_ARGB32_Premultiplied);
+        img.fill(0xffffffff);
+
+        QPainter p(&img);
+
+        DataWarehouse *dw = DataWarehouse::instance();
+        const int margin = dw->staffSpaceHeight().min;
+        int verticalMargin = dw->staffSpaceHeight().min;
+        qDebug() << "Margins: " << margin << verticalMargin;
+        foreach (const NoteHeadSegment& seg, noteHeadSegments) {
+            QRect segRect = seg.rect.translated(delta);
+            QList<int> projHelper;
+            for (int y = segRect.top(); y <= segRect.bottom(); ++y) {
+                int count = 0;
+                for (int x = segRect.left(); x <= segRect.right(); ++x) {
+                    count += (modifiedImage.pixel(x, y) == BlackColor);
+                }
+                if (count < margin) {
+                    projHelper << 0;
+                } else {
+                    projHelper << count;
+                }
+            }
+
+            for (int i = 0; i < projHelper.size(); ++i) {
+                if (projHelper.at(i) == 0) continue;
+                int runlength = 0;
+                while ((i + runlength) < projHelper.size()) {
+                    if (projHelper.at(i+runlength) == 0) break;
+                    ++runlength;
+                }
+
+                if (runlength < verticalMargin) {
+                    for (int j = 0; j < runlength; ++j) {
+                        projHelper[i+j] = 0;
+                    }
+
+                }
+
+                i += runlength - 1;
+            }
+
+            for (int i = 0; i < projHelper.size(); ++i) {
+                int y = segRect.top() + i;
+                int count = projHelper.at(i);
+                p.setPen(QColor(Qt::red));
+                p.drawLine(segRect.left(), y, segRect.left() + count, y);
+                p.setPen(QColor(Qt::blue));
+                p.drawRect(segRect);
+            }
+        }
+
+
+        p.end();
+        return img;
+    }
+
 }

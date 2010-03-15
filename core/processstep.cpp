@@ -1985,6 +1985,7 @@ void SymbolAreaExtraction::process()
         sd->extractNoteHeadSegments();
         sd->extractStemSegments();
         sd->findBeamsUsingShortestPathApproach();
+        sd->extractChords();
         staffDatas << sd;
 
         sz.rwidth() = qMax(sz.width(), staff.staffBoundingRect().width());
@@ -2028,7 +2029,7 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw stems
-            if (1) {
+            if (0) {
                 QColor color = QColor(Qt::gray);
                 color.setAlpha(160);
                 p.setBrush(color);
@@ -2056,6 +2057,25 @@ void SymbolAreaExtraction::process()
                 }
             }
 
+            // Draw chords
+            if (1) {
+                QColor colors[5] = {
+                    QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
+                    QColor(Qt::red), QColor(Qt::darkCyan)
+                };
+                int currentIndex = 0;
+
+                p.setPen(Qt::NoPen);
+                foreach (const NoteHeadSegment &n, sd->noteHeadSegments) {
+                    foreach (const QRect& r, n.noteRects) {
+                        colors[currentIndex].setAlpha(100);
+                        p.setBrush(colors[currentIndex]);
+                        p.drawRect(r.translated(-delta.x(), -delta.y()));
+                        currentIndex = ((currentIndex + 1) % 5);
+                    }
+                }
+            }
+
             p.end();
 
         }
@@ -2065,7 +2085,8 @@ void SymbolAreaExtraction::process()
 
         y += sh + 50;
 
-        p.drawImage(QPoint(0, y), sd->projectionImage(sd->maxProjections));
+        // p.drawImage(QPoint(0, y), sd->projectionImage(sd->maxProjections));
+        p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectioNImage());
 
         y += sh + 50;
     }
