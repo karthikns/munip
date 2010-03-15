@@ -526,7 +526,7 @@ namespace Munip
 
         DataWarehouse *dw = DataWarehouse::instance();
         const int margin = dw->staffSpaceHeight().min;
-        int verticalMargin = dw->staffSpaceHeight().min;
+        int verticalMargin = dw->staffSpaceHeight().min - dw->staffLineHeight().max;
         qDebug() << "Margins: " << margin << verticalMargin;
 
         QList<NoteHeadSegment>::iterator it = noteHeadSegments.begin();
@@ -607,7 +607,7 @@ namespace Munip
 
         DataWarehouse *dw = DataWarehouse::instance();
         const int margin = dw->staffSpaceHeight().min;
-        int verticalMargin = dw->staffSpaceHeight().min;
+        int verticalMargin = dw->staffSpaceHeight().min - dw->staffLineHeight().max;
         qDebug() << "Margins: " << margin << verticalMargin;
         foreach (const NoteHeadSegment& seg, noteHeadSegments) {
             QRect segRect = seg.rect.translated(delta);
