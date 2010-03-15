@@ -22,6 +22,14 @@ namespace Munip
         bool operator<(const NoteHeadSegment& other) const {
             return rect.left() < other.rect.left();
         }
+
+        bool operator==(const NoteHeadSegment& other) const {
+            return rect == other.rect && noteRects == other.noteRects;
+        }
+
+        bool operator!=(const NoteHeadSegment& other) const {
+            return !((*this) == other);
+        }
     };
 
     struct StemSegment
@@ -35,6 +43,16 @@ namespace Munip
         bool operator<(const StemSegment& other) const {
             return boundingRect.left() < other.boundingRect.left();
         }
+
+        bool operator==(const StemSegment& other) const {
+            return boundingRect == other.boundingRect &&
+                noteHeadSegment == other.noteHeadSegment &&
+                beamAtTop == other.beamAtTop;
+        }
+
+        bool operator!=(const StemSegment& other) const {
+            return !((*this) == other);
+        }
     };
 
     struct StaffData
@@ -44,7 +62,6 @@ namespace Munip
         void findSymbolRegions();
         void findMaxProjections();
         void findNoteHeadSegments();
-        void findBeams();
         void findBeamsUsingShortestPathApproach();
         void extractNoteHeadSegments();
         void extractStemSegments();

@@ -141,82 +141,14 @@ namespace Munip
 
     }
 
-    void StaffData::findBeams()
-    {
-        DataWarehouse *dw = DataWarehouse::instance();
-        const QRgb BlackColor = QColor(Qt::black).rgb();
-
-        QImage image = this->image;
-        {
-            QPainter p(&image);
-            p.setBrush(QColor(Qt::white));
-            p.setPen(Qt::NoPen);
-
-            for (int i = 0; i < stemSegments.size(); ++i) {
-                p.drawRect(stemSegments[i].boundingRect);
-            }
-        }
-
-
-        for (int i = 0; i < stemSegments.size(); ++i) {
-            const StemSegment& seg = stemSegments.at(i);
-            const int id = i;
-
-            QRect rect = seg.boundingRect;
-            for (int x = qMin(rect.right() + 1, image.width() - 1);
-                    x <= qMin(rect.right() + 2, image.width() - 1); ++x) {
-
-                int space = dw->staffSpaceHeight().max * 2;
-                int yStart = (seg.beamAtTop ? rect.top() : rect.bottom());
-                int yEnd = (seg.beamAtTop ? (rect.top() + space) : (rect.bottom() - space));
-                int yStep = (seg.beamAtTop ? +1 : -1);
-
-                for (int y = yStart; (seg.beamAtTop ? (y <= yEnd) : (y >= yEnd)); y += yStep) {
-                    const QPoint p(x, y);
-
-                    if (image.pixel(p) != BlackColor) continue;
-
-                    if (beamPoints.contains(p)) continue;
-
-                    QStack<QPoint> stack;
-                    stack.push(p);
-
-                    while (!stack.isEmpty()) {
-                        QPoint pop = stack.pop();
-                        if (beamPoints.contains(pop)) continue;
-
-                        beamPoints.insert(pop, id);
-                        QPoint l = pop, t = pop, r = pop, b = pop;
-                        l.rx() = qMax(x, l.x()-1);
-                        t.ry() = qMax(0, t.y()-1);
-                        r.rx() = qMin(image.width()-1, r.x()+1);
-                        b.ry() = qMin(image.height()-1, b.y()+1);
-
-                        if (image.pixel(l) == BlackColor && !beamPoints.contains(l)) {
-                            stack.push(l);
-                        }
-                        if (image.pixel(t) == BlackColor && !beamPoints.contains(t)) {
-                            stack.push(t);
-                        }
-                        if (image.pixel(r) == BlackColor && !beamPoints.contains(r)) {
-                            stack.push(r);
-                        }
-                        if (image.pixel(b) == BlackColor && !beamPoints.contains(b)) {
-                            stack.push(b);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     StemSegment StaffData::stemSegmentForPoint(const QPoint& p, bool &validOutput)
     {
         for (int i = 0; i < stemSegments.size(); ++i) {
             StemSegment seg = stemSegments.at(i);
             QRect rect = seg.boundingRect;
             rect.setLeft(rect.left() - 2);
-            rect.setWidth(4);
+            rect.setTop(rect.top() - 1);
+            rect.setBottom(rect.bottom() + 1);
             if (rect.contains(p)) {
                 validOutput = true;
                 return seg;
@@ -228,6 +160,7 @@ namespace Munip
 
     void StaffData::findBeamsUsingShortestPathApproach()
     {
+        qDebug() << Q_FUNC_INFO;
         const QRgb BlackColor = QColor(Qt::black).rgb();
 
         QImage image = this->image;
@@ -237,12 +170,13 @@ namespace Munip
             p.setPen(Qt::NoPen);
 
             for (int i = 0; i < stemSegments.size(); ++i) {
-                p.drawRect(stemSegments[i].boundingRect);
+                p.drawRect(stemSegments[i].boundingRect.adjusted(-1, 0, +1, 0));
             }
         }
 
 
         int id = 0;
+        QSet<QPoint> visited;
 
         for (int i = 0; i < stemSegments.size(); ++i) {
             const StemSegment& seg = stemSegments.at(i);
@@ -252,7 +186,6 @@ namespace Munip
             const int yEnd = (seg.beamAtTop ? (rect.bottom()) : (rect.top()));
             const int yStep = (seg.beamAtTop ? +1 : -1);
 
-            QSet<QPoint> visited;
 
             for (int x = qMin(rect.right() + 1, image.width() - 1);
                     x <= qMin(rect.right() + 2, image.width() - 1); ++x) {
@@ -269,9 +202,6 @@ namespace Munip
                     QList<QPoint> pathPoints;
                     pathPoints << p;
                     visited << p;
-
-                    bool valid = false;
-                    StemSegment rightSegment;
 
                     while (1) {
                         QPoint lastPoint = pathPoints.last();
@@ -302,19 +232,31 @@ namespace Munip
                         break;
                     }
 
-                    rightSegment = stemSegmentForPoint(pathPoints.last(), valid);
+                    bool valid = false;
+                    StemSegment rightSegment = stemSegmentForPoint(pathPoints.last(), valid);
+                    valid = (valid && seg != rightSegment);
+
                     if (valid) {
                         QList<QPoint> result = solidifyPath(pathPoints, seg, rightSegment, visited);
+                        QRect boundRect;
                         foreach (const QPoint& resultPt, result) {
                             beamPoints.insert(resultPt, id);
+                            if (boundRect.isNull()) {
+                                boundRect = QRect(resultPt, resultPt);
+                            } else {
+                                boundRect |= QRect(resultPt, resultPt);
+                            }
                         }
+                        qDebug() << "id = " << id
+                            << "num points = " << result.size()
+                            << "Bound: " << boundRect.topLeft() << boundRect.bottomRight();
                         ++id;
                     }
                 }
             }
         }
 
-        qDebug() << Q_FUNC_INFO << "Num of stems = " << id;
+        qDebug() << Q_FUNC_INFO << "Num of beam segments = " << id << endl;
     }
 
     QList<QPoint> StaffData::solidifyPath(const QList<QPoint> &pathPoints,

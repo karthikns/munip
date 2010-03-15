@@ -2000,21 +2000,29 @@ void SymbolAreaExtraction::process()
         QImage img = sd->staffImage();
         {
             QPainter p(&img);
+            // p.fillRect(0, 0, img.width(), img.height(), QBrush(Qt::white));
 
             QPoint delta(sd->staff.boundingRect().topLeft());
 
 
             // Draw beam points
-            if (1) {
+            if (0) {
                 p.setBrush(Qt::NoBrush);
                 QHash<QPoint, int>::const_iterator it = sd->beamPoints.constBegin();
                 QColor colors_beam[5] = {
                     QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
                     QColor(Qt::red), QColor(Qt::darkCyan)
                 };
+                // For debug purpose, make it -1 to colour all beams.
+                int requiredId = 22;
+                int numPoints = 0;
                 while (it != sd->beamPoints.constEnd()) {
-                    p.setPen(colors_beam[it.value() % 5]);
-                    p.drawPoint(it.key() - delta);
+                    //colors_beam[it.value() % 5].setAlpha(100);
+                    if (it.value() == requiredId || requiredId < 0) {
+                        ++numPoints;
+                        p.setPen(colors_beam[it.value() % 5]);
+                        p.drawPoint(it.key() - delta);
+                    }
                     ++it;
                 }
             }
@@ -2022,11 +2030,12 @@ void SymbolAreaExtraction::process()
             // Draw stems
             if (1) {
                 QColor color = QColor(Qt::gray);
+                color.setAlpha(160);
                 p.setBrush(color);
                 p.setPen(Qt::NoPen);
                 int currentIndex = 0;
                 foreach (const StemSegment& s, sd->stemSegments) {
-                    QRect r = s.boundingRect;
+                    QRect r = s.boundingRect.adjusted(-1, 0, +1, 0);
                     r.translate(-delta.x(), -delta.y());
                     p.drawRect(r);
                     currentIndex = (currentIndex + 1) % 3;
