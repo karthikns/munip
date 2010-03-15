@@ -2020,27 +2020,31 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw stems
-            QColor color = QColor(Qt::gray);
-            p.setBrush(color);
-            p.setPen(Qt::NoPen);
-            int currentIndex = 0;
-            foreach (const StemSegment& s, sd->stemSegments) {
-                QRect r = s.boundingRect;
-                r.translate(-delta.x(), -delta.y());
-                p.drawRect(r);
-                currentIndex = (currentIndex + 1) % 3;
+            if (1) {
+                QColor color = QColor(Qt::gray);
+                p.setBrush(color);
+                p.setPen(Qt::NoPen);
+                int currentIndex = 0;
+                foreach (const StemSegment& s, sd->stemSegments) {
+                    QRect r = s.boundingRect;
+                    r.translate(-delta.x(), -delta.y());
+                    p.drawRect(r);
+                    currentIndex = (currentIndex + 1) % 3;
+                }
             }
 
 
             // Draw note regions.
-            color = QColor(Qt::darkYellow);
-            color.setAlpha(100);
-            p.setBrush(color);
-            p.setPen(Qt::NoPen);
-            foreach (const NoteHeadSegment& n, sd->noteHeadSegments) {
-                QRect r = n.rect;
-                r.translate(-delta.x(), -delta.y());
-                p.drawRect(r);
+            if (0) {
+                QColor color = QColor(Qt::darkYellow);
+                color.setAlpha(100);
+                p.setBrush(color);
+                p.setPen(Qt::NoPen);
+                foreach (const NoteHeadSegment& n, sd->noteHeadSegments) {
+                    QRect r = n.rect;
+                    r.translate(-delta.x(), -delta.y());
+                    p.drawRect(r);
+                }
             }
 
             p.end();

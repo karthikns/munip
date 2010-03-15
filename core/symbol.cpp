@@ -442,45 +442,62 @@ namespace Munip
     void StaffData::extractStemSegments()
     {
         const QRgb BlackColor = QColor(Qt::black).rgb();
+
         DataWarehouse *dw = DataWarehouse::instance();
         const int lineHeight = dw->staffLineHeight().min * 2;
 
         foreach (const NoteHeadSegment& seg, noteHeadSegments) {
-            QList<int> projData;
-            int maxCountIndex = -1;
             QRect rect = seg.rect;
             rect.setLeft(qMax(0, rect.left() - lineHeight));
-            rect.setRight(qMin(image.width(), rect.right() + lineHeight));
+            rect.setRight(qMin(image.width() - 1, rect.right() + lineHeight));
 
+            int xWithMaxRunLength = -1;
+            Run maxRun;
             for (int x = rect.left(); x <= rect.right(); ++x) {
-                int count = 0;
+                // Runlength info for x.
                 for (int y = rect.top(); y <= rect.bottom(); ++y) {
-                    count += (image.pixel(x, y) == BlackColor);
-                }
-                projData << count;
-                if (maxCountIndex < 0) {
-                    maxCountIndex = x - rect.left();
-                } else {
-                    if (count > projData[maxCountIndex]) {
-                        maxCountIndex = x - rect.left();
+                    if (image.pixel(x, y) != BlackColor) continue;
+
+                    int runlength = 0;
+                    for (; (y + runlength) <= rect.bottom() &&
+                            image.pixel(x, y + runlength) == BlackColor; ++runlength);
+
+                    Run r(y, runlength);
+
+                    if (xWithMaxRunLength < 0 || r > maxRun) {
+                        xWithMaxRunLength = x;
+                        maxRun = r;
                     }
+
+                    y += runlength - 1;
                 }
             }
 
-            QRect stemRect(maxCountIndex + rect.left(), staff.boundingRect().top(),
-                    1, staff.boundingRect().height());
-            int margin = dw->staffSpaceHeight().min >> 1;
-            for (int x = maxCountIndex; x < qMin(maxCountIndex + lineHeight, projData.size()-1); ++x) {
-                if (qAbs(projData[x] - projData[maxCountIndex]) <= margin) {
-                    stemRect.setRight(x + rect.left());
+            const int margin = qRound(.8 * maxRun.length);
+            int xLimit = qMin(xWithMaxRunLength + lineHeight, rect.right());
+            QRect stemRect(xWithMaxRunLength, maxRun.pos, 1, maxRun.length);
+            for (int x = xWithMaxRunLength + 1; x <= xLimit; ++x) {
+                int count = 0;
+                for (int y = maxRun.pos; y < (maxRun.pos + maxRun.length); ++y) {
+                    count += (image.pixel(x, y) == BlackColor);
+                }
+
+                if (count >= margin) {
+                    stemRect.setRight(x);
                 } else {
                     break;
                 }
             }
 
-            for (int x = maxCountIndex; x >= qMax(maxCountIndex - lineHeight, 0); --x) {
-                if (qAbs(projData[x] - projData[maxCountIndex]) <= margin) {
-                    stemRect.setLeft(x + rect.left());
+            xLimit = qMax(rect.left(), xWithMaxRunLength - lineHeight);
+            for (int x = xWithMaxRunLength - 1; x >= xLimit; --x) {
+                int count = 0;
+                for (int y = maxRun.pos; y < (maxRun.pos + maxRun.length); ++y) {
+                    count += (image.pixel(x, y) == BlackColor);
+                }
+
+                if (count >= margin) {
+                    stemRect.setLeft(x);
                 } else {
                     break;
                 }
@@ -496,7 +513,6 @@ namespace Munip
             // == cond not thought, but guess not needed.
             stemSeg.beamAtTop = (lDist > rDist);
             stemSegments << stemSeg;
-
         }
 
         qSort(stemSegments);

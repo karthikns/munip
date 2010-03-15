@@ -32,6 +32,26 @@ namespace Munip
         int max;
     };
 
+    struct Run
+    {
+        int pos; // x or y coordinate as needed.
+        int length; // length of run
+
+        Run(int _pos = -1, int _length=0) :
+            pos(_pos),
+            length(_length)
+        {
+        }
+
+        bool operator<(const Run& other) const {
+            return length < other.length;
+        }
+
+        bool operator>(const Run& other) const {
+            return length > other.length;
+        }
+    };
+
     QImage convertToMonochrome(const QImage& image, int threshold = 200);
     QPointF meanOfPoints(const QList<QPoint>& pixels);
     QList<double> covariance(const QList<QPoint>& blackPixels, QPointF mean);
