@@ -1993,9 +1993,6 @@ void SymbolAreaExtraction::process()
             QPainter p(&img);
             // p.fillRect(0, 0, img.width(), img.height(), QBrush(Qt::white));
 
-            QPoint delta(sd->staff.boundingRect().topLeft());
-
-
             // Draw beam points
             if (1) {
                 p.setBrush(Qt::NoBrush);
@@ -2010,7 +2007,7 @@ void SymbolAreaExtraction::process()
                     //colors_beam[it.value() % 5].setAlpha(100);
                     if (it.value() == requiredId || requiredId < 0) {
                         p.setPen(colors_beam[it.value() % 5]);
-                        p.drawPoint(it.key() - delta);
+                        p.drawPoint(it.key());
                     }
                     ++it;
                 }
@@ -2025,7 +2022,6 @@ void SymbolAreaExtraction::process()
                 int currentIndex = 0;
                 foreach (const StemSegment& s, sd->stemSegments) {
                     QRect r = s.boundingRect.adjusted(-1, 0, +1, 0);
-                    r.translate(-delta.x(), -delta.y());
                     p.drawRect(r);
                     currentIndex = (currentIndex + 1) % 3;
                 }
@@ -2039,9 +2035,7 @@ void SymbolAreaExtraction::process()
                 p.setBrush(color);
                 p.setPen(Qt::NoPen);
                 foreach (const NoteHeadSegment& n, sd->noteHeadSegments) {
-                    QRect r = n.rect;
-                    r.translate(-delta.x(), -delta.y());
-                    p.drawRect(r);
+                    p.drawRect(n.rect);
                 }
             }
 
@@ -2058,7 +2052,7 @@ void SymbolAreaExtraction::process()
                     foreach (const QRect& r, n.noteRects) {
                         colors[currentIndex].setAlpha(100);
                         p.setBrush(colors[currentIndex]);
-                        p.drawRect(r.translated(-delta.x(), -delta.y()));
+                        p.drawRect(r);
                         currentIndex = ((currentIndex + 1) % 5);
                     }
                 }
@@ -2074,7 +2068,8 @@ void SymbolAreaExtraction::process()
         y += sh + 50;
 
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->noteProjections));
-        p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectionImage());
+        //p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectionImage());
+        p.drawImage(QPoint(0, y), sd->workImage);
 
         y += sh + 50;
     }

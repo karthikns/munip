@@ -1,14 +1,23 @@
-* Vertical detection from note heads
+* <strike>Vertical detection from note heads</strike>
 * Eliminate false positives for note heads (sharp symbol, Bass cleff)
-* Beam detection.
-* Chord detections.
+* <strike>Beam detection</strike>
+* <strike>Chord detections</strike>
 * Flags detection.
-* Ties and slurs detections.
-* Remove ledger lines
+* Ties and slurs detections {
+         One approach is to consider redrawing stafflines in different colour after detection of all
+         sybols except slur/tie. This way broken segements are rejoined without affecting detection
+         of other symbols.
+}
+* Remove ledger lines {
+         One approach could be to consider each chord rectangle and then remove thin horizontal
+         segments whose dimenstions are in the range of staff line height.
+}
 * Check if accidentals can be detected.
-* Whole note and half note detection to be done and corresponding verticals to be detected
+* Whole note and half note detection to be done and corresponding verticals to be detected {
+         An independent approach can be used as neither half nor whole note are beamed or flagged.
+}
 * Fix bug in staff line detection (staff bound rect, line aggregation)
-* Try to use shortest path for beam detection rather than blind implementatin of connected
-  components.
-* Stems' actual coordinates not correctly determined yet (top and bottom are that of StaffBoundRect)
-    Fix this!! This is very important for robustifying beam detection.
+* <strike>Try to use shortest path for beam detection rather than blind implementatin of connected
+  components.</strike>
+* <strike>Stems' actual coordinates not correctly determined yet (top and bottom are that of StaffBoundRect)
+    Fix this!! This is very important for robustifying beam detection.</strike>

@@ -13,32 +13,42 @@ namespace Munip
         image(img)
     {
         SlidingWindowSize = DataWarehouse::instance()->staffLineHeight().max;
+        workImage = staffImage();
     }
 
+    /**
+     * This function is very impt as it decides the order in which the processing has to happen.
+     * Each and every step has precise dependency and so this order should be preservered.
+     */
     void StaffData::process()
     {
         findSymbolRegions();
+
         findMaxProjections();
+
         extractNoteHeadSegments();
+
         extractStemSegments();
+
+        eraseStems();
         extractBeams();
+
+        eraseBeams();
         extractChords();
+
+        eraseChords();
     }
 
     void StaffData::findSymbolRegions()
     {
-        QRect r = staff.boundingRect();
-        const QRgb blackColor = QColor(Qt::black).rgb();
+        QRect r = workImage.rect();
+        const QRgb BlackColor = QColor(Qt::black).rgb();
 
         QRect symbolRect;
         for (int x = r.left(); x <= r.right(); ++x) {
             int count = 0;
             for (int y = r.top(); y <= r.bottom(); ++y) {
-                if (y < image.height()) {
-                    if (image.pixel(x, y) == blackColor) {
-                        count++;
-                    }
-                }
+                count += (workImage.pixel(x, y) == BlackColor);
             }
 
             bool isSymbolLine = (count >= 2);
@@ -63,7 +73,7 @@ namespace Munip
 
     void StaffData::findMaxProjections()
     {
-        QRect r = staff.boundingRect();
+        QRect r = workImage.rect();
         const QRgb BlackColor = QColor(Qt::black).rgb();
 
         foreach (const QRect &sr, symbolRects) {
@@ -75,15 +85,15 @@ namespace Munip
                 for (int y = sr.top(); y <= sr.bottom(); ++y) {
                     int count = 0;
 
-                    for (int i = 0; i < SlidingWindowSize; ++i) {
-                        count += (image.pixel(x+i, y) == BlackColor);
+                    for (int i = 0; i < SlidingWindowSize && (x+i) <= sr.right(); ++i) {
+                        count += (workImage.pixel(x+i, y) == BlackColor);
                     }
                     projectionHelper << count;
 
                 }
 
                 int peakHValue = determinePeakHValueFrom(projectionHelper);
-                for (int i = 0; i < SlidingWindowSize; ++i) {
+                for (int i = 0; i < SlidingWindowSize && (x+i) <= sr.right(); ++i) {
                     maxProjections[x+i] = qMax(maxProjections[x+i], peakHValue);
                 }
             }
@@ -161,19 +171,21 @@ namespace Munip
 
         // Now fill up noteHeadSegments list (datastructure construction)
         noteHeadSegments.clear();
-        QList<int> noteKeys = noteProjections.keys();
-        qSort(noteKeys);
+        // Update the keys as we added some new keys
+        keys = noteProjections.keys();
+        qSort(keys);
 
-        int top = staff.boundingRect().top();
-        int height = staff.boundingRect().height();
-        int noteWidth = 2 * DataWarehouse::instance()->staffSpaceHeight().min;
+        const QRect r = workImage.rect();
+        const int top = r.top();
+        const int height = r.height();
+        const int noteWidth = 2 * DataWarehouse::instance()->staffSpaceHeight().min;
 
-        for (int i = 0; i < noteKeys.size(); ++i) {
+        for (int i = 0; i < keys.size(); ++i) {
             int runlength = 0;
-            int key = noteKeys[i];
+            int key = keys[i];
             if (noteProjections.value(key) == 0) continue;
-            while (i+runlength < noteKeys.size() &&
-                    noteProjections.value(noteKeys[i]+runlength, 0) != 0) {
+            while (i+runlength < keys.size() &&
+                    noteProjections.value(keys[i]+runlength, 0) != 0) {
                 ++runlength;
             }
 
@@ -222,24 +234,24 @@ namespace Munip
         foreach (const NoteHeadSegment& seg, noteHeadSegments) {
             QRect rect = seg.rect;
             rect.setLeft(qMax(0, rect.left() - lineHeight));
-            rect.setRight(qMin(image.width() - 1, rect.right() + lineHeight));
+            rect.setRight(qMin(workImage.width() - 1, rect.right() + lineHeight));
 
             int xWithMaxRunLength = -1;
             Run maxRun;
             for (int x = rect.left(); x <= rect.right(); ++x) {
                 // Runlength info for x.
                 for (int y = rect.top(); y <= rect.bottom(); ++y) {
-                    if (image.pixel(x, y) != BlackColor) continue;
+                    if (workImage.pixel(x, y) != BlackColor) continue;
 
                     int runlength = 0;
                     for (; (y + runlength) <= rect.bottom() &&
-                            image.pixel(x, y + runlength) == BlackColor; ++runlength);
+                            workImage.pixel(x, y + runlength) == BlackColor; ++runlength);
 
-                    Run r(y, runlength);
+                    Run run(y, runlength);
 
-                    if (xWithMaxRunLength < 0 || r > maxRun) {
+                    if (xWithMaxRunLength < 0 || run > maxRun) {
                         xWithMaxRunLength = x;
-                        maxRun = r;
+                        maxRun = run;
                     }
 
                     y += runlength - 1;
@@ -252,7 +264,7 @@ namespace Munip
             for (int x = xWithMaxRunLength + 1; x <= xLimit; ++x) {
                 int count = 0;
                 for (int y = maxRun.pos; y < (maxRun.pos + maxRun.length); ++y) {
-                    count += (image.pixel(x, y) == BlackColor);
+                    count += (workImage.pixel(x, y) == BlackColor);
                 }
 
                 if (count >= margin) {
@@ -266,7 +278,7 @@ namespace Munip
             for (int x = xWithMaxRunLength - 1; x >= xLimit; --x) {
                 int count = 0;
                 for (int y = maxRun.pos; y < (maxRun.pos + maxRun.length); ++y) {
-                    count += (image.pixel(x, y) == BlackColor);
+                    count += (workImage.pixel(x, y) == BlackColor);
                 }
 
                 if (count >= margin) {
@@ -291,22 +303,23 @@ namespace Munip
         qSort(stemSegments);
     }
 
+    void StaffData::eraseStems()
+    {
+        QPainter p(&workImage);
+        p.setBrush(QColor(Qt::white));
+        p.setPen(Qt::NoPen);
+
+        // Erase all stems first
+        for (int i = 0; i < stemSegments.size(); ++i) {
+            p.drawRect(stemSegments[i].boundingRect.adjusted(-1, 0, +1, 0));
+        }
+        p.end();
+    }
+
     void StaffData::extractBeams()
     {
         qDebug() << Q_FUNC_INFO;
         const QRgb BlackColor = QColor(Qt::black).rgb();
-
-        QImage image = this->image;
-        {
-            QPainter p(&image);
-            p.setBrush(QColor(Qt::white));
-            p.setPen(Qt::NoPen);
-
-            for (int i = 0; i < stemSegments.size(); ++i) {
-                p.drawRect(stemSegments[i].boundingRect.adjusted(-1, 0, +1, 0));
-            }
-        }
-
 
         int id = 0;
         QSet<QPoint> visited;
@@ -320,17 +333,15 @@ namespace Munip
             const int yStep = (seg.beamAtTop ? +1 : -1);
 
 
-            for (int x = qMin(rect.right() + 1, image.width() - 1);
-                    x <= qMin(rect.right() + 2, image.width() - 1); ++x) {
+            for (int x = qMin(rect.right() + 1, workImage.width() - 1);
+                    x <= qMin(rect.right() + 2, workImage.width() - 1); ++x) {
 
                 for (int y = yStart; (seg.beamAtTop ? (y <= yEnd) : (y >= yEnd)); y += yStep) {
                     const QPoint p(x, y);
 
-                    if (image.pixel(p) != BlackColor) continue;
+                    if (workImage.pixel(p) != BlackColor) continue;
 
                     if (visited.contains(p)) continue;
-
-                    // if (beamPoints.contains(p)) continue;
 
                     QList<QPoint> pathPoints;
                     pathPoints << p;
@@ -339,7 +350,7 @@ namespace Munip
                     while (1) {
                         QPoint lastPoint = pathPoints.last();
                         QPoint newp = QPoint(lastPoint.x() + 1, lastPoint.y());
-                        if (newp.x() < image.width() && image.pixel(newp) == BlackColor
+                        if (newp.x() < workImage.width() && workImage.pixel(newp) == BlackColor
                                 && !visited.contains(newp)) {
                             pathPoints << newp;
                             visited << newp;
@@ -347,7 +358,7 @@ namespace Munip
                         }
 
                         newp = QPoint(lastPoint.x(), lastPoint.y() - 1);
-                        if (newp.y() >= 0 && image.pixel(newp) == BlackColor
+                        if (newp.y() >= 0 && workImage.pixel(newp) == BlackColor
                                 && !visited.contains(newp)) {
                             pathPoints << newp;
                             visited << newp;
@@ -355,7 +366,7 @@ namespace Munip
                         }
 
                         newp = QPoint(lastPoint.x(), lastPoint.y() + 1);
-                        if (newp.y() < image.height() && image.pixel(newp) == BlackColor
+                        if (newp.y() < workImage.height() && workImage.pixel(newp) == BlackColor
                                 && !visited.contains(newp)) {
                             pathPoints << newp;
                             visited << newp;
@@ -433,8 +444,8 @@ namespace Munip
                     if (pt.x() > left.boundingRect.right() &&
                             pt.x() < right.boundingRect.left() &&
                             pt.y() >= 0 &&
-                            pt.y() < image.height() &&
-                            image.pixel(pt) == BlackColor &&
+                            pt.y() < workImage.height() &&
+                            workImage.pixel(pt) == BlackColor &&
                             !visited.contains(pt)) {
                         visited << pt;
                         nextPassPoints << pt;
@@ -449,33 +460,26 @@ namespace Munip
         return result;
     }
 
+    void StaffData::eraseBeams()
+    {
+        QPainter p(&workImage);
+
+        p.setBrush(QColor(Qt::white));
+        p.setPen(QColor(Qt::white));
+
+        QHash<QPoint, int>::const_iterator bit = beamPoints.constBegin();
+        while (bit != beamPoints.constEnd()) {
+            p.drawPoint(bit.key());
+            ++bit;
+        }
+
+        p.end();
+    }
+
     void StaffData::extractChords()
     {
         const QRgb BlackColor = QColor(Qt::black).rgb();
-        const QRect r = staff.boundingRect();
-        const QPoint delta(-r.left(), -r.top());
-        QImage modifiedImage(r.size(), QImage::Format_ARGB32_Premultiplied);
-        if (1)
-        {
-            // Erase beam points
-            QPainter p(&modifiedImage);
-            p.drawImage(QRect(0, 0, r.width(), r.height()), image, r);
-            p.setBrush(QColor(Qt::white));
-            p.setPen(QColor(Qt::white));
-            QHash<QPoint, int>::const_iterator it = beamPoints.constBegin();
-            while (it != beamPoints.constEnd()) {
-                p.drawPoint(it.key() + delta);
-                ++it;
-            }
 
-            // Draw stems
-            foreach (const StemSegment& s, stemSegments) {
-                QRect r = s.boundingRect.adjusted(-1, 0, +1, 0);
-                r.translate(delta.x(), delta.y());
-                p.drawRect(r);
-            }
-            p.end();
-        }
 
         DataWarehouse *dw = DataWarehouse::instance();
         const int margin = dw->staffSpaceHeight().min;
@@ -485,12 +489,12 @@ namespace Munip
         QList<NoteHeadSegment>::iterator it = noteHeadSegments.begin();
         for (; it != noteHeadSegments.end(); ++it) {
             NoteHeadSegment &seg = *it;
-            QRect segRect = seg.rect.translated(delta);
+            QRect segRect = seg.rect;
             QList<int> projHelper;
             for (int y = segRect.top(); y <= segRect.bottom(); ++y) {
                 int count = 0;
                 for (int x = segRect.left(); x <= segRect.right(); ++x) {
-                    count += (modifiedImage.pixel(x, y) == BlackColor);
+                    count += (workImage.pixel(x, y) == BlackColor);
                 }
                 if (count < margin) {
                     projHelper << 0;
@@ -516,7 +520,6 @@ namespace Munip
                     int midY = segRect.top() + i + (runlength >> 1);
                     QRect rect(segRect.left(), midY - margin, segRect.width(),
                             margin * 2);
-                    rect.translate(-delta.x(), -delta.y());
                     seg.noteRects << rect;
                 }
 
@@ -528,6 +531,19 @@ namespace Munip
                 seg.horizontalProjection.insert(i + segRect.top(), projHelper.at(i));
             }
 
+        }
+    }
+
+    void StaffData::eraseChords()
+    {
+        QPainter p(&workImage);
+        p.setBrush(QBrush(QColor(Qt::white)));
+        p.setPen(Qt::NoPen);
+
+        foreach (const NoteHeadSegment& nSeg, noteHeadSegments) {
+            foreach (const QRect &chordRect, nSeg.noteRects) {
+                p.drawRect(chordRect);
+            }
         }
     }
 
@@ -547,19 +563,15 @@ namespace Munip
     QImage StaffData::projectionImage(const QHash<int, int> &hash) const
     {
         //qDebug() << Q_FUNC_INFO;
-        const QRect r = staff.boundingRect();
+        const QRect r = workImage.rect();
 
         QImage img(r.size(), QImage::Format_ARGB32_Premultiplied);
         img.fill(0xffffffff);
 
-        int xOffset = -r.left();
-        int yOffset = -r.top();
-
         QPainter p(&img);
         p.setPen(Qt::red);
         for (int x = r.left(); x <= r.right(); ++x) {
-            QLineF line(x + xOffset, r.bottom() + yOffset,
-                    x + xOffset, r.bottom() + yOffset - hash[x]);
+            QLineF line(x, r.bottom(), x, r.bottom() - hash[x]);
             p.drawLine(line);
         }
         p.end();
@@ -569,17 +581,14 @@ namespace Munip
 
     QImage StaffData::noteHeadHorizontalProjectionImage() const
     {
-        const QRect r = staff.boundingRect();
-        const QPoint delta(-r.left(), -r.top());
-
-        QImage img(r.size(), QImage::Format_ARGB32_Premultiplied);
+        QImage img(workImage.size(), QImage::Format_ARGB32_Premultiplied);
         img.fill(0xffffffff);
 
         QPainter p(&img);
 
         foreach (const NoteHeadSegment& seg, noteHeadSegments) {
             p.setPen(QColor(Qt::red));
-            QRect segRect = seg.rect.translated(delta);
+            QRect segRect = seg.rect;
 
             QHash<int, int>::const_iterator it = seg.horizontalProjection.constBegin();
             while (it != seg.horizontalProjection.constEnd()) {

@@ -73,14 +73,17 @@ namespace Munip
 
         void extractStemSegments();
 
+        void eraseStems();
         void extractBeams();
         StemSegment stemSegmentForPoint(const QPoint& p, bool &validOutput);
         QList<QPoint> solidifyPath(const QList<QPoint> &pathPoints,
                 const StemSegment& left, const StemSegment& right,
                 QSet<QPoint> &visited);
 
+        void eraseBeams();
         void extractChords();
 
+        void eraseChords();
         void extractFlags();
 
         QImage staffImage() const;
@@ -100,6 +103,7 @@ namespace Munip
         QHash<QPoint, int> beamPoints;
 
         const QImage& image;
+        QImage workImage;
     };
 
 }
