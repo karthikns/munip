@@ -441,60 +441,80 @@ namespace Munip
             for(int y = 0; y< m_processedImage.height();y++)
                 m_processedImage.setPixel(x, y, m_originalImage.pixel(x, y));
 
-        bool drawSegments = true;
-        if (drawSegments) {
-            m_processedImage = QImage(m_originalImage.size(), QImage::Format_ARGB32_Premultiplied);
+        m_processedImage = QImage(m_originalImage.size(), QImage::Format_ARGB32_Premultiplied);
 
-            for(int x = 0; x < m_processedImage.width(); x++)
-                for(int y = 0; y< m_processedImage.height();y++)
-                    m_processedImage.setPixel(x, y, m_originalImage.pixel(x, y));
+        for(int x = 0; x < m_processedImage.width(); x++)
+            for(int y = 0; y< m_processedImage.height();y++)
+                m_processedImage.setPixel(x, y, m_originalImage.pixel(x, y));
 
 
-            QPainter p(&m_processedImage);
-            QColor color(Qt::darkGreen);
-            p.setPen(color);
-            DataWarehouse *dw = DataWarehouse::instance();
-            const QList<Staff> staffList = dw->staffList();
-            foreach (const Staff& staff, staffList) {
-                bool thickenSegments = false;
-                if (thickenSegments) {
-                    const QRect staffBound = staff.staffBoundingRect();
-                    const int stepWidth = 50;
+        QPainter p(&m_processedImage);
+        QColor color(Qt::darkGreen);
+        p.setPen(color);
+        DataWarehouse *dw = DataWarehouse::instance();
+        const QList<Staff> staffList = dw->staffList();
+        foreach (const Staff& staff, staffList) {
+            bool thickenSegments = false;
+            if (thickenSegments) {
+                const QRect staffBound = staff.staffBoundingRect();
+                const int stepWidth = 50;
 
-                    const int Black = m_originalImage.color(0) == 0xffffffff ? 1 : 0;
-
-                    p.setPen(Qt::darkYellow);
-                    p.setBrush(Qt::NoBrush);
-
-                    for (int y = staffBound.top(); y <= staffBound.bottom(); ++y) {
-                        for (int startX = staffBound.left(); startX <= staffBound.right();
-                                startX += stepWidth) {
-                            int count = 0;
-                            int right = startX + qMin(stepWidth, (staffBound.right() - startX)) - 1;
-                            int width = qMin(stepWidth, right - startX);
-                            for (int x = startX; x <= right; ++x) {
-                                count += (m_originalImage.pixelIndex(x, y) == Black);
-                            }
-                            if (count >= int(qRound(.8 * width))) {
-                                p.drawLine(startX, y, right, y);
-                            }
-                        }
-                    }
-                }
+                const int Black = m_originalImage.color(0) == 0xffffffff ? 1 : 0;
 
                 p.setPen(Qt::darkYellow);
-                const QList<StaffLine> staffLines = staff.staffLines();
-                foreach (const StaffLine& staffLine, staffLines) {
-                    const QList<Segment> segments = staffLine.segments();
-                    foreach (const Segment& seg, segments) {
-                        p.drawLine(seg.startPos(), seg.endPos());
+                p.setBrush(Qt::NoBrush);
+
+                for (int y = staffBound.top(); y <= staffBound.bottom(); ++y) {
+                    for (int startX = staffBound.left(); startX <= staffBound.right();
+                            startX += stepWidth) {
+                        int count = 0;
+                        int right = startX + qMin(stepWidth, (staffBound.right() - startX)) - 1;
+                        int width = qMin(stepWidth, right - startX);
+                        for (int x = startX; x <= right; ++x) {
+                            count += (m_originalImage.pixelIndex(x, y) == Black);
+                        }
+                        if (count >= int(qRound(.8 * width))) {
+                            p.drawLine(startX, y, right, y);
+                        }
                     }
                 }
             }
 
-            estimateStaffParametersFromYellowAreas();
-
+            p.setPen(Qt::darkYellow);
+            const QList<StaffLine> staffLines = staff.staffLines();
+            foreach (const StaffLine& staffLine, staffLines) {
+                const QList<Segment> segments = staffLine.segments();
+                foreach (const Segment& seg, segments) {
+                    p.drawLine(seg.startPos(), seg.endPos());
+                }
+            }
         }
+
+        estimateStaffParametersFromYellowAreas();
+
+
+        int staffSpaceHeight = dw->staffSpaceHeight().dominantValue();
+        int staffLineHeight = dw->staffLineHeight().dominantValue();
+        bool drawLedgerLines = true;
+        if (drawLedgerLines) {
+            p.setPen(QPen(QColor(Qt::darkYellow), staffLineHeight));
+            foreach (const Staff& staff, dw->staffList()) {
+                const QRect sr = staff.staffBoundingRect();
+                const QRect r = staff.boundingRect();
+                int y = sr.top() - staffSpaceHeight - (staffLineHeight >> 1);
+                while (y > r.top()) {
+                    p.drawLine(sr.left(), y, sr.right(), y);
+                    y -= staffSpaceHeight + (staffLineHeight);
+                }
+
+                y = sr.bottom() + staffSpaceHeight + (staffLineHeight >> 1);
+                while (y < r.bottom()) {
+                    p.drawLine(sr.left(), y, sr.right(), y);
+                    y += staffSpaceHeight + (staffLineHeight);
+                }
+            }
+        }
+
 
         bool drawLineList = false;
         if (drawLineList) {
@@ -509,7 +529,7 @@ namespace Munip
         }
 
 
-       // m_processedImage = m_lineRemovedTracker.toImage();
+        // m_processedImage = m_lineRemovedTracker.toImage();
 #if 0
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
         const int Black = 1 - White;
@@ -1463,7 +1483,7 @@ void StaffLineRemoval::crudeRemove()
 
     foreach (const Staff& staff, staffList) {
         const QList<StaffLine> staffLines = staff.staffLines();
-        QRect r = staff.staffBoundingRect();
+        QRect r = staff.boundingRect();
 
         for (int x = r.left(); x <= r.right(); ++x) {
             for (int y = r.top(); y <= r.bottom(); ++y) {
