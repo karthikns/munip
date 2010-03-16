@@ -492,30 +492,6 @@ namespace Munip
 
         estimateStaffParametersFromYellowAreas();
 
-
-        int staffSpaceHeight = dw->staffSpaceHeight().dominantValue();
-        int staffLineHeight = dw->staffLineHeight().dominantValue();
-        bool drawLedgerLines = true;
-        if (drawLedgerLines) {
-            p.setPen(QPen(QColor(Qt::darkYellow), staffLineHeight));
-            foreach (const Staff& staff, dw->staffList()) {
-                const QRect sr = staff.staffBoundingRect();
-                const QRect r = staff.boundingRect();
-                int y = sr.top() - staffSpaceHeight - (staffLineHeight >> 1);
-                while (y > r.top()) {
-                    p.drawLine(sr.left(), y, sr.right(), y);
-                    y -= staffSpaceHeight + (staffLineHeight);
-                }
-
-                y = sr.bottom() + staffSpaceHeight + (staffLineHeight >> 1);
-                while (y < r.bottom()) {
-                    p.drawLine(sr.left(), y, sr.right(), y);
-                    y += staffSpaceHeight + (staffLineHeight);
-                }
-            }
-        }
-
-
         bool drawLineList = false;
         if (drawLineList) {
             QColor colors[3] = { QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen) };
