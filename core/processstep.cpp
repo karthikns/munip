@@ -2078,7 +2078,7 @@ void SymbolAreaExtraction::process()
         y += sh + 50;
 
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->noteProjections));
-        p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectioNImage());
+        p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectionImage());
 
         y += sh + 50;
     }

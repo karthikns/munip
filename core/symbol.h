@@ -19,6 +19,8 @@ namespace Munip
         QRect rect;
         QList<QRect> noteRects;
 
+        QHash<int, int> horizontalProjection;
+
         bool operator<(const NoteHeadSegment& other) const {
             return rect.left() < other.rect.left();
         }
@@ -83,7 +85,7 @@ namespace Munip
 
         QImage staffImage() const;
         QImage projectionImage(const QHash<int, int> &hash) const;
-        QImage noteHeadHorizontalProjectioNImage() const;
+        QImage noteHeadHorizontalProjectionImage() const;
 
         int SlidingWindowSize;
 
