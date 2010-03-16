@@ -38,9 +38,10 @@ namespace Munip
     {
         QRect boundingRect;
         NoteHeadSegment noteHeadSegment;
+        int flagCount;
         bool beamAtTop;
 
-        StemSegment() { beamAtTop = true; }
+        StemSegment() { beamAtTop = true; flagCount = 0;}
 
         bool operator<(const StemSegment& other) const {
             return boundingRect.left() < other.boundingRect.left();

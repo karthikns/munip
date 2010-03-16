@@ -37,6 +37,7 @@ namespace Munip
         extractChords();
 
         eraseChords();
+        extractFlags();
     }
 
     void StaffData::findSymbolRegions()
@@ -543,6 +544,60 @@ namespace Munip
         foreach (const NoteHeadSegment& nSeg, noteHeadSegments) {
             foreach (const QRect &chordRect, nSeg.noteRects) {
                 p.drawRect(chordRect);
+            }
+        }
+    }
+
+    void StaffData::extractFlags()
+    {
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+        const QRect staffRect = workImage.rect();
+        DataWarehouse *dw = DataWarehouse::instance();
+
+        QList<StemSegment>::iterator it = stemSegments.begin();
+        for (; it != stemSegments.end(); ++it) {
+            StemSegment &seg = *it;
+            QRect areaToTry(0, 0, dw->staffSpaceHeight().min >> 1,
+                    seg.boundingRect.height());
+            areaToTry.moveTo(seg.boundingRect.topRight());
+            areaToTry.translate(1, 0); // move another pixel towards right
+
+            if (areaToTry.left() > staffRect.right()) continue;
+
+            QList<int> numTransitions;
+            for (int x = areaToTry.left(); x <= areaToTry.right(); ++x) {
+                if (x > staffRect.right()) break;
+                QList<int> runs;
+
+                for (int y = areaToTry.top(); y <= areaToTry.bottom(); ++y) {
+                    if (workImage.pixel(x, y) != BlackColor) continue;
+
+                    int runlength = 0;
+                    for (; (y + runlength) <= areaToTry.bottom(); ++runlength) {
+                        if (workImage.pixel(x, y + runlength) != BlackColor) break;
+                    }
+
+                    if (runlength > (dw->staffLineHeight().min >> 1)) {
+                        runs << runlength;
+                    }
+                    y += runlength - 1;
+                }
+                numTransitions << runs.size();
+            }
+
+            int avgTransitions = 0;
+            if (numTransitions.isEmpty() == false) {
+                int sum = 0;
+                for (int i = 0; i < numTransitions.size(); ++i) {
+                    sum += numTransitions.at(i);
+                }
+                avgTransitions = int(qRound(qreal(sum)/numTransitions.size()));
+            }
+
+            seg.flagCount = avgTransitions;
+            if (avgTransitions) {
+                qDebug() << Q_FUNC_INFO << seg.boundingRect.topLeft() << seg.boundingRect.bottomRight();
+                qDebug() << numTransitions << endl;
             }
         }
     }

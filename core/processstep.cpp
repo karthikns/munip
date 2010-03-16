@@ -2014,16 +2014,16 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw stems
-            if (0) {
-                QColor color = QColor(Qt::gray);
-                color.setAlpha(160);
-                p.setBrush(color);
+            if (1) {
+                QColor colors[5] = {
+                    QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
+                    QColor(Qt::red), QColor(Qt::darkCyan)
+                };
                 p.setPen(Qt::NoPen);
-                int currentIndex = 0;
                 foreach (const StemSegment& s, sd->stemSegments) {
                     QRect r = s.boundingRect.adjusted(-1, 0, +1, 0);
+                    p.setBrush(colors[s.flagCount % 5]);
                     p.drawRect(r);
-                    currentIndex = (currentIndex + 1) % 3;
                 }
             }
 

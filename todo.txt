@@ -2,7 +2,12 @@
 * Eliminate false positives for note heads (sharp symbol, Bass cleff)
 * <strike>Beam detection</strike>
 * <strike>Chord detections</strike>
-* Flags detection.
+* Flags detection {
+         Implemented a crude flag detection algorithm based on black - white
+         transitions.
+         To robustify, either ledger lines should be eliminated neatly or some
+         shape matching for flags should be performed.
+}
 * Ties and slurs detections {
          One approach is to consider redrawing stafflines in different colour after detection of all
          sybols except slur/tie. This way broken segements are rejoined without affecting detection
