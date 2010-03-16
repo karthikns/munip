@@ -59,23 +59,31 @@ namespace Munip
     {
         StaffData(const QImage& img, const Staff& staff);
 
-        void findSymbolRegions();
-        void findMaxProjections();
-        void findNoteHeadSegments();
-        void findBeamsUsingShortestPathApproach();
-        void extractNoteHeadSegments();
-        void extractStemSegments();
-        void extractChords();
+        void process();
 
+        void findSymbolRegions();
+
+        void findMaxProjections();
+        int determinePeakHValueFrom(const QList<int> &horProjValues);
+
+        void extractNoteHeadSegments();
+        QHash<int, int> filter(Range width, Range height, const QHash<int, int> &hash);
+
+        void extractStemSegments();
+
+        void extractBeams();
         StemSegment stemSegmentForPoint(const QPoint& p, bool &validOutput);
         QList<QPoint> solidifyPath(const QList<QPoint> &pathPoints,
                 const StemSegment& left, const StemSegment& right,
                 QSet<QPoint> &visited);
+
+        void extractChords();
+
+        void extractFlags();
+
         QImage staffImage() const;
         QImage projectionImage(const QHash<int, int> &hash) const;
         QImage noteHeadHorizontalProjectioNImage() const;
-        int determinePeakHValueFrom(const QList<int> &horProjValues);
-        QHash<int, int> filter(Range width, Range height, const QHash<int, int> &hash);
 
         int SlidingWindowSize;
 

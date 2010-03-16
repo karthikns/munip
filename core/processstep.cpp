@@ -1979,13 +1979,7 @@ void SymbolAreaExtraction::process()
     QSize sz;
     foreach (const Staff& staff, staffList) {
         StaffData *sd = new StaffData(m_originalImage, staff);
-        sd->findSymbolRegions();
-        sd->findMaxProjections();
-        sd->findNoteHeadSegments();
-        sd->extractNoteHeadSegments();
-        sd->extractStemSegments();
-        sd->findBeamsUsingShortestPathApproach();
-        sd->extractChords();
+        sd->process();
         staffDatas << sd;
 
         sz.rwidth() = qMax(sz.width(), staff.staffBoundingRect().width());
@@ -2007,7 +2001,7 @@ void SymbolAreaExtraction::process()
 
 
             // Draw beam points
-            if (0) {
+            if (1) {
                 p.setBrush(Qt::NoBrush);
                 QHash<QPoint, int>::const_iterator it = sd->beamPoints.constBegin();
                 QColor colors_beam[5] = {
@@ -2015,12 +2009,10 @@ void SymbolAreaExtraction::process()
                     QColor(Qt::red), QColor(Qt::darkCyan)
                 };
                 // For debug purpose, make it -1 to colour all beams.
-                int requiredId = 22;
-                int numPoints = 0;
+                int requiredId = -1;
                 while (it != sd->beamPoints.constEnd()) {
                     //colors_beam[it.value() % 5].setAlpha(100);
                     if (it.value() == requiredId || requiredId < 0) {
-                        ++numPoints;
                         p.setPen(colors_beam[it.value() % 5]);
                         p.drawPoint(it.key() - delta);
                     }

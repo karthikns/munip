@@ -15,6 +15,16 @@ namespace Munip
         SlidingWindowSize = DataWarehouse::instance()->staffLineHeight().max;
     }
 
+    void StaffData::process()
+    {
+        findSymbolRegions();
+        findMaxProjections();
+        extractNoteHeadSegments();
+        extractStemSegments();
+        extractBeams();
+        extractChords();
+    }
+
     void StaffData::findSymbolRegions()
     {
         QRect r = staff.boundingRect();
@@ -78,19 +88,28 @@ namespace Munip
                 }
             }
         }
-
-        return;
-        qDebug() << Q_FUNC_INFO;
-        QList<int> keys = maxProjections.keys();
-        qSort(keys);
-        foreach (int k, keys) {
-            qDebug() << k << maxProjections[k] << endl;
-        }
-
-        qDebug() << endl;
     }
 
-    void StaffData::findNoteHeadSegments()
+    int StaffData::determinePeakHValueFrom(const QList<int>& horProjValues)
+    {
+        const int peak = SlidingWindowSize - 1;
+        int maxRun = 0;
+        for (int i = 0; i < horProjValues.size(); ++i) {
+            if (horProjValues[i] < peak) continue;
+
+            int runLength = 0;
+            for (; (i + runLength) < horProjValues.size(); ++runLength) {
+                if (horProjValues[i+runLength] < peak) break;//!= horProjValues[i]) break;
+            }
+
+            i += runLength - 1;
+            maxRun = qMax(maxRun, runLength);
+        }
+
+        return maxRun;
+    }
+
+    void StaffData::extractNoteHeadSegments()
     {
         DataWarehouse *dw = DataWarehouse::instance();
         int n1_2 = 2 * (dw->staffLineHeight().max);
@@ -106,6 +125,7 @@ namespace Munip
         qSort(keys);
 
         int lineHeight = dw->staffLineHeight().min;
+        // Fill up very thin gaps.
         for (int i = 1; i < keys.size(); ++i) {
             int diff = keys[i] - keys[i-1];
             if (diff == 0) {
@@ -119,6 +139,7 @@ namespace Munip
             }
 
         }
+        // Remove peak region which are very thin or very thick.
         for (int i = 0; i < keys.size(); ++i) {
             int runlength = 0;
             int key = keys[i];
@@ -138,27 +159,139 @@ namespace Munip
 
         }
 
+        // Now fill up noteHeadSegments list (datastructure construction)
+        noteHeadSegments.clear();
+        QList<int> noteKeys = noteProjections.keys();
+        qSort(noteKeys);
 
+        int top = staff.boundingRect().top();
+        int height = staff.boundingRect().height();
+        int noteWidth = 2 * DataWarehouse::instance()->staffSpaceHeight().min;
+
+        for (int i = 0; i < noteKeys.size(); ++i) {
+            int runlength = 0;
+            int key = noteKeys[i];
+            if (noteProjections.value(key) == 0) continue;
+            while (i+runlength < noteKeys.size() &&
+                    noteProjections.value(noteKeys[i]+runlength, 0) != 0) {
+                ++runlength;
+            }
+
+            i += runlength - 1;
+
+            int xCenter = key + (runlength >> 1);
+            NoteHeadSegment n;
+            // n.rect = QRect(xCenter - noteWidth, top, noteWidth * 2, height);
+            n.rect = QRect(xCenter - (noteWidth >> 1), top, noteWidth, height);
+            // TODO: BoundingRect should include beams, but thats not being drawn. Check that.
+            //n.rect = QRect(key, top, runlength, height);
+
+            noteHeadSegments << n;
+        }
+
+        qSort(noteHeadSegments);
     }
 
-    StemSegment StaffData::stemSegmentForPoint(const QPoint& p, bool &validOutput)
+    QHash<int, int> StaffData::filter(Range , Range height,
+            const QHash<int, int> &hash)
     {
-        for (int i = 0; i < stemSegments.size(); ++i) {
-            StemSegment seg = stemSegments.at(i);
-            QRect rect = seg.boundingRect;
-            rect.setLeft(rect.left() - 2);
-            rect.setTop(rect.top() - 1);
-            rect.setBottom(rect.bottom() + 1);
-            if (rect.contains(p)) {
-                validOutput = true;
-                return seg;
+        QList<int> allKeys = hash.keys();
+        qSort(allKeys);
+
+        QHash<int, int> retval;
+
+        for (int i = 0; i < allKeys.size(); ++i) {
+            if (hash[allKeys[i]] < height.min) continue;
+            if (hash[allKeys[i]] > height.max) {
+                retval[allKeys[i]] = retval[allKeys[i]-1];
+            } else {
+                retval[allKeys[i]] = hash[allKeys[i]];
             }
         }
-        validOutput = false;
-        return StemSegment();
+
+        return retval;
     }
 
-    void StaffData::findBeamsUsingShortestPathApproach()
+    void StaffData::extractStemSegments()
+    {
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+
+        DataWarehouse *dw = DataWarehouse::instance();
+        const int lineHeight = dw->staffLineHeight().min * 2;
+
+        foreach (const NoteHeadSegment& seg, noteHeadSegments) {
+            QRect rect = seg.rect;
+            rect.setLeft(qMax(0, rect.left() - lineHeight));
+            rect.setRight(qMin(image.width() - 1, rect.right() + lineHeight));
+
+            int xWithMaxRunLength = -1;
+            Run maxRun;
+            for (int x = rect.left(); x <= rect.right(); ++x) {
+                // Runlength info for x.
+                for (int y = rect.top(); y <= rect.bottom(); ++y) {
+                    if (image.pixel(x, y) != BlackColor) continue;
+
+                    int runlength = 0;
+                    for (; (y + runlength) <= rect.bottom() &&
+                            image.pixel(x, y + runlength) == BlackColor; ++runlength);
+
+                    Run r(y, runlength);
+
+                    if (xWithMaxRunLength < 0 || r > maxRun) {
+                        xWithMaxRunLength = x;
+                        maxRun = r;
+                    }
+
+                    y += runlength - 1;
+                }
+            }
+
+            const int margin = qRound(.8 * maxRun.length);
+            int xLimit = qMin(xWithMaxRunLength + lineHeight, rect.right());
+            QRect stemRect(xWithMaxRunLength, maxRun.pos, 1, maxRun.length);
+            for (int x = xWithMaxRunLength + 1; x <= xLimit; ++x) {
+                int count = 0;
+                for (int y = maxRun.pos; y < (maxRun.pos + maxRun.length); ++y) {
+                    count += (image.pixel(x, y) == BlackColor);
+                }
+
+                if (count >= margin) {
+                    stemRect.setRight(x);
+                } else {
+                    break;
+                }
+            }
+
+            xLimit = qMax(rect.left(), xWithMaxRunLength - lineHeight);
+            for (int x = xWithMaxRunLength - 1; x >= xLimit; --x) {
+                int count = 0;
+                for (int y = maxRun.pos; y < (maxRun.pos + maxRun.length); ++y) {
+                    count += (image.pixel(x, y) == BlackColor);
+                }
+
+                if (count >= margin) {
+                    stemRect.setLeft(x);
+                } else {
+                    break;
+                }
+            }
+
+            StemSegment stemSeg;
+            stemSeg.boundingRect = stemRect;
+            stemSeg.noteHeadSegment = seg;
+
+            int lDist = qAbs(seg.rect.left() - stemSeg.boundingRect.left());
+            int rDist = qAbs(seg.rect.right() - stemSeg.boundingRect.left());
+
+            // == cond not thought, but guess not needed.
+            stemSeg.beamAtTop = (lDist > rDist);
+            stemSegments << stemSeg;
+        }
+
+        qSort(stemSegments);
+    }
+
+    void StaffData::extractBeams()
     {
         qDebug() << Q_FUNC_INFO;
         const QRgb BlackColor = QColor(Qt::black).rgb();
@@ -259,6 +392,23 @@ namespace Munip
         qDebug() << Q_FUNC_INFO << "Num of beam segments = " << id << endl;
     }
 
+    StemSegment StaffData::stemSegmentForPoint(const QPoint& p, bool &validOutput)
+    {
+        for (int i = 0; i < stemSegments.size(); ++i) {
+            StemSegment seg = stemSegments.at(i);
+            QRect rect = seg.boundingRect;
+            rect.setLeft(rect.left() - 2);
+            rect.setTop(rect.top() - 1);
+            rect.setBottom(rect.bottom() + 1);
+            if (rect.contains(p)) {
+                validOutput = true;
+                return seg;
+            }
+        }
+        validOutput = false;
+        return StemSegment();
+    }
+
     QList<QPoint> StaffData::solidifyPath(const QList<QPoint> &pathPoints,
             const StemSegment& left, const StemSegment& right,
             QSet<QPoint> &visited)
@@ -299,203 +449,6 @@ namespace Munip
         return result;
     }
 
-    QHash<int, int> StaffData::filter(Range , Range height,
-            const QHash<int, int> &hash)
-    {
-        QList<int> allKeys = hash.keys();
-        qSort(allKeys);
-
-        QHash<int, int> retval;
-
-        //qDebug() << Q_FUNC_INFO;
-        //qDebug() << height.min << height.max;
-
-        for (int i = 0; i < allKeys.size(); ++i) {
-            if (hash[allKeys[i]] < height.min) continue;
-            if (hash[allKeys[i]] > height.max) {
-                retval[allKeys[i]] = retval[allKeys[i]-1];
-            } else {
-                retval[allKeys[i]] = hash[allKeys[i]];
-            }
-        }
-        //qDebug() << retval;
-
-        return retval;
-    }
-
-    int StaffData::determinePeakHValueFrom(const QList<int>& horProjValues)
-    {
-        //qDebug() << Q_FUNC_INFO << horProjValues;
-        const int peak = SlidingWindowSize - 1;
-        int maxRun = 0;
-        for (int i = 0; i < horProjValues.size(); ++i) {
-            if (horProjValues[i] < peak) continue;
-
-            int runLength = 0;
-            for (; (i + runLength) < horProjValues.size(); ++runLength) {
-                if (horProjValues[i+runLength] < peak) break;//!= horProjValues[i]) break;
-            }
-
-            i += runLength - 1;
-            maxRun = qMax(maxRun, runLength);
-        }
-
-        //qDebug() << Q_FUNC_INFO << maxRun << endl;
-        return maxRun;
-    }
-
-    void StaffData::extractNoteHeadSegments()
-    {
-        noteHeadSegments.clear();
-        QList<int> noteKeys = noteProjections.keys();
-        qSort(noteKeys);
-
-        int top = staff.boundingRect().top();
-        int height = staff.boundingRect().height();
-        int noteWidth = 2 * DataWarehouse::instance()->staffSpaceHeight().min;
-
-        //qDebug() << Q_FUNC_INFO;
-        for (int i = 0; i < noteKeys.size(); ++i) {
-            int runlength = 0;
-            int key = noteKeys[i];
-            if (noteProjections.value(key) == 0) continue;
-            while (i+runlength < noteKeys.size() &&
-                    noteProjections.value(noteKeys[i]+runlength, 0) != 0) {
-                ++runlength;
-            }
-
-            i += runlength - 1;
-
-            int xCenter = key + (runlength >> 1);
-            NoteHeadSegment n;
-            // n.rect = QRect(xCenter - noteWidth, top, noteWidth * 2, height);
-            n.rect = QRect(xCenter - (noteWidth >> 1), top, noteWidth, height);
-            // TODO: BoundingRect should include beams, but thats not being drawn. Check that.
-            //n.rect = QRect(key, top, runlength, height);
-
-            noteHeadSegments << n;
-        }
-
-        qSort(noteHeadSegments);
-        //qDebug() << noteProjections.keys();
-        //qDebug() << noteProjections.values();
-    }
-
-    void StaffData::extractStemSegments()
-    {
-        const QRgb BlackColor = QColor(Qt::black).rgb();
-
-        DataWarehouse *dw = DataWarehouse::instance();
-        const int lineHeight = dw->staffLineHeight().min * 2;
-
-        foreach (const NoteHeadSegment& seg, noteHeadSegments) {
-            QRect rect = seg.rect;
-            rect.setLeft(qMax(0, rect.left() - lineHeight));
-            rect.setRight(qMin(image.width() - 1, rect.right() + lineHeight));
-
-            int xWithMaxRunLength = -1;
-            Run maxRun;
-            for (int x = rect.left(); x <= rect.right(); ++x) {
-                // Runlength info for x.
-                for (int y = rect.top(); y <= rect.bottom(); ++y) {
-                    if (image.pixel(x, y) != BlackColor) continue;
-
-                    int runlength = 0;
-                    for (; (y + runlength) <= rect.bottom() &&
-                            image.pixel(x, y + runlength) == BlackColor; ++runlength);
-
-                    Run r(y, runlength);
-
-                    if (xWithMaxRunLength < 0 || r > maxRun) {
-                        xWithMaxRunLength = x;
-                        maxRun = r;
-                    }
-
-                    y += runlength - 1;
-                }
-            }
-
-            const int margin = qRound(.8 * maxRun.length);
-            int xLimit = qMin(xWithMaxRunLength + lineHeight, rect.right());
-            QRect stemRect(xWithMaxRunLength, maxRun.pos, 1, maxRun.length);
-            for (int x = xWithMaxRunLength + 1; x <= xLimit; ++x) {
-                int count = 0;
-                for (int y = maxRun.pos; y < (maxRun.pos + maxRun.length); ++y) {
-                    count += (image.pixel(x, y) == BlackColor);
-                }
-
-                if (count >= margin) {
-                    stemRect.setRight(x);
-                } else {
-                    break;
-                }
-            }
-
-            xLimit = qMax(rect.left(), xWithMaxRunLength - lineHeight);
-            for (int x = xWithMaxRunLength - 1; x >= xLimit; --x) {
-                int count = 0;
-                for (int y = maxRun.pos; y < (maxRun.pos + maxRun.length); ++y) {
-                    count += (image.pixel(x, y) == BlackColor);
-                }
-
-                if (count >= margin) {
-                    stemRect.setLeft(x);
-                } else {
-                    break;
-                }
-            }
-
-            StemSegment stemSeg;
-            stemSeg.boundingRect = stemRect;
-            stemSeg.noteHeadSegment = seg;
-
-            int lDist = qAbs(seg.rect.left() - stemSeg.boundingRect.left());
-            int rDist = qAbs(seg.rect.right() - stemSeg.boundingRect.left());
-
-            // == cond not thought, but guess not needed.
-            stemSeg.beamAtTop = (lDist > rDist);
-            stemSegments << stemSeg;
-        }
-
-        qSort(stemSegments);
-    }
-
-    QImage StaffData::staffImage() const
-    {
-        const QRect r = staff.boundingRect();
-        QImage img(r.size(), QImage::Format_ARGB32_Premultiplied);
-        img.fill(0xffffffff);
-
-        QPainter p(&img);
-        p.drawImage(QRect(0, 0, r.width(), r.height()), image, r);
-        p.end();
-
-        return img;
-    }
-
-    QImage StaffData::projectionImage(const QHash<int, int> &hash) const
-    {
-        //qDebug() << Q_FUNC_INFO;
-        const QRect r = staff.boundingRect();
-
-        QImage img(r.size(), QImage::Format_ARGB32_Premultiplied);
-        img.fill(0xffffffff);
-
-        int xOffset = -r.left();
-        int yOffset = -r.top();
-
-        QPainter p(&img);
-        p.setPen(Qt::red);
-        for (int x = r.left(); x <= r.right(); ++x) {
-            QLineF line(x + xOffset, r.bottom() + yOffset,
-                    x + xOffset, r.bottom() + yOffset - hash[x]);
-            p.drawLine(line);
-        }
-        p.end();
-
-        return img;
-    }
-
     void StaffData::extractChords()
     {
         const QRgb BlackColor = QColor(Qt::black).rgb();
@@ -526,7 +479,7 @@ namespace Munip
 
         DataWarehouse *dw = DataWarehouse::instance();
         const int margin = dw->staffSpaceHeight().min;
-        int verticalMargin = dw->staffSpaceHeight().min - dw->staffLineHeight().max;
+        int verticalMargin = dw->staffSpaceHeight().min - dw->staffLineHeight().min;
         qDebug() << "Margins: " << margin << verticalMargin;
 
         QList<NoteHeadSegment>::iterator it = noteHeadSegments.begin();
@@ -572,6 +525,42 @@ namespace Munip
         }
     }
 
+    QImage StaffData::staffImage() const
+    {
+        const QRect r = staff.boundingRect();
+        QImage img(r.size(), QImage::Format_ARGB32_Premultiplied);
+        img.fill(0xffffffff);
+
+        QPainter p(&img);
+        p.drawImage(QRect(0, 0, r.width(), r.height()), image, r);
+        p.end();
+
+        return img;
+    }
+
+    QImage StaffData::projectionImage(const QHash<int, int> &hash) const
+    {
+        //qDebug() << Q_FUNC_INFO;
+        const QRect r = staff.boundingRect();
+
+        QImage img(r.size(), QImage::Format_ARGB32_Premultiplied);
+        img.fill(0xffffffff);
+
+        int xOffset = -r.left();
+        int yOffset = -r.top();
+
+        QPainter p(&img);
+        p.setPen(Qt::red);
+        for (int x = r.left(); x <= r.right(); ++x) {
+            QLineF line(x + xOffset, r.bottom() + yOffset,
+                    x + xOffset, r.bottom() + yOffset - hash[x]);
+            p.drawLine(line);
+        }
+        p.end();
+
+        return img;
+    }
+
     QImage StaffData::noteHeadHorizontalProjectioNImage() const
     {
         const QRgb BlackColor = QColor(Qt::black).rgb();
@@ -607,7 +596,7 @@ namespace Munip
 
         DataWarehouse *dw = DataWarehouse::instance();
         const int margin = dw->staffSpaceHeight().min;
-        int verticalMargin = dw->staffSpaceHeight().min - dw->staffLineHeight().max;
+        int verticalMargin = dw->staffSpaceHeight().min - dw->staffLineHeight().min;
         qDebug() << "Margins: " << margin << verticalMargin;
         foreach (const NoteHeadSegment& seg, noteHeadSegments) {
             QRect segRect = seg.rect.translated(delta);
