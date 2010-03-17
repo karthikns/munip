@@ -577,7 +577,8 @@ namespace Munip
                         if (workImage.pixel(x, y + runlength) != BlackColor) break;
                     }
 
-                    if (runlength > (dw->staffLineHeight().min >> 1)) {
+                    const int margin = (dw->staffLineHeight().min << 1);
+                    if (runlength > margin) {
                         runs << runlength;
                     }
                     y += runlength - 1;
