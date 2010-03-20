@@ -28,6 +28,16 @@ namespace Munip
         workImage = staffImage();
     }
 
+    StaffData::~StaffData()
+    {
+        // First delete stem segments as they store pointer to note segment.
+        qDeleteAll(stemSegments);
+        stemSegments.clear();
+
+        qDeleteAll(noteSegments);
+        noteSegments.clear();
+    }
+
     /**
      * This function is very impt as it decides the order in which the processing has to happen.
      * Each and every step has precise dependency and so this order should be preservered.

@@ -54,6 +54,7 @@ namespace Munip
     struct StaffData
     {
         StaffData(const QImage& img, const Staff& staff);
+        ~StaffData();
 
         void process();
 

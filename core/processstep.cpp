@@ -2074,9 +2074,10 @@ void SymbolAreaExtraction::process()
         y += sh + 50;
     }
 
+    qDeleteAll(staffDatas);
+    staffDatas.clear();
+
     emit ended();
 }
-
-
 
 }
