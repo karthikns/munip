@@ -194,10 +194,10 @@ namespace Munip
 
             int xCenter = key + (runlength >> 1);
             NoteHeadSegment n;
-            // n.rect = QRect(xCenter - noteWidth, top, noteWidth * 2, height);
-            n.rect = QRect(xCenter - (noteWidth >> 1), top, noteWidth, height);
+            // n.boundingRect = QRect(xCenter - noteWidth, top, noteWidth * 2, height);
+            n.boundingRect = QRect(xCenter - (noteWidth >> 1), top, noteWidth, height);
             // TODO: BoundingRect should include beams, but thats not being drawn. Check that.
-            //n.rect = QRect(key, top, runlength, height);
+            //n.boundingRect = QRect(key, top, runlength, height);
 
             noteHeadSegments << n;
         }
@@ -233,7 +233,7 @@ namespace Munip
         const int lineHeight = dw->staffLineHeight().min * 2;
 
         foreach (const NoteHeadSegment& seg, noteHeadSegments) {
-            QRect rect = seg.rect;
+            QRect rect = seg.boundingRect;
             rect.setLeft(qMax(0, rect.left() - lineHeight));
             rect.setRight(qMin(workImage.width() - 1, rect.right() + lineHeight));
 
@@ -293,8 +293,8 @@ namespace Munip
             stemSeg.boundingRect = stemRect;
             stemSeg.noteHeadSegment = seg;
 
-            int lDist = qAbs(seg.rect.left() - stemSeg.boundingRect.left());
-            int rDist = qAbs(seg.rect.right() - stemSeg.boundingRect.left());
+            int lDist = qAbs(seg.boundingRect.left() - stemSeg.boundingRect.left());
+            int rDist = qAbs(seg.boundingRect.right() - stemSeg.boundingRect.left());
 
             // == cond not thought, but guess not needed.
             stemSeg.beamAtTop = (lDist > rDist);
@@ -490,7 +490,7 @@ namespace Munip
         QList<NoteHeadSegment>::iterator it = noteHeadSegments.begin();
         for (; it != noteHeadSegments.end(); ++it) {
             NoteHeadSegment &seg = *it;
-            QRect segRect = seg.rect;
+            QRect segRect = seg.boundingRect;
             QList<int> projHelper;
             for (int y = segRect.top(); y <= segRect.bottom(); ++y) {
                 int count = 0;
@@ -644,7 +644,7 @@ namespace Munip
 
         foreach (const NoteHeadSegment& seg, noteHeadSegments) {
             p.setPen(QColor(Qt::red));
-            QRect segRect = seg.rect;
+            QRect segRect = seg.boundingRect;
 
             QHash<int, int>::const_iterator it = seg.horizontalProjection.constBegin();
             while (it != seg.horizontalProjection.constEnd()) {

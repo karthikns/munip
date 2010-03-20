@@ -2035,7 +2035,7 @@ void SymbolAreaExtraction::process()
                 p.setBrush(color);
                 p.setPen(Qt::NoPen);
                 foreach (const NoteHeadSegment& n, sd->noteHeadSegments) {
-                    p.drawRect(n.rect);
+                    p.drawRect(n.boundingRect);
                 }
             }
 

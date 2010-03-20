@@ -16,17 +16,18 @@ namespace Munip
 
     struct NoteHeadSegment
     {
-        QRect rect;
+        QRect boundingRect;
         QList<QRect> noteRects;
 
         QHash<int, int> horizontalProjection;
 
         bool operator<(const NoteHeadSegment& other) const {
-            return rect.left() < other.rect.left();
+            return boundingRect.left() < other.boundingRect.left();
         }
 
         bool operator==(const NoteHeadSegment& other) const {
-            return rect == other.rect && noteRects == other.noteRects;
+            return boundingRect == other.boundingRect
+                && noteRects == other.noteRects;
         }
 
         bool operator!=(const NoteHeadSegment& other) const {
