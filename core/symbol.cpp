@@ -364,8 +364,8 @@ namespace Munip
         foreach (StemSegment *seg, stemSegments) {
             QRect rect = seg->boundingRect;
 
-            for (int x = qMin(rect.right() + 1, workImage.width() - 1);
-                    x <= qMin(rect.right() + 2, workImage.width() - 1); ++x) {
+            for (int x = rect.right() + 1; x <= (rect.right() + 2); ++x) {
+                if (x >= workImage.width()) break;
 
                 for (int y = rect.top(); y <= rect.bottom(); ++y) {
                     const QPoint p(x, y);
@@ -380,33 +380,38 @@ namespace Munip
                     QSet<QPoint> localVisited;
                     localVisited << p;
 
+                    const QPoint rightUpDownDelta[3] = {
+                        QPoint(+1, 0), QPoint(0, -1), QPoint(0, +1)
+                    };
+                    const QPoint rightDownUpDelta[3] = {
+                        QPoint(+1, 0), QPoint(0, +1), QPoint(0, -1)
+                    };
+
                     while (1) {
-                        QPoint lastPoint = pathPoints.last();
-                        QPoint newp = QPoint(lastPoint.x() + 1, lastPoint.y());
-                        if (newp.x() < workImage.width() && workImage.pixel(newp) == BlackColor
-                                && !visited.contains(newp) && !localVisited.contains(newp)) {
-                            pathPoints << newp;
-                            localVisited << newp;
-                            continue;
+                        const QPoint lastPoint = pathPoints.last();
+                        bool addedNewPathPoint = false;
+
+                        for (int i = 0; i < 3; ++i) {
+                            QPoint newP = lastPoint + rightUpDownDelta[i];
+                            if (newP.x() >= workImage.width()) continue;
+                            if (newP.y() >= workImage.height()) continue;
+                            if (newP.y() < 0) continue;
+
+                            if (workImage.pixel(newP) == BlackColor &&
+                                    !visited.contains(newP) &&
+                                    !localVisited.contains(newP))
+                            {
+                                pathPoints << newP;
+                                localVisited << newP;
+                                addedNewPathPoint = true;
+                                break;
+                            }
+
                         }
 
-                        newp = QPoint(lastPoint.x(), lastPoint.y() - 1);
-                        if (newp.y() >= 0 && workImage.pixel(newp) == BlackColor
-                                && !visited.contains(newp) && !localVisited.contains(newp)) {
-                            pathPoints << newp;
-                            localVisited << newp;
-                            continue;
+                        if (!addedNewPathPoint) {
+                            break;
                         }
-
-                        newp = QPoint(lastPoint.x(), lastPoint.y() + 1);
-                        if (newp.y() < workImage.height() && workImage.pixel(newp) == BlackColor
-                                && !visited.contains(newp) && !localVisited.contains(newp)) {
-                            pathPoints << newp;
-                            localVisited << newp;
-                            continue;
-                        }
-
-                        break;
                     }
 
                     StemSegment *rightSegment = stemSegmentForPoint(pathPoints.last());
@@ -415,35 +420,35 @@ namespace Munip
                         pathPoints.clear();
                         localVisited.clear();
                         pathPoints << p;
+
                         while (1) {
-                            QPoint lastPoint = pathPoints.last();
-                            QPoint newp = QPoint(lastPoint.x() + 1, lastPoint.y());
-                            if (newp.x() < workImage.width() && workImage.pixel(newp) == BlackColor
-                                    && !visited.contains(newp) && !localVisited.contains(newp)) {
-                                pathPoints << newp;
-                                localVisited << newp;
-                                continue;
+                            const QPoint lastPoint = pathPoints.last();
+                            bool addedNewPathPoint = false;
+
+                            for (int i = 0; i < 3; ++i) {
+                                QPoint newP = lastPoint + rightDownUpDelta[i];
+                                if (newP.x() >= workImage.width()) continue;
+                                if (newP.y() >= workImage.height()) continue;
+                                if (newP.y() < 0) continue;
+
+                                if (workImage.pixel(newP) == BlackColor &&
+                                        !visited.contains(newP) &&
+                                        !localVisited.contains(newP))
+                                {
+                                    pathPoints << newP;
+                                    localVisited << newP;
+                                    addedNewPathPoint = true;
+                                    break;
+                                }
+
                             }
 
-                            newp = QPoint(lastPoint.x(), lastPoint.y() + 1);
-                            if (newp.y() < workImage.height() && workImage.pixel(newp) == BlackColor
-                                    && !visited.contains(newp) && !localVisited.contains(newp)) {
-                                pathPoints << newp;
-                                localVisited << newp;
-                                continue;
+                            if (!addedNewPathPoint) {
+                                break;
                             }
-
-                            newp = QPoint(lastPoint.x(), lastPoint.y() - 1);
-                            if (newp.y() >= 0 && workImage.pixel(newp) == BlackColor
-                                    && !visited.contains(newp) && !localVisited.contains(newp)) {
-                                pathPoints << newp;
-                                localVisited << newp;
-                                continue;
-                            }
-
-                            break;
                         }
 
+                        rightSegment = stemSegmentForPoint(pathPoints.last());
                     }
 
                     visited.unite(localVisited);

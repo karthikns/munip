@@ -2024,21 +2024,12 @@ void SymbolAreaExtraction::process()
                     QRect r = s->boundingRect.adjusted(-1, 0, +1, 0);
                     p.setBrush(colors[s->totalFlagCount() % 5]);
                     p.drawRect(r);
-                    QRect areaToTry(0, 0, dw->staffSpaceHeight().min >> 1,
-                                s->boundingRect.height());
-                    areaToTry.moveTo(s->boundingRect.topLeft() - QPoint(areaToTry.width() + 1, 0));
-
-                    //continue;
-                    QColor trans(Qt::red);
-                    trans.setAlpha(100);
-                    p.setBrush(trans);
-                    p.drawRect(areaToTry);
                 }
             }
 
 
             // Draw note regions.
-            if (1) {
+            if (0) {
                 QColor color = QColor(Qt::darkYellow);
                 color.setAlpha(100);
                 p.setBrush(color);
@@ -2049,7 +2040,7 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw chords
-            if (1) {
+            if (0) {
                 QColor colors[5] = {
                     QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
                     QColor(Qt::red), QColor(Qt::darkCyan)
