@@ -385,31 +385,33 @@ namespace Munip
 
                     QList<QPoint> pathPoints;
                     pathPoints << p;
-                    visited << p;
+
+                    QSet<QPoint> localVisited;
+                    localVisited << p;
 
                     while (1) {
                         QPoint lastPoint = pathPoints.last();
                         QPoint newp = QPoint(lastPoint.x() + 1, lastPoint.y());
                         if (newp.x() < workImage.width() && workImage.pixel(newp) == BlackColor
-                                && !visited.contains(newp)) {
+                                && !visited.contains(newp) && !localVisited.contains(newp)) {
                             pathPoints << newp;
-                            visited << newp;
+                            localVisited << newp;
                             continue;
                         }
 
                         newp = QPoint(lastPoint.x(), lastPoint.y() - 1);
                         if (newp.y() >= 0 && workImage.pixel(newp) == BlackColor
-                                && !visited.contains(newp)) {
+                                && !visited.contains(newp) && !localVisited.contains(newp)) {
                             pathPoints << newp;
-                            visited << newp;
+                            localVisited << newp;
                             continue;
                         }
 
                         newp = QPoint(lastPoint.x(), lastPoint.y() + 1);
                         if (newp.y() < workImage.height() && workImage.pixel(newp) == BlackColor
-                                && !visited.contains(newp)) {
+                                && !visited.contains(newp) && !localVisited.contains(newp)) {
                             pathPoints << newp;
-                            visited << newp;
+                            localVisited << newp;
                             continue;
                         }
 
@@ -417,6 +419,43 @@ namespace Munip
                     }
 
                     StemSegment *rightSegment = stemSegmentForPoint(pathPoints.last());
+
+                    if (!rightSegment) {
+                        pathPoints.clear();
+                        localVisited.clear();
+                        pathPoints << p;
+                        while (1) {
+                            QPoint lastPoint = pathPoints.last();
+                            QPoint newp = QPoint(lastPoint.x() + 1, lastPoint.y());
+                            if (newp.x() < workImage.width() && workImage.pixel(newp) == BlackColor
+                                    && !visited.contains(newp) && !localVisited.contains(newp)) {
+                                pathPoints << newp;
+                                localVisited << newp;
+                                continue;
+                            }
+
+                            newp = QPoint(lastPoint.x(), lastPoint.y() + 1);
+                            if (newp.y() < workImage.height() && workImage.pixel(newp) == BlackColor
+                                    && !visited.contains(newp) && !localVisited.contains(newp)) {
+                                pathPoints << newp;
+                                localVisited << newp;
+                                continue;
+                            }
+
+                            newp = QPoint(lastPoint.x(), lastPoint.y() - 1);
+                            if (newp.y() >= 0 && workImage.pixel(newp) == BlackColor
+                                    && !visited.contains(newp) && !localVisited.contains(newp)) {
+                                pathPoints << newp;
+                                localVisited << newp;
+                                continue;
+                            }
+
+                            break;
+                        }
+
+                    }
+
+                    visited.unite(localVisited);
 
                     if (rightSegment && seg != rightSegment) {
                         QList<QPoint> result = solidifyPath(pathPoints, seg, rightSegment, visited);
