@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+bool EnableMDebugOutput = true;
+
 namespace Munip
 {
     int IDGenerator::lastID = -1;

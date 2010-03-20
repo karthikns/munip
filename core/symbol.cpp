@@ -20,6 +20,18 @@ namespace Munip
         return l->boundingRect.left() < r->boundingRect.left();
     }
 
+    QDebug operator<<(QDebug dbg, const NoteSegment* seg)
+    {
+        dbg.nospace() << "NoteSegment: [" << (void*)seg << "] " << seg->boundingRect;
+        return dbg.space();
+    }
+
+    QDebug operator<<(QDebug dbg, const StemSegment* seg)
+    {
+        dbg.nospace() << "StemSegment: [" << (void*)seg << "] " << seg->boundingRect;
+        return dbg.space();
+    }
+
     StaffData::StaffData(const QImage& img, const Staff& stf) :
         staff(stf),
         image(img)
@@ -225,6 +237,12 @@ namespace Munip
 
         qSort(noteSegments.begin(), noteSegments.end(),
                 lessThanNoteSegmentPointers);
+
+        mDebug() << Q_FUNC_INFO << endl << "Note segments <sorted>: ";
+        foreach (NoteSegment *seg, noteSegments) {
+            mDebug() << seg;
+        }
+        mDebug();
     }
 
     QHash<int, int> StaffData::filter(Range , Range height,
@@ -341,15 +359,14 @@ namespace Munip
 
     void StaffData::extractBeams()
     {
-        qDebug() << Q_FUNC_INFO;
+        mDebug() << Q_FUNC_INFO;
         const QRgb BlackColor = QColor(Qt::black).rgb();
+        const QPoint delta = staff.boundingRect().topLeft() * 0;
 
         int id = 0;
         QSet<QPoint> visited;
 
-        for (int i = 0; i < stemSegments.size(); ++i) {
-            const StemSegment* seg = stemSegments.at(i);
-
+        foreach (StemSegment *seg, stemSegments) {
             QRect rect = seg->boundingRect;
             const int yStart = (seg->beamAtTop ? rect.top() : rect.bottom());
             const int yEnd = (seg->beamAtTop ? (rect.bottom()) : (rect.top()));
@@ -399,10 +416,12 @@ namespace Munip
                         break;
                     }
 
-                    const StemSegment *rightSegment = stemSegmentForPoint(pathPoints.last());
+                    StemSegment *rightSegment = stemSegmentForPoint(pathPoints.last());
 
                     if (rightSegment && seg != rightSegment) {
                         QList<QPoint> result = solidifyPath(pathPoints, seg, rightSegment, visited);
+                        seg->rightFlagCount += 1;
+                        rightSegment->leftFlagCount += 1;
                         QRect boundRect;
                         foreach (const QPoint& resultPt, result) {
                             beamPoints.insert(resultPt, id);
@@ -412,22 +431,25 @@ namespace Munip
                                 boundRect |= QRect(resultPt, resultPt);
                             }
                         }
-                        qDebug() << "id = " << id
+                        mDebug() << "id = " << id
                             << "num points = " << result.size()
-                            << "Bound: " << boundRect.topLeft() << boundRect.bottomRight();
+                            << "Bound: "
+                            << boundRect.topLeft() + delta
+                            << boundRect.bottomRight() + delta << endl
+                            << "Left: " << seg << endl
+                            << "Right: " << rightSegment << endl << endl;
                         ++id;
                     }
                 }
             }
         }
 
-        qDebug() << Q_FUNC_INFO << "Num of beam segments = " << id << endl;
+        mDebug() << endl << "Num of beam segments = " << id << endl;
     }
 
-    const StemSegment* StaffData::stemSegmentForPoint(const QPoint& p) const
+    StemSegment* StaffData::stemSegmentForPoint(const QPoint& p)
     {
-        for (int i = 0; i < stemSegments.size(); ++i) {
-            const StemSegment *seg = stemSegments.at(i);
+        foreach (StemSegment *seg, stemSegments) {
             QRect rect = seg->boundingRect;
             rect.setLeft(rect.left() - 2);
             rect.setTop(rect.top() - 1);
@@ -503,7 +525,6 @@ namespace Munip
         DataWarehouse *dw = DataWarehouse::instance();
         const int margin = dw->staffSpaceHeight().min;
         int verticalMargin = dw->staffSpaceHeight().min - dw->staffLineHeight().min;
-        qDebug() << "Margins: " << margin << verticalMargin;
 
         for (int i = 0; i < noteSegments.size(); ++i) {
             NoteSegment *seg = noteSegments[i];
@@ -568,6 +589,8 @@ namespace Munip
 
     void StaffData::extractFlags()
     {
+        mDebug() << Q_FUNC_INFO;
+
         const QRgb BlackColor = QColor(Qt::black).rgb();
         const QRect staffRect = workImage.rect();
         DataWarehouse *dw = DataWarehouse::instance();
@@ -576,46 +599,61 @@ namespace Munip
             StemSegment *seg = stemSegments[i];
             QRect areaToTry(0, 0, dw->staffSpaceHeight().min >> 1,
                     seg->boundingRect.height());
-            areaToTry.moveTo(seg->boundingRect.topRight());
-            areaToTry.translate(1, 0); // move another pixel towards right
+            QPoint positions[2] =
+            {
+                seg->boundingRect.topRight() + QPoint(2, 0),
+                seg->boundingRect.topLeft() - QPoint(areaToTry.width() + 1, 0)
+            };
+            // J loop for trying both "left" and "right" areas of stem.
+            for (int j = 0; j < 2; ++j) {
+                areaToTry.moveTo(positions[j]);
 
-            if (areaToTry.left() > staffRect.right()) continue;
+                if (areaToTry.left() > staffRect.right()) continue;
+                if (areaToTry.right() < staffRect.left()) continue;
 
-            QList<int> numTransitions;
-            for (int x = areaToTry.left(); x <= areaToTry.right(); ++x) {
-                if (x > staffRect.right()) break;
-                QList<int> runs;
+                QList<int> numTransitions;
+                for (int i = 0; i < areaToTry.width(); ++i) {
+                    int x = (j == 0) ? (areaToTry.left() + i) :
+                        (areaToTry.right() - i);
+                    if (x > staffRect.right() || x < staffRect.left()) break;
+                    QList<int> runs;
 
-                for (int y = areaToTry.top(); y <= areaToTry.bottom(); ++y) {
-                    if (workImage.pixel(x, y) != BlackColor) continue;
+                    for (int y = areaToTry.top(); y <= areaToTry.bottom(); ++y) {
+                        if (workImage.pixel(x, y) != BlackColor) continue;
 
-                    int runlength = 0;
-                    for (; (y + runlength) <= areaToTry.bottom(); ++runlength) {
-                        if (workImage.pixel(x, y + runlength) != BlackColor) break;
+                        int runlength = 0;
+                        for (; (y + runlength) <= areaToTry.bottom(); ++runlength) {
+                            if (workImage.pixel(x, y + runlength) != BlackColor) break;
+                        }
+
+                        const int margin = (dw->staffLineHeight().min << 1);
+                        if (runlength > margin) {
+                            runs << runlength;
+                        }
+                        y += runlength - 1;
                     }
+                    // An empty column means there is no more connected components.
+                    if (runs.isEmpty()) break;
+                    numTransitions << runs.size();
+                }
 
-                    const int margin = (dw->staffLineHeight().min << 1);
-                    if (runlength > margin) {
-                        runs << runlength;
+                int avgTransitions = 0;
+                if (numTransitions.isEmpty() == false) {
+                    int sum = 0;
+                    for (int i = 0; i < numTransitions.size(); ++i) {
+                        sum += numTransitions.at(i);
                     }
-                    y += runlength - 1;
+                    avgTransitions = int(qRound(qreal(sum)/numTransitions.size()));
                 }
-                numTransitions << runs.size();
-            }
 
-            int avgTransitions = 0;
-            if (numTransitions.isEmpty() == false) {
-                int sum = 0;
-                for (int i = 0; i < numTransitions.size(); ++i) {
-                    sum += numTransitions.at(i);
+                if (j == 0) {
+                    seg->rightFlagCount += avgTransitions;
+                } else {
+                    seg->leftFlagCount += avgTransitions;
                 }
-                avgTransitions = int(qRound(qreal(sum)/numTransitions.size()));
-            }
-
-            seg->flagCount = avgTransitions;
-            if (avgTransitions) {
-                qDebug() << Q_FUNC_INFO << seg->boundingRect.topLeft() << seg->boundingRect.bottomRight();
-                qDebug() << numTransitions << endl;
+                if (avgTransitions) {
+                    mDebug() << seg << numTransitions << endl;
+                }
             }
         }
     }
@@ -635,7 +673,6 @@ namespace Munip
 
     QImage StaffData::projectionImage(const QHash<int, int> &hash) const
     {
-        //qDebug() << Q_FUNC_INFO;
         const QRect r = workImage.rect();
 
         QImage img(r.size(), QImage::Format_ARGB32_Premultiplied);

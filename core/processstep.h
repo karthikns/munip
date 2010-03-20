@@ -16,22 +16,6 @@
 #include <QQueue>
 #include <QVariant>
 
-// Flag to turn off debug output(used to disable debug output in testcases)
-#define MUNIP_DEBUG
-#ifdef MUNIP_DEBUG
-    #define mDebug qDebug
-    #define mWarning qWarning
-#else
-    struct MDebug : public QDebug
-    {
-        MDebug() : QDebug(&myData) {}
-        QString myData;
-    };
-
-    #define mDebug MDebug
-    #define mWarning MDebug
-#endif
-
 class QIcon;
 class HorizontalRunlengthImage;
 
@@ -41,8 +25,6 @@ inline uint qHash(const QRect &rect)
 }
 
 namespace Munip {
-
-
     // Forwared declarations
     class Page;
     class ProcessQueue;

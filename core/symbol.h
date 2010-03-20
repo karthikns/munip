@@ -39,8 +39,13 @@ namespace Munip
 
         QRect boundingRect;
         NoteSegment *noteSegment;
-        int flagCount;
         bool beamAtTop;
+        int leftFlagCount;
+        int rightFlagCount;
+
+        int totalFlagCount() const {
+            return qMax(leftFlagCount, rightFlagCount);
+        }
 
         bool isEqualTo(const StemSegment* other) const {
             return noteSegment == other->noteSegment &&
@@ -48,7 +53,11 @@ namespace Munip
         }
 
     private:
-        StemSegment() { noteSegment = 0; beamAtTop = true; flagCount = 0;}
+        StemSegment() {
+            noteSegment = 0;
+            beamAtTop = true;
+            leftFlagCount = rightFlagCount = 0;
+        }
     };
 
     struct StaffData
@@ -70,7 +79,7 @@ namespace Munip
 
         void eraseStems();
         void extractBeams();
-        const StemSegment* stemSegmentForPoint(const QPoint& p) const;
+        StemSegment* stemSegmentForPoint(const QPoint& p);
         QList<QPoint> solidifyPath(const QList<QPoint> &pathPoints,
                 const StemSegment* left, const StemSegment* right,
                 QSet<QPoint> &visited);

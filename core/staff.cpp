@@ -161,7 +161,7 @@ namespace Munip
     void StaffLine::displaySegments()
     {
         for(int i= 0; i < m_segmentList.size(); i++)
-                  qDebug()<<m_segmentList[i].startPos()<<m_segmentList[i].endPos()<<m_segmentList[i].destinationPos();
+                  mDebug()<<m_segmentList[i].startPos()<<m_segmentList[i].endPos()<<m_segmentList[i].destinationPos();
     }
 
     void StaffLine::sortSegments()

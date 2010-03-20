@@ -257,18 +257,16 @@ namespace Munip
     void SkewCorrection::process()
     {
         emit started();
-        double theta = std::atan(detectSkew());
-        mDebug() << Q_FUNC_INFO << theta
-            << theta*(180.0/M_PI) << endl;
+        const double theta = std::atan(detectSkew());
+        const double angle = -180.0/M_PI * theta;
+        mDebug() << Q_FUNC_INFO << angle << endl;
         if (theta == 0.0) {
             emit ended();
             return;
         }
 
         QTransform transform, trueTransform;
-        double angle = -180.0/M_PI * theta;
         emit angleCalculated(-angle);
-        mDebug() << "                  " << Q_FUNC_INFO << -angle << endl;
         transform.rotate(angle);
         // Find out the true tranformation used (automatically adjusted
         // by QImage::transformed method)
@@ -594,39 +592,45 @@ namespace Munip
 
     void StaffLineDetect::findPaths()
     {
-
-
-        for(int y = 0; y <m_processedImage.height() ; y++)
-            for(int i = 0; i < m_segments[y].size(); i++)
-            {
+        for(int y = 0; y <m_processedImage.height() ; y++) {
+            for(int i = 0; i < m_segments[y].size(); i++) {
                 findMaxPath(m_segments[y][i]);
                 m_connectedComponentID++;
             }
+        }
 
         QList<Segment> segmentList = m_lookUpTable.uniqueKeys();
         QList<Segment> paths;
-        foreach(Segment p,segmentList)
+        foreach(Segment p,segmentList) {
             paths.push_back(p);
+        }
 
         qSort( paths.begin(),paths.end(),segmentSortByWeight);
-        for(int i = 0; i < paths.size(); i++)
-            mDebug()<<paths[i].startPos()<<paths[i].endPos()<<m_lookUpTable.value(paths[i]).startPos()<<m_lookUpTable.value(paths[i]).endPos()<<paths[i].destinationPos();
+        mDebug() << Q_FUNC_INFO << endl << "Paths:";
+        for(int i = 0; i < paths.size(); i++) {
+            mDebug() << paths[i].startPos() << paths[i].endPos()
+                << m_lookUpTable.value(paths[i]).startPos()
+                << m_lookUpTable.value(paths[i]).endPos()
+                << paths[i].destinationPos();
+        }
+        mDebug();
 
         Segment maxWeightPath = paths[0];
 
         //prune the segments to find the ones with maximum weight
         int i = 0;
-        while (i < paths.size() && paths[i].weight() >= (int)(0.9*maxWeightPath.weight()))
+        while (i < paths.size() && paths[i].weight() >= (int)(0.9*maxWeightPath.weight())) {
             i++;
+        }
 
         paths.erase(paths.begin() + i, paths.end());
 
         // Now construct the lines from optimal segments
 
         const int size = paths.size();
-        mDebug() << Q_FUNC_INFO << " Size = " << size;
+        mDebug() << Q_FUNC_INFO << "Path size after pruning = " << size;
 
-        qSort( paths.begin(),paths.end(),segmentSortByConnectedComponentID);
+        qSort(paths.begin(), paths.end(), segmentSortByConnectedComponentID);
         QSet<int> done;
 
         i = 0;
@@ -663,14 +667,17 @@ namespace Munip
         }
         qSort(m_lineList.begin(),m_lineList.end(),staffLineSort);
 
-        for(int i = 0; i < m_lineList.size(); i++)
-            mDebug() <<Q_FUNC_INFO<< m_lineList[i].startPos() << m_lineList[i].endPos()<<m_lineList[i].boundingBox();
+        mDebug() << Q_FUNC_INFO << endl << "Line list: ";
+        for(int i = 0; i < m_lineList.size(); i++) {
+            mDebug() << m_lineList[i].startPos() << m_lineList[i].endPos()
+                << m_lineList[i].boundingBox();
+        }
+        mDebug();
         //m_lineList[i].displaySegments();
-        // }
 
         drawDetectedLines();
         //removeLines();
-}
+    }
 
 Segment StaffLineDetect::findMaxPath(Segment segment)
 {
@@ -756,7 +763,7 @@ void StaffLineDetect::constructStaff()
 
     int i = 0;
     DataWarehouse::instance()->clearStaff();
-    qDebug() << Q_FUNC_INFO;
+    mDebug() << Q_FUNC_INFO;
     while (i < m_lineList.size())
     {
         Staff s;
@@ -772,8 +779,8 @@ void StaffLineDetect::constructStaff()
         s.setBoundingRect(findStaffBoundingRect(s));
 
         DataWarehouse ::instance()->appendStaff(s);
-        qDebug() << "staff contructed when i = " << i;
-        mDebug() <<Q_FUNC_INFO<<s.boundingRect().topLeft()<<s.boundingRect().bottomRight()<<s.boundingRect();
+        mDebug() << "staff contructed when i = " << i;
+        mDebug() << "Staff rect = " << s.boundingRect() << endl;
 #if 0
         identifySymbolRegions(s);
 #endif
@@ -820,9 +827,6 @@ void StaffLineDetect::estimateStaffParametersFromYellowAreas()
 
     }
 
-    qDebug() << endl << Q_FUNC_INFO;
-    qDebug() << "Yellow";
-
     int yellowMax = 0;
     QList<int> keys = yellowRunLengths.keys();
     Range yellowRange;
@@ -830,9 +834,7 @@ void StaffLineDetect::estimateStaffParametersFromYellowAreas()
         if (yellowRunLengths[runLength] > yellowRunLengths[yellowMax]) {
             yellowMax = runLength;
         }
-        qDebug() << runLength << yellowRunLengths[runLength];
     }
-    qDebug() << endl;
     if (yellowMax == 1) {
         yellowRange = Range(1, 2);
     } else {
@@ -840,7 +842,6 @@ void StaffLineDetect::estimateStaffParametersFromYellowAreas()
         yellowRange = Range(yellowMax - interval, yellowMax + interval);
     }
 
-    qDebug() << "White";
 
     int whiteMax = 0;
     keys = whiteRunLengths.keys();
@@ -849,9 +850,7 @@ void StaffLineDetect::estimateStaffParametersFromYellowAreas()
         if (whiteRunLengths[runLength] > whiteRunLengths[whiteMax]) {
             whiteMax = runLength;
         }
-        qDebug() << runLength << whiteRunLengths[runLength];
     }
-    qDebug() << endl;
     if (whiteMax == 1) {
         whiteRange = Range(1, 2);
     } else {
@@ -862,8 +861,9 @@ void StaffLineDetect::estimateStaffParametersFromYellowAreas()
     dw->setStaffLineHeight(yellowRange);
     dw->setStaffSpaceHeight(whiteRange);
 
-    qDebug() << "StaffLineHeight" << yellowRange;
-    qDebug() << "StaffSpaceHeight" << whiteRange;
+    mDebug() << Q_FUNC_INFO;
+    mDebug() << "StaffLineHeight" << yellowRange;
+    mDebug() << "StaffSpaceHeight" << whiteRange << endl;
 }
 
 QRect StaffLineDetect::findStaffBoundingRect(const Staff& s)
@@ -1738,9 +1738,9 @@ void StaffParamExtraction::process()
     dw->setStaffSpaceHeight(maxRunLengthsRanges[White]);
     dw->setStaffLineHeight(maxRunLengthsRanges[Black]);
 
-    qDebug() << Q_FUNC_INFO;
-    qDebug() << "StaffSpaceHeight:" << dw->staffSpaceHeight();
-    qDebug() << "StaffLineHeight:" << dw->staffLineHeight();
+    mDebug() << Q_FUNC_INFO;
+    mDebug() << "StaffSpaceHeight:" << dw->staffSpaceHeight();
+    mDebug() << "StaffLineHeight:" << dw->staffLineHeight() << endl;
 
     if (m_drawGraph) {
         bool pruneForClarity = true;
@@ -2016,20 +2016,29 @@ void SymbolAreaExtraction::process()
             // Draw stems
             if (1) {
                 QColor colors[5] = {
-                    QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
+                    QColor(Qt::darkMagenta), QColor(Qt::blue), QColor(Qt::darkGreen),
                     QColor(Qt::red), QColor(Qt::darkCyan)
                 };
                 p.setPen(Qt::NoPen);
                 foreach (const StemSegment *s, sd->stemSegments) {
                     QRect r = s->boundingRect.adjusted(-1, 0, +1, 0);
-                    p.setBrush(colors[s->flagCount % 5]);
+                    p.setBrush(colors[s->totalFlagCount() % 5]);
                     p.drawRect(r);
+                    QRect areaToTry(0, 0, dw->staffSpaceHeight().min >> 1,
+                                s->boundingRect.height());
+                    areaToTry.moveTo(s->boundingRect.topLeft() - QPoint(areaToTry.width() + 1, 0));
+
+                    //continue;
+                    QColor trans(Qt::red);
+                    trans.setAlpha(100);
+                    p.setBrush(trans);
+                    p.drawRect(areaToTry);
                 }
             }
 
 
             // Draw note regions.
-            if (0) {
+            if (1) {
                 QColor color = QColor(Qt::darkYellow);
                 color.setAlpha(100);
                 p.setBrush(color);

@@ -7,6 +7,24 @@
 #include <QDebug>
 #include <QImage>
 
+extern bool EnableMDebugOutput;
+
+inline QDebug mDebug()
+{
+    if (EnableMDebugOutput) {
+        return qDebug();
+    }
+    return QDebug(new QString);
+}
+
+inline QDebug mWarning()
+{
+    if (EnableMDebugOutput) {
+        return qWarning();
+    }
+    return QDebug(new QString);
+}
+
 namespace Munip
 {
     struct IDGenerator
