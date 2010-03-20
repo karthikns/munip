@@ -16,47 +16,39 @@ namespace Munip
 
     struct NoteHeadSegment
     {
+        static NoteHeadSegment* create() { return new NoteHeadSegment; }
+
         QRect boundingRect;
         QList<QRect> noteRects;
 
         QHash<int, int> horizontalProjection;
 
-        bool operator<(const NoteHeadSegment& other) const {
-            return boundingRect.left() < other.boundingRect.left();
+        /// Its enough to compare bounding rectangles as two note segments
+        /// can't have same bounds.
+        bool isEqualTo(const NoteHeadSegment* rhs) const {
+            return boundingRect == rhs->boundingRect;
         }
 
-        bool operator==(const NoteHeadSegment& other) const {
-            return boundingRect == other.boundingRect
-                && noteRects == other.noteRects;
-        }
-
-        bool operator!=(const NoteHeadSegment& other) const {
-            return !((*this) == other);
-        }
+    private:
+        NoteHeadSegment() {}
     };
 
     struct StemSegment
     {
+        static StemSegment* create() { return new StemSegment; }
+
         QRect boundingRect;
-        NoteHeadSegment noteHeadSegment;
+        NoteHeadSegment *noteHeadSegment;
         int flagCount;
         bool beamAtTop;
 
-        StemSegment() { beamAtTop = true; flagCount = 0;}
-
-        bool operator<(const StemSegment& other) const {
-            return boundingRect.left() < other.boundingRect.left();
+        bool isEqualTo(const StemSegment* other) const {
+            return noteHeadSegment == other->noteHeadSegment &&
+                boundingRect == other->boundingRect;
         }
 
-        bool operator==(const StemSegment& other) const {
-            return boundingRect == other.boundingRect &&
-                noteHeadSegment == other.noteHeadSegment &&
-                beamAtTop == other.beamAtTop;
-        }
-
-        bool operator!=(const StemSegment& other) const {
-            return !((*this) == other);
-        }
+    private:
+        StemSegment() { noteHeadSegment = 0; beamAtTop = true; flagCount = 0;}
     };
 
     struct StaffData
@@ -77,9 +69,9 @@ namespace Munip
 
         void eraseStems();
         void extractBeams();
-        StemSegment stemSegmentForPoint(const QPoint& p, bool &validOutput);
+        const StemSegment* stemSegmentForPoint(const QPoint& p) const;
         QList<QPoint> solidifyPath(const QList<QPoint> &pathPoints,
-                const StemSegment& left, const StemSegment& right,
+                const StemSegment* left, const StemSegment* right,
                 QSet<QPoint> &visited);
 
         void eraseBeams();
@@ -100,8 +92,8 @@ namespace Munip
         QHash<int, int> noteProjections;
         QHash<int, int> stemsProjections;
 
-        QList<NoteHeadSegment> noteHeadSegments;
-        QList<StemSegment> stemSegments;
+        QList<NoteHeadSegment*> noteHeadSegments;
+        QList<StemSegment*> stemSegments;
         QHash<QPoint, int> beamPoints;
 
         const QImage& image;

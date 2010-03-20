@@ -2020,9 +2020,9 @@ void SymbolAreaExtraction::process()
                     QColor(Qt::red), QColor(Qt::darkCyan)
                 };
                 p.setPen(Qt::NoPen);
-                foreach (const StemSegment& s, sd->stemSegments) {
-                    QRect r = s.boundingRect.adjusted(-1, 0, +1, 0);
-                    p.setBrush(colors[s.flagCount % 5]);
+                foreach (const StemSegment *s, sd->stemSegments) {
+                    QRect r = s->boundingRect.adjusted(-1, 0, +1, 0);
+                    p.setBrush(colors[s->flagCount % 5]);
                     p.drawRect(r);
                 }
             }
@@ -2034,8 +2034,8 @@ void SymbolAreaExtraction::process()
                 color.setAlpha(100);
                 p.setBrush(color);
                 p.setPen(Qt::NoPen);
-                foreach (const NoteHeadSegment& n, sd->noteHeadSegments) {
-                    p.drawRect(n.boundingRect);
+                foreach (const NoteHeadSegment *n, sd->noteHeadSegments) {
+                    p.drawRect(n->boundingRect);
                 }
             }
 
@@ -2048,8 +2048,8 @@ void SymbolAreaExtraction::process()
                 int currentIndex = 0;
 
                 p.setPen(Qt::NoPen);
-                foreach (const NoteHeadSegment &n, sd->noteHeadSegments) {
-                    foreach (const QRect& r, n.noteRects) {
+                foreach (const NoteHeadSegment *n, sd->noteHeadSegments) {
+                    foreach (const QRect& r, n->noteRects) {
                         colors[currentIndex].setAlpha(100);
                         p.setBrush(colors[currentIndex]);
                         p.drawRect(r);

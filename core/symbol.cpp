@@ -8,6 +8,18 @@
 
 namespace Munip
 {
+    static bool lessThanNoteHeadSegmentPointers(const NoteHeadSegment *l,
+            const NoteHeadSegment *r)
+    {
+        return l->boundingRect.left() < r->boundingRect.left();
+    }
+
+    static bool lessThanStemSegmentPointers(const StemSegment* l,
+            const StemSegment* r)
+    {
+        return l->boundingRect.left() < r->boundingRect.left();
+    }
+
     StaffData::StaffData(const QImage& img, const Staff& stf) :
         staff(stf),
         image(img)
@@ -138,6 +150,7 @@ namespace Munip
         int lineHeight = dw->staffLineHeight().min;
         // Fill up very thin gaps.
         for (int i = 1; i < keys.size(); ++i) {
+            //TODO: Flaw, won't scale when there are 0 entries rather than missing keys.
             int diff = keys[i] - keys[i-1];
             if (diff == 0) {
                 continue;
@@ -148,7 +161,6 @@ namespace Munip
                     noteProjections[j] = valueToInsert;
                 }
             }
-
         }
         // Remove peak region which are very thin or very thick.
         for (int i = 0; i < keys.size(); ++i) {
@@ -171,7 +183,6 @@ namespace Munip
         }
 
         // Now fill up noteHeadSegments list (datastructure construction)
-        noteHeadSegments.clear();
         // Update the keys as we added some new keys
         keys = noteProjections.keys();
         qSort(keys);
@@ -193,16 +204,17 @@ namespace Munip
             i += runlength - 1;
 
             int xCenter = key + (runlength >> 1);
-            NoteHeadSegment n;
-            // n.boundingRect = QRect(xCenter - noteWidth, top, noteWidth * 2, height);
-            n.boundingRect = QRect(xCenter - (noteWidth >> 1), top, noteWidth, height);
+            NoteHeadSegment *n = NoteHeadSegment::create();
+            // n->boundingRect = QRect(xCenter - noteWidth, top, noteWidth * 2, height);
+            n->boundingRect = QRect(xCenter - (noteWidth >> 1), top, noteWidth, height);
             // TODO: BoundingRect should include beams, but thats not being drawn. Check that.
-            //n.boundingRect = QRect(key, top, runlength, height);
+            //n->boundingRect = QRect(key, top, runlength, height);
 
             noteHeadSegments << n;
         }
 
-        qSort(noteHeadSegments);
+        qSort(noteHeadSegments.begin(), noteHeadSegments.end(),
+                lessThanNoteHeadSegmentPointers);
     }
 
     QHash<int, int> StaffData::filter(Range , Range height,
@@ -232,8 +244,8 @@ namespace Munip
         DataWarehouse *dw = DataWarehouse::instance();
         const int lineHeight = dw->staffLineHeight().min * 2;
 
-        foreach (const NoteHeadSegment& seg, noteHeadSegments) {
-            QRect rect = seg.boundingRect;
+        foreach (NoteHeadSegment* seg, noteHeadSegments) {
+            QRect rect = seg->boundingRect;
             rect.setLeft(qMax(0, rect.left() - lineHeight));
             rect.setRight(qMin(workImage.width() - 1, rect.right() + lineHeight));
 
@@ -289,19 +301,19 @@ namespace Munip
                 }
             }
 
-            StemSegment stemSeg;
-            stemSeg.boundingRect = stemRect;
-            stemSeg.noteHeadSegment = seg;
+            StemSegment *stemSeg = StemSegment::create();
+            stemSeg->boundingRect = stemRect;
+            stemSeg->noteHeadSegment = seg;
 
-            int lDist = qAbs(seg.boundingRect.left() - stemSeg.boundingRect.left());
-            int rDist = qAbs(seg.boundingRect.right() - stemSeg.boundingRect.left());
+            int lDist = qAbs(seg->boundingRect.left() - stemSeg->boundingRect.left());
+            int rDist = qAbs(seg->boundingRect.right() - stemSeg->boundingRect.left());
 
             // == cond not thought, but guess not needed.
-            stemSeg.beamAtTop = (lDist > rDist);
+            stemSeg->beamAtTop = (lDist > rDist);
             stemSegments << stemSeg;
         }
 
-        qSort(stemSegments);
+        qSort(stemSegments.begin(), stemSegments.end(), lessThanStemSegmentPointers);
     }
 
     void StaffData::eraseStems()
@@ -312,7 +324,7 @@ namespace Munip
 
         // Erase all stems first
         for (int i = 0; i < stemSegments.size(); ++i) {
-            p.drawRect(stemSegments[i].boundingRect.adjusted(-1, 0, +1, 0));
+            p.drawRect(stemSegments[i]->boundingRect.adjusted(-1, 0, +1, 0));
         }
         p.end();
     }
@@ -326,18 +338,18 @@ namespace Munip
         QSet<QPoint> visited;
 
         for (int i = 0; i < stemSegments.size(); ++i) {
-            const StemSegment& seg = stemSegments.at(i);
+            const StemSegment* seg = stemSegments.at(i);
 
-            QRect rect = seg.boundingRect;
-            const int yStart = (seg.beamAtTop ? rect.top() : rect.bottom());
-            const int yEnd = (seg.beamAtTop ? (rect.bottom()) : (rect.top()));
-            const int yStep = (seg.beamAtTop ? +1 : -1);
+            QRect rect = seg->boundingRect;
+            const int yStart = (seg->beamAtTop ? rect.top() : rect.bottom());
+            const int yEnd = (seg->beamAtTop ? (rect.bottom()) : (rect.top()));
+            const int yStep = (seg->beamAtTop ? +1 : -1);
 
 
             for (int x = qMin(rect.right() + 1, workImage.width() - 1);
                     x <= qMin(rect.right() + 2, workImage.width() - 1); ++x) {
 
-                for (int y = yStart; (seg.beamAtTop ? (y <= yEnd) : (y >= yEnd)); y += yStep) {
+                for (int y = yStart; (seg->beamAtTop ? (y <= yEnd) : (y >= yEnd)); y += yStep) {
                     const QPoint p(x, y);
 
                     if (workImage.pixel(p) != BlackColor) continue;
@@ -377,11 +389,9 @@ namespace Munip
                         break;
                     }
 
-                    bool valid = false;
-                    StemSegment rightSegment = stemSegmentForPoint(pathPoints.last(), valid);
-                    valid = (valid && seg != rightSegment);
+                    const StemSegment *rightSegment = stemSegmentForPoint(pathPoints.last());
 
-                    if (valid) {
+                    if (rightSegment && seg != rightSegment) {
                         QList<QPoint> result = solidifyPath(pathPoints, seg, rightSegment, visited);
                         QRect boundRect;
                         foreach (const QPoint& resultPt, result) {
@@ -404,25 +414,23 @@ namespace Munip
         qDebug() << Q_FUNC_INFO << "Num of beam segments = " << id << endl;
     }
 
-    StemSegment StaffData::stemSegmentForPoint(const QPoint& p, bool &validOutput)
+    const StemSegment* StaffData::stemSegmentForPoint(const QPoint& p) const
     {
         for (int i = 0; i < stemSegments.size(); ++i) {
-            StemSegment seg = stemSegments.at(i);
-            QRect rect = seg.boundingRect;
+            const StemSegment *seg = stemSegments.at(i);
+            QRect rect = seg->boundingRect;
             rect.setLeft(rect.left() - 2);
             rect.setTop(rect.top() - 1);
             rect.setBottom(rect.bottom() + 1);
             if (rect.contains(p)) {
-                validOutput = true;
                 return seg;
             }
         }
-        validOutput = false;
-        return StemSegment();
+        return 0;
     }
 
     QList<QPoint> StaffData::solidifyPath(const QList<QPoint> &pathPoints,
-            const StemSegment& left, const StemSegment& right,
+            const StemSegment *left, const StemSegment *right,
             QSet<QPoint> &visited)
     {
         QList<QPoint> result;
@@ -442,8 +450,8 @@ namespace Munip
                 pts << l << t << r << b;
 
                 foreach (const QPoint& pt, pts) {
-                    if (pt.x() > left.boundingRect.right() &&
-                            pt.x() < right.boundingRect.left() &&
+                    if (pt.x() > left->boundingRect.right() &&
+                            pt.x() < right->boundingRect.left() &&
                             pt.y() >= 0 &&
                             pt.y() < workImage.height() &&
                             workImage.pixel(pt) == BlackColor &&
@@ -487,10 +495,10 @@ namespace Munip
         int verticalMargin = dw->staffSpaceHeight().min - dw->staffLineHeight().min;
         qDebug() << "Margins: " << margin << verticalMargin;
 
-        QList<NoteHeadSegment>::iterator it = noteHeadSegments.begin();
-        for (; it != noteHeadSegments.end(); ++it) {
-            NoteHeadSegment &seg = *it;
-            QRect segRect = seg.boundingRect;
+        for (int i = 0; i < noteHeadSegments.size(); ++i) {
+            NoteHeadSegment *seg = noteHeadSegments[i];
+            QRect segRect = seg->boundingRect;
+
             QList<int> projHelper;
             for (int y = segRect.top(); y <= segRect.bottom(); ++y) {
                 int count = 0;
@@ -521,15 +529,15 @@ namespace Munip
                     int midY = segRect.top() + i + (runlength >> 1);
                     QRect rect(segRect.left(), midY - margin, segRect.width(),
                             margin * 2);
-                    seg.noteRects << rect;
+                    seg->noteRects << rect;
                 }
 
                 i += runlength - 1;
             }
 
-            seg.horizontalProjection.clear();
+            seg->horizontalProjection.clear();
             for (int i = 0; i < projHelper.size(); ++i) {
-                seg.horizontalProjection.insert(i + segRect.top(), projHelper.at(i));
+                seg->horizontalProjection.insert(i + segRect.top(), projHelper.at(i));
             }
 
         }
@@ -541,8 +549,8 @@ namespace Munip
         p.setBrush(QBrush(QColor(Qt::white)));
         p.setPen(Qt::NoPen);
 
-        foreach (const NoteHeadSegment& nSeg, noteHeadSegments) {
-            foreach (const QRect &chordRect, nSeg.noteRects) {
+        foreach (const NoteHeadSegment* nSeg, noteHeadSegments) {
+            foreach (const QRect &chordRect, nSeg->noteRects) {
                 p.drawRect(chordRect);
             }
         }
@@ -554,12 +562,11 @@ namespace Munip
         const QRect staffRect = workImage.rect();
         DataWarehouse *dw = DataWarehouse::instance();
 
-        QList<StemSegment>::iterator it = stemSegments.begin();
-        for (; it != stemSegments.end(); ++it) {
-            StemSegment &seg = *it;
+        for (int i = 0; i < stemSegments.size(); ++i) {
+            StemSegment *seg = stemSegments[i];
             QRect areaToTry(0, 0, dw->staffSpaceHeight().min >> 1,
-                    seg.boundingRect.height());
-            areaToTry.moveTo(seg.boundingRect.topRight());
+                    seg->boundingRect.height());
+            areaToTry.moveTo(seg->boundingRect.topRight());
             areaToTry.translate(1, 0); // move another pixel towards right
 
             if (areaToTry.left() > staffRect.right()) continue;
@@ -595,9 +602,9 @@ namespace Munip
                 avgTransitions = int(qRound(qreal(sum)/numTransitions.size()));
             }
 
-            seg.flagCount = avgTransitions;
+            seg->flagCount = avgTransitions;
             if (avgTransitions) {
-                qDebug() << Q_FUNC_INFO << seg.boundingRect.topLeft() << seg.boundingRect.bottomRight();
+                qDebug() << Q_FUNC_INFO << seg->boundingRect.topLeft() << seg->boundingRect.bottomRight();
                 qDebug() << numTransitions << endl;
             }
         }
@@ -642,12 +649,12 @@ namespace Munip
 
         QPainter p(&img);
 
-        foreach (const NoteHeadSegment& seg, noteHeadSegments) {
+        foreach (const NoteHeadSegment* seg, noteHeadSegments) {
             p.setPen(QColor(Qt::red));
-            QRect segRect = seg.boundingRect;
+            QRect segRect = seg->boundingRect;
 
-            QHash<int, int>::const_iterator it = seg.horizontalProjection.constBegin();
-            while (it != seg.horizontalProjection.constEnd()) {
+            QHash<int, int>::const_iterator it = seg->horizontalProjection.constBegin();
+            while (it != seg->horizontalProjection.constEnd()) {
                 p.drawLine(segRect.left(), it.key(),
                         segRect.left() + it.value(), it.key());
                 ++it;

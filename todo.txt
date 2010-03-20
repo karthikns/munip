@@ -26,3 +26,5 @@
   components.</strike>
 * <strike>Stems' actual coordinates not correctly determined yet (top and bottom are that of StaffBoundRect)
     Fix this!! This is very important for robustifying beam detection.</strike>
+* Fix the flaw marked in StaffData::extractNoteHeadSegmetns(), won't scale when there are 0 entries
+  rather than missing keys.
