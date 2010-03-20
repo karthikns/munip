@@ -333,11 +333,6 @@ namespace Munip
             stemSeg->boundingRect = stemRect;
             stemSeg->noteSegment = seg;
 
-            int lDist = qAbs(seg->boundingRect.left() - stemSeg->boundingRect.left());
-            int rDist = qAbs(seg->boundingRect.right() - stemSeg->boundingRect.left());
-
-            // == cond not thought, but guess not needed.
-            stemSeg->beamAtTop = (lDist > rDist);
             stemSegments << stemSeg;
         }
 
@@ -368,15 +363,11 @@ namespace Munip
 
         foreach (StemSegment *seg, stemSegments) {
             QRect rect = seg->boundingRect;
-            const int yStart = (seg->beamAtTop ? rect.top() : rect.bottom());
-            const int yEnd = (seg->beamAtTop ? (rect.bottom()) : (rect.top()));
-            const int yStep = (seg->beamAtTop ? +1 : -1);
-
 
             for (int x = qMin(rect.right() + 1, workImage.width() - 1);
                     x <= qMin(rect.right() + 2, workImage.width() - 1); ++x) {
 
-                for (int y = yStart; (seg->beamAtTop ? (y <= yEnd) : (y >= yEnd)); y += yStep) {
+                for (int y = rect.top(); y <= rect.bottom(); ++y) {
                     const QPoint p(x, y);
 
                     if (workImage.pixel(p) != BlackColor) continue;
@@ -492,7 +483,7 @@ namespace Munip
             QRect rect = seg->boundingRect;
             rect.setLeft(rect.left() - 2);
             rect.setTop(rect.top() - 1);
-            rect.setBottom(rect.bottom() + 1);
+            rect.setBottom(rect.bottom() + 2);
             if (rect.contains(p)) {
                 return seg;
             }

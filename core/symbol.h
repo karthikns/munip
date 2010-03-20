@@ -39,7 +39,6 @@ namespace Munip
 
         QRect boundingRect;
         NoteSegment *noteSegment;
-        bool beamAtTop;
         int leftFlagCount;
         int rightFlagCount;
 
@@ -55,7 +54,6 @@ namespace Munip
     private:
         StemSegment() {
             noteSegment = 0;
-            beamAtTop = true;
             leftFlagCount = rightFlagCount = 0;
         }
     };
