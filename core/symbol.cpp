@@ -8,8 +8,8 @@
 
 namespace Munip
 {
-    static bool lessThanNoteHeadSegmentPointers(const NoteHeadSegment *l,
-            const NoteHeadSegment *r)
+    static bool lessThanNoteSegmentPointers(const NoteSegment *l,
+            const NoteSegment *r)
     {
         return l->boundingRect.left() < r->boundingRect.left();
     }
@@ -38,7 +38,7 @@ namespace Munip
 
         findMaxProjections();
 
-        extractNoteHeadSegments();
+        extractNoteSegments();
 
         extractStemSegments();
 
@@ -132,7 +132,7 @@ namespace Munip
         return maxRun;
     }
 
-    void StaffData::extractNoteHeadSegments()
+    void StaffData::extractNoteSegments()
     {
         DataWarehouse *dw = DataWarehouse::instance();
         int n1_2 = 2 * (dw->staffLineHeight().max);
@@ -182,7 +182,7 @@ namespace Munip
 
         }
 
-        // Now fill up noteHeadSegments list (datastructure construction)
+        // Now fill up noteSegments list (datastructure construction)
         // Update the keys as we added some new keys
         keys = noteProjections.keys();
         qSort(keys);
@@ -204,17 +204,17 @@ namespace Munip
             i += runlength - 1;
 
             int xCenter = key + (runlength >> 1);
-            NoteHeadSegment *n = NoteHeadSegment::create();
+            NoteSegment *n = NoteSegment::create();
             // n->boundingRect = QRect(xCenter - noteWidth, top, noteWidth * 2, height);
             n->boundingRect = QRect(xCenter - (noteWidth >> 1), top, noteWidth, height);
             // TODO: BoundingRect should include beams, but thats not being drawn. Check that.
             //n->boundingRect = QRect(key, top, runlength, height);
 
-            noteHeadSegments << n;
+            noteSegments << n;
         }
 
-        qSort(noteHeadSegments.begin(), noteHeadSegments.end(),
-                lessThanNoteHeadSegmentPointers);
+        qSort(noteSegments.begin(), noteSegments.end(),
+                lessThanNoteSegmentPointers);
     }
 
     QHash<int, int> StaffData::filter(Range , Range height,
@@ -244,7 +244,7 @@ namespace Munip
         DataWarehouse *dw = DataWarehouse::instance();
         const int lineHeight = dw->staffLineHeight().min * 2;
 
-        foreach (NoteHeadSegment* seg, noteHeadSegments) {
+        foreach (NoteSegment* seg, noteSegments) {
             QRect rect = seg->boundingRect;
             rect.setLeft(qMax(0, rect.left() - lineHeight));
             rect.setRight(qMin(workImage.width() - 1, rect.right() + lineHeight));
@@ -303,7 +303,7 @@ namespace Munip
 
             StemSegment *stemSeg = StemSegment::create();
             stemSeg->boundingRect = stemRect;
-            stemSeg->noteHeadSegment = seg;
+            stemSeg->noteSegment = seg;
 
             int lDist = qAbs(seg->boundingRect.left() - stemSeg->boundingRect.left());
             int rDist = qAbs(seg->boundingRect.right() - stemSeg->boundingRect.left());
@@ -495,8 +495,8 @@ namespace Munip
         int verticalMargin = dw->staffSpaceHeight().min - dw->staffLineHeight().min;
         qDebug() << "Margins: " << margin << verticalMargin;
 
-        for (int i = 0; i < noteHeadSegments.size(); ++i) {
-            NoteHeadSegment *seg = noteHeadSegments[i];
+        for (int i = 0; i < noteSegments.size(); ++i) {
+            NoteSegment *seg = noteSegments[i];
             QRect segRect = seg->boundingRect;
 
             QList<int> projHelper;
@@ -549,7 +549,7 @@ namespace Munip
         p.setBrush(QBrush(QColor(Qt::white)));
         p.setPen(Qt::NoPen);
 
-        foreach (const NoteHeadSegment* nSeg, noteHeadSegments) {
+        foreach (const NoteSegment* nSeg, noteSegments) {
             foreach (const QRect &chordRect, nSeg->noteRects) {
                 p.drawRect(chordRect);
             }
@@ -649,7 +649,7 @@ namespace Munip
 
         QPainter p(&img);
 
-        foreach (const NoteHeadSegment* seg, noteHeadSegments) {
+        foreach (const NoteSegment* seg, noteSegments) {
             p.setPen(QColor(Qt::red));
             QRect segRect = seg->boundingRect;
 

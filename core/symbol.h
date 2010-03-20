@@ -14,9 +14,9 @@ namespace Munip
 {
     class Range;
 
-    struct NoteHeadSegment
+    struct NoteSegment
     {
-        static NoteHeadSegment* create() { return new NoteHeadSegment; }
+        static NoteSegment* create() { return new NoteSegment; }
 
         QRect boundingRect;
         QList<QRect> noteRects;
@@ -25,12 +25,12 @@ namespace Munip
 
         /// Its enough to compare bounding rectangles as two note segments
         /// can't have same bounds.
-        bool isEqualTo(const NoteHeadSegment* rhs) const {
+        bool isEqualTo(const NoteSegment* rhs) const {
             return boundingRect == rhs->boundingRect;
         }
 
     private:
-        NoteHeadSegment() {}
+        NoteSegment() {}
     };
 
     struct StemSegment
@@ -38,17 +38,17 @@ namespace Munip
         static StemSegment* create() { return new StemSegment; }
 
         QRect boundingRect;
-        NoteHeadSegment *noteHeadSegment;
+        NoteSegment *noteSegment;
         int flagCount;
         bool beamAtTop;
 
         bool isEqualTo(const StemSegment* other) const {
-            return noteHeadSegment == other->noteHeadSegment &&
+            return noteSegment == other->noteSegment &&
                 boundingRect == other->boundingRect;
         }
 
     private:
-        StemSegment() { noteHeadSegment = 0; beamAtTop = true; flagCount = 0;}
+        StemSegment() { noteSegment = 0; beamAtTop = true; flagCount = 0;}
     };
 
     struct StaffData
@@ -62,7 +62,7 @@ namespace Munip
         void findMaxProjections();
         int determinePeakHValueFrom(const QList<int> &horProjValues);
 
-        void extractNoteHeadSegments();
+        void extractNoteSegments();
         QHash<int, int> filter(Range width, Range height, const QHash<int, int> &hash);
 
         void extractStemSegments();
@@ -92,7 +92,7 @@ namespace Munip
         QHash<int, int> noteProjections;
         QHash<int, int> stemsProjections;
 
-        QList<NoteHeadSegment*> noteHeadSegments;
+        QList<NoteSegment*> noteSegments;
         QList<StemSegment*> stemSegments;
         QHash<QPoint, int> beamPoints;
 

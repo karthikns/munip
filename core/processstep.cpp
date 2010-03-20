@@ -2034,7 +2034,7 @@ void SymbolAreaExtraction::process()
                 color.setAlpha(100);
                 p.setBrush(color);
                 p.setPen(Qt::NoPen);
-                foreach (const NoteHeadSegment *n, sd->noteHeadSegments) {
+                foreach (const NoteSegment *n, sd->noteSegments) {
                     p.drawRect(n->boundingRect);
                 }
             }
@@ -2048,7 +2048,7 @@ void SymbolAreaExtraction::process()
                 int currentIndex = 0;
 
                 p.setPen(Qt::NoPen);
-                foreach (const NoteHeadSegment *n, sd->noteHeadSegments) {
+                foreach (const NoteSegment *n, sd->noteSegments) {
                     foreach (const QRect& r, n->noteRects) {
                         colors[currentIndex].setAlpha(100);
                         p.setBrush(colors[currentIndex]);
