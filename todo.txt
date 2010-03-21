@@ -1,7 +1,4 @@
-* <strike>Vertical detection from note heads</strike>
 * Eliminate false positives for note heads (sharp symbol, Bass cleff)
-* <strike>Beam detection</strike>
-* <strike>Chord detections</strike>
 * Flags detection {
          Implemented a crude flag detection algorithm based on black - white
          transitions.
@@ -22,11 +19,17 @@
          An independent approach can be used as neither half nor whole note are beamed or flagged.
 }
 * Fix bug in staff line detection (staff bound rect, line aggregation)
-* <strike>Try to use shortest path for beam detection rather than blind implementatin of connected
-  components.</strike>
-* <strike>Stems' actual coordinates not correctly determined yet (top and bottom are that of StaffBoundRect)
-    Fix this!! This is very important for robustifying beam detection.</strike>
-* Fix the flaw marked in StaffData::extractNoteHeadSegmetns(), won't scale when there are 0 entries
-  rather than missing keys.
 * For beam detection, better algorithm would be draw beams in different color (workImage). This way
   testing for stem pixel will be reduced to O(1) and the algo would be more robust.
+
+COMPLETED TODOS
+===============
+* Vertical detection from note heads
+* Beam detection
+* Chord detections
+* Try to use shortest path for beam detection rather than blind implementatin of connected
+  components.
+* Stems' actual coordinates not correctly determined yet (top and bottom are that of StaffBoundRect)
+    Fix this!! This is very important for robustifying beam detection.
+* Fix the flaw marked in StaffData::extractNoteHeadSegmetns(), won't scale when there are 0 entries
+  rather than missing keys.

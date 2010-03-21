@@ -1994,7 +1994,7 @@ void SymbolAreaExtraction::process()
             // p.fillRect(0, 0, img.width(), img.height(), QBrush(Qt::white));
 
             // Draw beam points
-            if (1) {
+            if (0) {
                 p.setBrush(Qt::NoBrush);
                 QHash<QPoint, int>::const_iterator it = sd->beamPoints.constBegin();
                 QColor colors_beam[5] = {
@@ -2029,7 +2029,7 @@ void SymbolAreaExtraction::process()
 
 
             // Draw note regions.
-            if (0) {
+            if (1) {
                 QColor color = QColor(Qt::darkYellow);
                 color.setAlpha(100);
                 p.setBrush(color);
@@ -2067,9 +2067,10 @@ void SymbolAreaExtraction::process()
 
         y += sh + 50;
 
-        //p.drawImage(QPoint(0, y), sd->projectionImage(sd->noteProjections));
+        //p.drawImage(QPoint(0, y), sd->projectionImage(sd->maxProjections));
+        p.drawImage(QPoint(0, y), sd->projectionImage(sd->noteProjections));
         //p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectionImage());
-        p.drawImage(QPoint(0, y), sd->workImage);
+        //p.drawImage(QPoint(0, y), sd->workImage);
 
         y += sh + 50;
     }

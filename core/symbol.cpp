@@ -169,63 +169,75 @@ namespace Munip
         QList<int> keys = noteProjections.keys();
         qSort(keys);
 
-        int lineHeight = dw->staffLineHeight().min;
-        // Fill up very thin gaps.
-        for (int i = 1; i < keys.size(); ++i) {
-            //TODO: Flaw, won't scale when there are 0 entries rather than missing keys.
-            int diff = keys[i] - keys[i-1];
-            if (diff == 0) {
-                continue;
+
+        // Fill up very thin gaps. (aka the bald note head region ;) )
+        const int ThinGapLimit = (dw->staffLineHeight().min >> 1);
+
+        for (int i = keys.first(); i <= keys.last(); ++i) {
+            if (noteProjections.value(i, 0) > 0) continue;
+
+            int runlength = 0;
+            for (; (i + runlength) <= keys.last(); ++runlength) {
+                if (noteProjections.value(i+runlength, 0) > 0) break;
             }
-            if (diff <= (lineHeight>>1)) {
-                int valueToInsert = qMin(noteProjections[keys[i]], noteProjections[keys[i-1]]);
-                for (int j = keys[i-1] + 1; j < keys[i]; ++j) {
+
+            if (runlength <= ThinGapLimit) {
+                // valueToInsert will be min of the values surrounding '0' run.
+                int valueToInsert = qMin(noteProjections.value(i-1, 0),
+                        noteProjections.value(i+runlength, 0));
+                for (int j = i; j < (i+runlength); ++j) {
                     noteProjections[j] = valueToInsert;
                 }
             }
+
+            i += runlength - 1;
         }
+
+        // Update the keys variable as we inserted few in above loop.
+        keys = noteProjections.keys();
+        qSort(keys);
+
         // Remove peak region which are very thin or very thick.
-        for (int i = 0; i < keys.size(); ++i) {
+        const int ThinRegionLimit = dw->staffSpaceHeight().min >> 1;
+        const int ThickRegionLimit = dw->staffSpaceHeight().max << 1;
+
+        for (int i = keys.first(); i <= keys.last(); ++i) {
+            if (noteProjections.value(i, 0) == 0) continue;
+
             int runlength = 0;
-            int key = keys[i];
-            if (noteProjections.value(key) == 0) continue;
-            while (i+runlength < keys.size() &&
-                    noteProjections.value(keys[i]+runlength, 0) != 0) {
-                ++runlength;
+            for (; (i+runlength) <= keys.last(); ++runlength) {
+                if (noteProjections.value(i+runlength, 0) == 0) break;
             }
 
-            if (runlength < (dw->staffSpaceHeight().min >>1)
-                    || runlength >= (dw->staffSpaceHeight().max << 1)) {
-                for (int j = 0; j<runlength;j++) {
-                    noteProjections[j+keys[i]] = 0;
+            if (runlength <= ThinRegionLimit || runlength >= ThickRegionLimit) {
+                for (int j = i; j < (i+runlength); ++j) {
+                    noteProjections[j] = 0;
                 }
             }
-            i += runlength - 1;
 
+            i += runlength - 1;
         }
 
-        // Now fill up noteSegments list (datastructure construction)
         // Update the keys as we added some new keys
         keys = noteProjections.keys();
         qSort(keys);
 
+        // Now fill up noteSegments list (datastructure construction)
         const QRect r = workImage.rect();
         const int top = r.top();
         const int height = r.height();
         const int noteWidth = 2 * DataWarehouse::instance()->staffSpaceHeight().min;
 
-        for (int i = 0; i < keys.size(); ++i) {
+        for (int i = keys.first(); i <= keys.last(); ++i) {
+            if (noteProjections.value(i, 0) == 0) continue;
+
             int runlength = 0;
-            int key = keys[i];
-            if (noteProjections.value(key) == 0) continue;
-            while (i+runlength < keys.size() &&
-                    noteProjections.value(keys[i]+runlength, 0) != 0) {
-                ++runlength;
+            for (; (i+runlength) <= keys.last(); ++runlength) {
+                if (noteProjections.value(i+runlength, 0) == 0) break;
             }
 
-            i += runlength - 1;
 
-            int xCenter = key + (runlength >> 1);
+            int xCenter = i + (runlength >> 1);
             NoteSegment *n = NoteSegment::create();
             // n->boundingRect = QRect(xCenter - noteWidth, top, noteWidth * 2, height);
             n->boundingRect = QRect(xCenter - (noteWidth >> 1), top, noteWidth, height);
@@ -233,6 +245,8 @@ namespace Munip
             //n->boundingRect = QRect(key, top, runlength, height);
 
             noteSegments << n;
+
+            i += runlength - 1;
         }
 
         qSort(noteSegments.begin(), noteSegments.end(),
