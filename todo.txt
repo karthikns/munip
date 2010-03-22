@@ -21,6 +21,10 @@
 * Fix bug in staff line detection (staff bound rect, line aggregation)
 * For beam detection, better algorithm would be draw beams in different color (workImage). This way
   testing for stem pixel will be reduced to O(1) and the algo would be more robust.
+* Handle special case where wide note head region is induced due to thickened beams which are removed
+  with assumption that its cleff or some wider symbol. {
+         Probably a check for stems can be made and then appropriately segmented.
+}
 
 COMPLETED TODOS
 ===============

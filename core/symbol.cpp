@@ -36,7 +36,9 @@ namespace Munip
         staff(stf),
         image(img)
     {
-        SlidingWindowSize = DataWarehouse::instance()->staffLineHeight().max;
+        // SlidingWindowSize should atleast be 4 pixels wide,
+        // else it results in lots of false positives.
+        SlidingWindowSize = qMax(4, DataWarehouse::instance()->staffLineHeight().max);
         workImage = staffImage();
     }
 
@@ -121,6 +123,11 @@ namespace Munip
                     int count = 0;
 
                     for (int i = 0; i < SlidingWindowSize && (x+i) <= sr.right(); ++i) {
+
+                        // The following condition eliminates 90% of false positives!!!
+                        // It mainly discards the count if it the row begins with white pixel.
+                        if (i == 0 && workImage.pixel(x+i, y) != BlackColor) break;
+
                         count += (workImage.pixel(x+i, y) == BlackColor);
                     }
                     projectionHelper << count;
@@ -202,7 +209,9 @@ namespace Munip
         qSort(keys);
 
         // Remove peak region which are very thin or very thick.
-        const int ThinRegionLimit = dw->staffSpaceHeight().min >> 1;
+        // IMPT: 80% the staffSpaceHeight min is really good choice since the regions are now thick,
+        // thanks to filter method cutting the taller ones to the limit rather than previous value.
+        const int ThinRegionLimit = int(qRound(.8 * dw->staffSpaceHeight().min));
         const int ThickRegionLimit = dw->staffSpaceHeight().max << 1;
 
         for (int i = keys.first(); i <= keys.last(); ++i) {
@@ -274,7 +283,10 @@ namespace Munip
         for (int i = 0; i < allKeys.size(); ++i) {
             if (hash[allKeys[i]] < height.min) continue;
             if (hash[allKeys[i]] > height.max) {
-                retval[allKeys[i]] = retval[allKeys[i]-1];
+                // Setting it height.max destroyes the curve, but emboldens the note head region in
+                // a better fashion.
+                retval[allKeys[i]] = height.max;
+                //retval[allKeys[i]-1];
             } else {
                 retval[allKeys[i]] = hash[allKeys[i]];
             }
