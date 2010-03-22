@@ -161,9 +161,13 @@ namespace Munip
         noteProjections = filter(Range(1, 100),
                 Range(n1_2, n1_2 + dw->staffSpaceHeight().max),
                 maxProjections);
+
         noteProjections = filter(Range(1, 100),
                 Range(n1_2 + dw->staffSpaceHeight().min - dw->staffLineHeight().min, 100),
                 noteProjections);
+
+        // temp is just for debugging purpose.
+        temp = noteProjections;
 
         // Removal of false positives.
         QList<int> keys = noteProjections.keys();
@@ -762,5 +766,4 @@ namespace Munip
         p.end();
         return img;
     }
-
 }

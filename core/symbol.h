@@ -100,6 +100,8 @@ namespace Munip
         QHash<int, int> noteProjections;
         QHash<int, int> stemsProjections;
 
+        QHash<int, int> temp;
+
         QList<NoteSegment*> noteSegments;
         QList<StemSegment*> stemSegments;
         QHash<QPoint, int> beamPoints;

@@ -85,9 +85,15 @@ namespace Munip
     double normalizedLineTheta(const QLineF& line);
 }
 
-inline QDebug& operator<<(QDebug& dbg, const Munip::Range& range)
+inline QDebug operator<<(QDebug dbg, const Munip::Range& range)
 {
-    dbg << "Range(" << range.min << "-->" << range.max <<") = " << range.size();
+    dbg.nospace() << "Range(" << range.min << "-->" << range.max <<") = " << range.size();
+    return dbg.space();
+}
+
+inline QDebug operator<<(QDebug dbg, const Munip::Run& run)
+{
+    dbg.nospace() << "Run [" << run.pos << "] --> " << run.length << " pixels";
     return dbg.space();
 }
 
