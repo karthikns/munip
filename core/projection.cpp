@@ -1,5 +1,7 @@
 #include "projection.h"
 
+#include "tools.h"
+
 namespace Munip {
     const qreal ProjectionItem::BarWidth = 3;
 
@@ -83,7 +85,9 @@ namespace Munip {
 
     ProjectionData grayScaleHistogram(const QImage& image)
     {
-        ProjectionData data(256, 0);
+        ProjectionData data;
+        resizeList(data, 256, 0);
+
         for(int x = 0; x < image.width(); ++x) {
             for(int y = 0; y < image.height(); ++y) {
                 QRgb rgb = image.pixel(x, y);

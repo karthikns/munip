@@ -4,7 +4,6 @@ CONFIG += static
 
 # Input
 HEADERS += datawarehouse.h \
-    horizontalrunlengthimage.h \
     imagewidget.h \
     mainwindow.h \
     processstep.h \
@@ -16,7 +15,6 @@ HEADERS += datawarehouse.h \
     cluster.h \
     symbol.h
 SOURCES += datawarehouse.cpp \
-    horizontalrunlengthimage.cpp \
     imagewidget.cpp \
     mainwindow.cpp \
     processstep.cpp \

@@ -4,6 +4,7 @@
 #include "segments.h"
 #include "staff.h"
 
+#include <QColor>
 #include <QDebug>
 #include <QImage>
 
@@ -55,20 +56,96 @@ namespace Munip
         int pos; // x or y coordinate as needed.
         int length; // length of run
 
-        Run(int _pos = -1, int _length=0) :
+        explicit Run(int _pos = -1, int _length=0) :
             pos(_pos),
             length(_length)
         {
         }
 
-        bool operator<(const Run& other) const {
-            return length < other.length;
+        int endPos() const { return pos + length; }
+
+        bool isValid() const {
+            return pos >= 0 && length > 0;
         }
 
-        bool operator>(const Run& other) const {
-            return length > other.length;
+        bool operator==(const Run& rhs) const {
+            return pos == rhs.pos && length == rhs.length;
+        }
+
+        bool operator!=(const Run& rhs) const {
+            return !(*this == rhs);
         }
     };
+
+    struct RunCoord
+    {
+        int pos;
+        Run run;
+
+        explicit RunCoord(int p = -1, const Run& r = Run()) : pos(p), run(r)
+        {
+        }
+
+        bool isValid() const {
+            return pos >= 0 && run.isValid();
+        }
+
+        bool operator==(const RunCoord& rhs) const {
+            return pos == rhs.pos && run == rhs.run;
+        }
+
+        bool operator!=(const RunCoord& rhs) const {
+            return !(*this == rhs);
+        }
+    };
+
+    class RunlengthImage
+    {
+    public:
+        explicit RunlengthImage(const QImage& image, Qt::Orientation orientation,
+                const QColor& color = QColor(Qt::black));
+        virtual ~RunlengthImage();
+
+        Qt::Orientation orientation() const;
+
+        QSize size() const;
+        QRect rect() const;
+
+        const QList<Run>& runs(int index) const;
+        Run run(int x, int y) const;
+
+        QList<Run> adjacentRunsInNextLine(const RunCoord& runCoord) const;
+
+    private:
+        static const QList<Run> InvalidRuns;
+
+        Qt::Orientation m_orientation;
+        QList<QList<Run> >  m_data;
+        QSize m_size;
+    };
+
+    class VerticalRunlengthImage : public RunlengthImage
+    {
+    public:
+        explicit VerticalRunlengthImage(const QImage& image,
+                const QColor& color = QColor(Qt::black));
+        ~VerticalRunlengthImage();
+
+        const QList<Run>& runsForColumn(int index) const;
+        QList<Run> adjacentRunsInNextColumn(const RunCoord& runCoord) const;
+    };
+
+    template<typename X>
+    static void resizeList(QList<X> &list, int size, const X& defaultValue)
+    {
+        if (list.size() > size) {
+            list.erase(list.begin() + size, list.end());
+        } else if (list.size() < size) {
+            for (int i = list.size(); i < size; ++i) {
+                list << defaultValue;
+            }
+        }
+    }
 
     QImage convertToMonochrome(const QImage& image, int threshold = 200);
     QPointF meanOfPoints(const QList<QPoint>& pixels);
@@ -81,8 +158,6 @@ namespace Munip
     bool segmentSortByPosition(Segment &s1,Segment &s2);
     bool staffLineSort(StaffLine &line1,StaffLine &line2);
     bool symbolRectSort(QRect &symbolRect1,QRect &symbolRect2);
-
-    double normalizedLineTheta(const QLineF& line);
 }
 
 inline QDebug operator<<(QDebug dbg, const Munip::Range& range)
@@ -102,6 +177,20 @@ inline QDebug operator<<(QDebug dbg, const Munip::Run& run)
 inline uint qHash(const QPoint& p)
 {
     return p.x() * 4000 + p.y();
+}
+
+namespace Munip {
+    inline uint qHash(const Munip::Run& run)
+    {
+        if (!run.isValid()) return 0;
+        return run.pos * 4000 + run.length + 1;
+    }
+
+    inline uint qHash(const Munip::RunCoord &runCoord)
+    {
+        if (!runCoord.isValid()) return 0;
+        return runCoord.pos * 4000 + qHash(runCoord.run) + 1;
+    }
 }
 
 #endif

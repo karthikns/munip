@@ -26,6 +26,9 @@
          Probably a check for stems can be made and then appropriately segmented.
 }
 
+* While computing and storing max H projection, also think of storing the position which contributed
+   to max projection. This can probably used to get rid of beams interfering note detection.
+
 COMPLETED TODOS
 ===============
 * Vertical detection from note heads

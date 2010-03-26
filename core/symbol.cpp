@@ -320,7 +320,7 @@ namespace Munip
 
                     Run run(y, runlength);
 
-                    if (xWithMaxRunLength < 0 || run > maxRun) {
+                    if (xWithMaxRunLength < 0 || run.length > maxRun.length) {
                         xWithMaxRunLength = x;
                         maxRun = run;
                     }
@@ -385,207 +385,104 @@ namespace Munip
     void StaffData::extractBeams()
     {
         mDebug() << Q_FUNC_INFO;
-        const QRgb BlackColor = QColor(Qt::black).rgb();
-        const QPoint delta = staff.boundingRect().topLeft() * 0;
+        beamsRunCoords.clear();
+        VerticalRunlengthImage vRunImage(workImage);
 
-        int id = 0;
-        QSet<QPoint> visited;
+        QSet<RunCoord> visited;
+        QHash<RunCoord, RunCoord> prevCoord;
+
+        DataWarehouse *dw = DataWarehouse::instance();
+        const int MinimumBeamRunlengthLimit = dw->staffSpaceHeight().min >> 1;
 
         foreach (StemSegment *seg, stemSegments) {
-            QRect rect = seg->boundingRect;
+            const QRect rect = seg->boundingRect;
+            const RunCoord stemRunCoord(rect.right() + 1, Run(rect.top(), rect.height()));
 
-            for (int x = rect.right() + 1; x <= (rect.right() + 2); ++x) {
-                if (x >= workImage.width()) break;
+            QStack<RunCoord> stack; // For DFS
+            stack.push(stemRunCoord);
 
-                for (int y = rect.top(); y <= rect.bottom(); ++y) {
-                    const QPoint p(x, y);
+            while (!stack.isEmpty()) {
+                RunCoord runCoord = stack.pop();
+                if (!runCoord.isValid()) continue;
 
-                    if (workImage.pixel(p) != BlackColor) continue;
+                QList<Run> adjRuns = vRunImage.adjacentRunsInNextColumn(runCoord);
 
-                    if (visited.contains(p)) continue;
-
-                    QList<QPoint> pathPoints;
-                    pathPoints << p;
-
-                    QSet<QPoint> localVisited;
-                    localVisited << p;
-
-                    const QPoint rightUpDownDelta[3] = {
-                        QPoint(+1, 0), QPoint(0, -1), QPoint(0, +1)
-                    };
-                    const QPoint rightDownUpDelta[3] = {
-                        QPoint(+1, 0), QPoint(0, +1), QPoint(0, -1)
-                    };
-
-                    while (1) {
-                        const QPoint lastPoint = pathPoints.last();
-                        bool addedNewPathPoint = false;
-
-                        for (int i = 0; i < 3; ++i) {
-                            QPoint newP = lastPoint + rightUpDownDelta[i];
-                            if (newP.x() >= workImage.width()) continue;
-                            if (newP.y() >= workImage.height()) continue;
-                            if (newP.y() < 0) continue;
-
-                            if (workImage.pixel(newP) == BlackColor &&
-                                    !visited.contains(newP) &&
-                                    !localVisited.contains(newP))
-                            {
-                                pathPoints << newP;
-                                localVisited << newP;
-                                addedNewPathPoint = true;
-                                break;
-                            }
-
-                        }
-
-                        if (!addedNewPathPoint) {
-                            break;
-                        }
+                bool pushed = false;
+                foreach (const Run& adjRun, adjRuns) {
+                    RunCoord adjRunCoord(runCoord.pos + 1, adjRun);
+                    if (adjRunCoord.isValid() &&
+                            adjRunCoord.run.length >= MinimumBeamRunlengthLimit &&
+                            !visited.contains(adjRunCoord))
+                    {
+                        prevCoord[adjRunCoord] = runCoord;
+                        stack.push(adjRunCoord);
+                        pushed = true;
                     }
+                }
 
-                    StemSegment *rightSegment = stemSegmentForPoint(pathPoints.last());
+                if (!pushed) {
+                    StemSegment *right = stemSegmentForRunCoord(runCoord);
+                    if (right && right != seg) {
+                        QList<RunCoord> beamCoords;
 
-                    if (!rightSegment) {
-                        pathPoints.clear();
-                        localVisited.clear();
-                        pathPoints << p;
-
-                        while (1) {
-                            const QPoint lastPoint = pathPoints.last();
-                            bool addedNewPathPoint = false;
-
-                            for (int i = 0; i < 3; ++i) {
-                                QPoint newP = lastPoint + rightDownUpDelta[i];
-                                if (newP.x() >= workImage.width()) continue;
-                                if (newP.y() >= workImage.height()) continue;
-                                if (newP.y() < 0) continue;
-
-                                if (workImage.pixel(newP) == BlackColor &&
-                                        !visited.contains(newP) &&
-                                        !localVisited.contains(newP))
-                                {
-                                    pathPoints << newP;
-                                    localVisited << newP;
-                                    addedNewPathPoint = true;
-                                    break;
-                                }
-
-                            }
-
-                            if (!addedNewPathPoint) {
-                                break;
-                            }
-                        }
-
-                        rightSegment = stemSegmentForPoint(pathPoints.last());
-                    }
-
-                    visited.unite(localVisited);
-
-                    if (rightSegment && seg != rightSegment) {
-                        QList<QPoint> result = solidifyPath(pathPoints, seg, rightSegment, visited);
+                        right->leftFlagCount += 1;
                         seg->rightFlagCount += 1;
-                        rightSegment->leftFlagCount += 1;
-                        QRect boundRect;
-                        foreach (const QPoint& resultPt, result) {
-                            beamPoints.insert(resultPt, id);
-                            if (boundRect.isNull()) {
-                                boundRect = QRect(resultPt, resultPt);
-                            } else {
-                                boundRect |= QRect(resultPt, resultPt);
-                            }
+
+                        RunCoord cur = runCoord;
+                        // This loop takes care not to push stemRunCoord as that
+                        // is the artifact we created for convenience.
+                        while (1) {
+                            RunCoord prev = prevCoord.value(cur, RunCoord());
+                            if (!prev.isValid()) break;
+
+                            beamCoords << cur;
+
+                            cur = prev;
                         }
-                        mDebug() << "id = " << id
-                            << "num points = " << result.size()
-                            << "Bound: "
-                            << boundRect.topLeft() + delta
-                            << boundRect.bottomRight() + delta << endl
-                            << "Left: " << seg << endl
-                            << "Right: " << rightSegment << endl << endl;
-                        ++id;
+
+                        beamsRunCoords << beamCoords;
                     }
                 }
             }
         }
 
-        mDebug() << endl << "Num of beam segments = " << id << endl;
+        mDebug() << "Num of beam segments = " << beamsRunCoords.size();
     }
 
-    StemSegment* StaffData::stemSegmentForPoint(const QPoint& p)
+    StemSegment* StaffData::stemSegmentForRunCoord(const RunCoord& runCoord)
     {
+        const QRect runRect(runCoord.pos, runCoord.run.pos, 1, runCoord.run.length);
         foreach (StemSegment *seg, stemSegments) {
             QRect rect = seg->boundingRect;
             rect.setLeft(rect.left() - 2);
             rect.setTop(rect.top() - 1);
             rect.setBottom(rect.bottom() + 2);
-            if (rect.contains(p)) {
+            if (rect.intersects(runRect)) {
                 return seg;
             }
         }
         return 0;
     }
 
-    QList<QPoint> StaffData::solidifyPath(const QList<QPoint> &pathPoints,
-            const StemSegment *left, const StemSegment *right,
-            QSet<QPoint> &visited)
-    {
-        QList<QPoint> result;
-        QList<QPoint> lastPassPoints = pathPoints;
-        const QRgb BlackColor = QColor(Qt::black).rgb();
-
-        while (1) {
-            QList<QPoint> nextPassPoints;
-
-            foreach (const QPoint& p, lastPassPoints) {
-                result << p;
-                QPoint l = p, t = p, r = p, b = p;
-                l.rx()--; t.ry()--; r.rx()++; b.ry()++;
-
-                // Construct neighbors.
-                QList<QPoint> pts;
-                pts << l << t << r << b;
-
-                foreach (const QPoint& pt, pts) {
-                    if (pt.x() > left->boundingRect.right() &&
-                            pt.x() < right->boundingRect.left() &&
-                            pt.y() >= 0 &&
-                            pt.y() < workImage.height() &&
-                            workImage.pixel(pt) == BlackColor &&
-                            !visited.contains(pt)) {
-                        visited << pt;
-                        nextPassPoints << pt;
-                    }
-                }
-            }
-
-            if (nextPassPoints.isEmpty()) break;
-            lastPassPoints = nextPassPoints;
-        }
-
-        return result;
-    }
-
     void StaffData::eraseBeams()
     {
         QPainter p(&workImage);
 
-        p.setBrush(QColor(Qt::white));
+        p.setBrush(Qt::NoBrush);
         p.setPen(QColor(Qt::white));
 
-        QHash<QPoint, int>::const_iterator bit = beamPoints.constBegin();
-        while (bit != beamPoints.constEnd()) {
-            p.drawPoint(bit.key());
-            ++bit;
+        foreach (const QList<RunCoord>& oneBeamCoords, beamsRunCoords) {
+            foreach (const RunCoord& runCoord, oneBeamCoords) {
+                p.drawLine(runCoord.pos, runCoord.run.pos,
+                        runCoord.pos, runCoord.run.endPos());
+            }
         }
-
         p.end();
     }
 
     void StaffData::extractChords()
     {
         const QRgb BlackColor = QColor(Qt::black).rgb();
-
 
         DataWarehouse *dw = DataWarehouse::instance();
         const int margin = dw->staffSpaceHeight().min;

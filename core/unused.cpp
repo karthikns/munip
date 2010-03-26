@@ -3,7 +3,6 @@
 
 #include "cluster.h"
 #include "datawarehouse.h"
-#include "horizontalrunlengthimage.h"
 #include "imagewidget.h"
 #include "mainwindow.h"
 #include "projection.h"

@@ -6,7 +6,7 @@
 #include <QVarLengthArray>
 
 namespace Munip {
-    typedef QVector<int> ProjectionData;
+    typedef QList<int> ProjectionData;
 
     class ProjectionItem : public QGraphicsItem
     {

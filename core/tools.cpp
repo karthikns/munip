@@ -8,6 +8,173 @@ namespace Munip
 {
     int IDGenerator::lastID = -1;
 
+    static void initializeHoriontalRunlengthImage(const QImage& image, const QColor& color,
+            QList<QList<Run> > &dataRef)
+    {
+        const QRgb data = color.rgb();
+        resizeList(dataRef, image.height(), QList<Run>());
+
+        for (int y = 0; y < image.height(); ++y) {
+            QList<Run> &row = dataRef[y];
+            row.clear();
+
+            for (int x = 0; x < image.width(); ++x) {
+                if (image.pixel(x, y) != data) continue;
+
+                int runlength = 0;
+                for (; (x + runlength) < image.width(); ++runlength) {
+                    if (image.pixel(x + runlength, y) != data) break;
+                }
+
+                row << Run(x, runlength);
+                x += runlength - 1;
+            }
+        }
+    }
+
+    static void initializeVerticalRunlengthImage(const QImage& image, const QColor& color,
+            QList<QList<Run> > &dataRef)
+    {
+        const QRgb data = color.rgb();
+        resizeList(dataRef, image.width(), QList<Run>());
+
+        for (int x = 0; x < image.width(); ++x) {
+            QList<Run> &col = dataRef[x];
+            col.clear();
+
+            for (int y = 0; y < image.height(); ++y) {
+                if (image.pixel(x, y) != data) continue;
+
+                int runlength = 0;
+                for (; (y + runlength) < image.height(); ++runlength) {
+                    if (image.pixel(x, y + runlength) != data) break;
+                }
+
+                col << Run(y, runlength);
+                y += runlength - 1;
+            }
+        }
+    }
+
+    const QList<Run> RunlengthImage::InvalidRuns = QList<Run>();
+
+    RunlengthImage::RunlengthImage(const QImage& image,
+            Qt::Orientation orientation, const QColor& color) :
+        m_orientation(orientation),
+        m_size(image.size())
+    {
+        if (m_orientation == Qt::Horizontal) {
+            initializeHoriontalRunlengthImage(image, color, m_data);
+        } else {
+            initializeVerticalRunlengthImage(image, color, m_data);
+        }
+    }
+
+    RunlengthImage::~RunlengthImage()
+    {
+    }
+
+    Qt::Orientation RunlengthImage::orientation() const
+    {
+        return m_orientation;
+    }
+
+    QSize RunlengthImage::size() const
+    {
+        return m_size;
+    }
+
+    QRect RunlengthImage::rect() const
+    {
+        return QRect(QPoint(0, 0), m_size);
+    }
+
+    const QList<Run>& RunlengthImage::runs(int index) const
+    {
+        if (index < 0 || index >= m_data.size()) {
+            // needed because, this method returns reference.
+            return RunlengthImage::InvalidRuns;
+        }
+
+        return m_data.at(index);
+    }
+
+    Run RunlengthImage::run(int x, int y) const
+    {
+        Run retval;
+        if (x < 0 || x >= m_size.width()) return retval;
+        if (y < 0 || y >= m_size.height()) return retval;
+
+        const QList<Run>& runsRef =
+            (m_orientation == Qt::Horizontal ? runs(y) : runs(x));
+
+        if (runsRef.isEmpty()) return retval;
+
+        int searchCoord = (m_orientation == Qt::Horizontal ? x : y);
+
+        int l = 0, h = runsRef.size() - 1, mid = 0;
+
+        while (l <= h) {
+            mid = (l + h) / 2;
+            const Run midRun = runsRef.at(mid);
+
+            if (searchCoord >= midRun.pos && searchCoord <= midRun.endPos()) {
+                retval = midRun;
+                break;
+            } else if (searchCoord < midRun.pos) {
+                h = mid - 1;
+            } else {
+                l = mid + 1;
+            }
+        }
+
+        return retval;
+    }
+
+    QList<Run> RunlengthImage::adjacentRunsInNextLine(const RunCoord& runCoord) const
+    {
+        QList<Run> retval;
+
+        if (runCoord.pos < 0 || runCoord.pos >= (m_data.size() - 1)) return retval;
+
+        const int nextCoord = runCoord.pos + 1;
+
+        for (int i = runCoord.run.pos; i < runCoord.run.endPos(); ++i) {
+            Run r;
+            if (m_orientation == Qt::Horizontal) {
+                r = run(i, nextCoord);
+            } else {
+                r = run(nextCoord, i);
+            }
+
+            if (r.isValid()) {
+                retval << r;
+                i = r.endPos();
+            }
+        }
+
+        return retval;
+    }
+
+    VerticalRunlengthImage::VerticalRunlengthImage(const QImage& image,
+            const QColor& color) : RunlengthImage(image, Qt::Vertical, color)
+    {
+    }
+
+    VerticalRunlengthImage::~VerticalRunlengthImage()
+    {
+    }
+
+    const QList<Run>& VerticalRunlengthImage::runsForColumn(int index) const
+    {
+        return runs(index);
+    }
+
+    QList<Run> VerticalRunlengthImage::adjacentRunsInNextColumn(const RunCoord& runCoord) const
+    {
+        return adjacentRunsInNextLine(runCoord);
+    }
+
     QImage convertToMonochrome(const QImage& image, int threshold)
     {
         if (image.format() == QImage::Format_Mono) {
@@ -24,14 +191,14 @@ namespace Munip
 
         const int White = 0, Black = 1;
         // Ensure above index values to color table
-        monochromed.setColor(0, 0xffffffff);
-        monochromed.setColor(1, 0xff000000);
+        monochromed.setColor(White, 0xffffffff);
+        monochromed.setColor(Black, 0xff000000);
 
         for(int x = 0; x < w; ++x) {
             for(int y = 0; y < h; ++y) {
                 bool isWhite = (qGray(image.pixel(x, y)) > threshold);
-                int color = isWhite ? White : Black;
-                monochromed.setPixel(x, y, color);
+                int colorIndex = isWhite ? White : Black;
+                monochromed.setPixel(x, y, colorIndex);
             }
         }
 
@@ -101,15 +268,21 @@ namespace Munip
 
     bool segmentSortByConnectedComponentID(Segment &s1,Segment &s2)
     {
-        return (s1.connectedComponentID() < s2.connectedComponentID())||( (s1.connectedComponentID() == s2.connectedComponentID() ) && (s1.weight() > s2.weight() ) );
+        return (s1.connectedComponentID() < s2.connectedComponentID()) ||
+            ((s1.connectedComponentID() == s2.connectedComponentID()) &&
+             (s1.weight() > s2.weight()));
 
     }
 
     bool segmentSortByPosition(Segment &s1,Segment &s2)
     {
-        //return ((s1.startPos().x() < s2.startPos().x())||((s1.startPos().x() == s2.startPos().x()) && (s1.startPos().y() < s2.startPos().y())));
+        //return ((s1.startPos().x() < s2.startPos().x()) ||
+        //((s1.startPos().x() == s2.startPos().x()) &&
+        //(s1.startPos().y() < s2.startPos().y())));
 
-        return ((s1.startPos().y() < s2.startPos().y())||((s1.startPos().y() == s2.startPos().y()) && (s1.startPos().x() < s2.startPos().x())));
+        return ((s1.startPos().y() < s2.startPos().y())
+                || ((s1.startPos().y() == s2.startPos().y()) &&
+                    (s1.startPos().x() < s2.startPos().x())));
     }
 
     bool staffLineSort(StaffLine &line1,StaffLine &line2)
@@ -119,15 +292,8 @@ namespace Munip
 
     bool symbolRectSort(QRect &symbolRect1,QRect &symbolRect2)
     {
-        return ( ( symbolRect1.topLeft().x() < symbolRect2.topLeft().x() ) || ( symbolRect1.topLeft().x() == symbolRect2.topLeft().x() && symbolRect1.topLeft().y() < symbolRect2.topLeft().y() ) );
-    }
-
-     double normalizedLineTheta(const QLineF& line)
-    {
-        double angle = line.angle();
-        while (angle < 0.0) angle += 360.0;
-        while (angle > 360.0) angle -= 360.0;
-        if (angle > 180.0) angle -= 360.0;
-        return angle < 0.0 ? -angle : angle;
+        return ((symbolRect1.topLeft().x() < symbolRect2.topLeft().x()) ||
+                (symbolRect1.topLeft().x() == symbolRect2.topLeft().x() &&
+                 symbolRect1.topLeft().y() < symbolRect2.topLeft().y()));
     }
 }

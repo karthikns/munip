@@ -3,7 +3,6 @@
 
 #include "cluster.h"
 #include "datawarehouse.h"
-#include "horizontalrunlengthimage.h"
 #include "imagewidget.h"
 #include "mainwindow.h"
 #include "projection.h"
@@ -214,7 +213,7 @@ namespace Munip
             QVector<QRgb> colorTable = m_processedImage.colorTable();
             if (colorTable.isEmpty()) {
                 int pixels = m_processedImage.width() * m_processedImage.height();
-                unsigned int *data = reinterpret_cast<unsigned int *>(m_processedImage.bits());
+                QRgb *data = reinterpret_cast<QRgb*>(m_processedImage.bits());
                 for (int i = 0; i < pixels; ++i) {
                     int val = qGray(data[i]);
                     data[i] = qRgba(val, val, val, qAlpha(data[i]));
@@ -1994,22 +1993,21 @@ void SymbolAreaExtraction::process()
             // p.fillRect(0, 0, img.width(), img.height(), QBrush(Qt::white));
 
             // Draw beam points
-            if (0) {
+            if (1) {
                 p.setBrush(Qt::NoBrush);
-                QHash<QPoint, int>::const_iterator it = sd->beamPoints.constBegin();
                 QColor colors_beam[5] = {
                     QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
                     QColor(Qt::red), QColor(Qt::darkCyan)
                 };
-                // For debug purpose, make it -1 to colour all beams.
-                int requiredId = -1;
-                while (it != sd->beamPoints.constEnd()) {
-                    //colors_beam[it.value() % 5].setAlpha(100);
-                    if (it.value() == requiredId || requiredId < 0) {
-                        p.setPen(colors_beam[it.value() % 5]);
-                        p.drawPoint(it.key());
+
+                int i = 0;
+                foreach (const QList<RunCoord>& oneBeamCoords, sd->beamsRunCoords) {
+                    p.setPen(colors_beam[i % 5]);
+                    foreach (const RunCoord& runCoord, oneBeamCoords) {
+                        p.drawLine(runCoord.pos, runCoord.run.pos,
+                                runCoord.pos, runCoord.run.endPos());
                     }
-                    ++it;
+                    ++i;
                 }
             }
 
@@ -2029,7 +2027,7 @@ void SymbolAreaExtraction::process()
 
 
             // Draw note regions.
-            if (1) {
+            if (0) {
                 QColor color = QColor(Qt::darkYellow);
                 color.setAlpha(100);
                 p.setBrush(color);
@@ -2069,9 +2067,9 @@ void SymbolAreaExtraction::process()
 
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->maxProjections));
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->noteProjections));
-        p.drawImage(QPoint(0, y), sd->projectionImage(sd->temp));
+        //p.drawImage(QPoint(0, y), sd->projectionImage(sd->temp));
         //p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectionImage());
-        //p.drawImage(QPoint(0, y), sd->workImage);
+        p.drawImage(QPoint(0, y), sd->workImage);
 
         y += sh + 50;
     }
