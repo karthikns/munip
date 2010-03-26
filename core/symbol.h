@@ -43,6 +43,7 @@ namespace Munip
         int rightFlagCount;
 
         QSet<RunCoord> flagRunCoords;
+        QSet<RunCoord> partialBeamRunCoords;
 
         int totalFlagCount() const {
             return qMax(leftFlagCount, rightFlagCount);
@@ -76,18 +77,20 @@ namespace Munip
         QHash<int, int> filter(Range width, Range height, const QHash<int, int> &hash);
 
         void extractStemSegments();
-
         void eraseStems();
-        void extractBeams();
+
         StemSegment* stemSegmentForRunCoord(const RunCoord &r);
-
+        void extractBeams();
         void eraseBeams();
+
         void extractChords();
-
         void eraseChords();
-        void extractFlags();
 
+        void extractFlags();
         void eraseFlags();
+
+        void extractPartialBeams();
+        void erasePartialBeams();
 
         QImage staffImage() const;
         QImage projectionImage(const QHash<int, int> &hash) const;

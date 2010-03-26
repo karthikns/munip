@@ -2068,6 +2068,19 @@ void SymbolAreaExtraction::process()
                 }
             }
 
+            // Draw partial beams.
+            if (1) {
+                p.setBrush(Qt::NoBrush);
+                p.setPen(QColor(Qt::cyan));
+
+                foreach (StemSegment *seg, sd->stemSegments) {
+                    foreach (const RunCoord &runCoord, seg->partialBeamRunCoords) {
+                        p.drawLine(runCoord.pos, runCoord.run.pos, runCoord.pos, runCoord.run.endPos());
+                    }
+                }
+            }
+
+
             p.end();
 
         }

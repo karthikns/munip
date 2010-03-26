@@ -115,6 +115,7 @@ namespace Munip
         Run run(int x, int y) const;
 
         QList<Run> adjacentRunsInNextLine(const RunCoord& runCoord) const;
+        QList<Run> adjacentRunsInPreviousLine(const RunCoord& runCoord) const;
 
     private:
         static const QList<Run> InvalidRuns;
@@ -133,6 +134,7 @@ namespace Munip
 
         const QList<Run>& runsForColumn(int index) const;
         QList<Run> adjacentRunsInNextColumn(const RunCoord& runCoord) const;
+        QList<Run> adjacentRunsInPreviousColumn(const RunCoord& runCoord) const;
     };
 
     template<typename X>

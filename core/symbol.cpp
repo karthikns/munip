@@ -65,17 +65,19 @@ namespace Munip
         extractNoteSegments();
 
         extractStemSegments();
-
         eraseStems();
+
         extractBeams();
-
         eraseBeams();
+
         extractChords();
-
         eraseChords();
-        extractFlags();
 
+        extractFlags();
         eraseFlags();
+
+        extractPartialBeams();
+        erasePartialBeams();
     }
 
     void StaffData::findSymbolRegions()
@@ -666,79 +668,121 @@ namespace Munip
         }
     }
 
-
-#if 0
-    void StaffData::extractFlags()
+    void StaffData::extractPartialBeams()
     {
         mDebug() << Q_FUNC_INFO;
+        VerticalRunlengthImage vRunImage(workImage);
 
-        const QRgb BlackColor = QColor(Qt::black).rgb();
-        const QRect staffRect = workImage.rect();
+        QHash<RunCoord, RunCoord> prevCoord;
+
         DataWarehouse *dw = DataWarehouse::instance();
+        const int MinimumPartialBeamRunlengthLimit = dw->staffLineHeight().min << 1;
+        const int PartialBeamDistanceLimit = int(qRound(.33 * dw->staffSpaceHeight().max));
 
-        for (int i = 0; i < stemSegments.size(); ++i) {
-            StemSegment *seg = stemSegments[i];
-            QRect areaToTry(0, 0, dw->staffSpaceHeight().min >> 1,
-                    seg->boundingRect.height());
-            QPoint positions[2] =
-            {
-                seg->boundingRect.topRight() + QPoint(2, 0),
-                seg->boundingRect.topLeft() - QPoint(areaToTry.width() + 1, 0)
-            };
-            // J loop for trying both "left" and "right" areas of stem.
-            for (int j = 0; j < 2; ++j) {
-                areaToTry.moveTo(positions[j]);
+        foreach (StemSegment *seg, stemSegments) {
+            const QRect rect = seg->boundingRect;
+            const RunCoord stemRunCoord(rect.right() + 1, Run(rect.top(), rect.height()));
 
-                if (areaToTry.left() > staffRect.right()) continue;
-                if (areaToTry.right() < staffRect.left()) continue;
+            QStack<RunCoord> stack; // For DFS
+            stack.push(stemRunCoord);
 
-                QList<int> numTransitions;
-                for (int i = 0; i < areaToTry.width(); ++i) {
-                    int x = (j == 0) ? (areaToTry.left() + i) :
-                        (areaToTry.right() - i);
-                    if (x > staffRect.right() || x < staffRect.left()) break;
-                    QList<int> runs;
+            while (!stack.isEmpty()) {
+                const RunCoord runCoord = stack.pop();
 
-                    for (int y = areaToTry.top(); y <= areaToTry.bottom(); ++y) {
-                        if (workImage.pixel(x, y) != BlackColor) continue;
+                if (!runCoord.isValid()) continue;
 
-                        int runlength = 0;
-                        for (; (y + runlength) <= areaToTry.bottom(); ++runlength) {
-                            if (workImage.pixel(x, y + runlength) != BlackColor) break;
-                        }
+                QList<Run> adjRuns = vRunImage.adjacentRunsInNextColumn(runCoord);
 
-                        const int margin = (dw->staffLineHeight().min << 1);
-                        if (runlength > margin) {
-                            runs << runlength;
-                        }
-                        y += runlength - 1;
+                bool pushed = false;
+                foreach (const Run& adjRun, adjRuns) {
+                    RunCoord adjRunCoord(runCoord.pos + 1, adjRun);
+                    if (adjRunCoord.isValid() &&
+                            adjRunCoord.run.length >= MinimumPartialBeamRunlengthLimit)
+                    {
+                        prevCoord[adjRunCoord] = runCoord;
+                        stack.push(adjRunCoord);
+                        pushed = true;
                     }
-                    // An empty column means there is no more connected components.
-                    if (runs.isEmpty()) break;
-                    numTransitions << runs.size();
                 }
 
-                int avgTransitions = 0;
-                if (numTransitions.isEmpty() == false) {
-                    int sum = 0;
-                    for (int i = 0; i < numTransitions.size(); ++i) {
-                        sum += numTransitions.at(i);
+                if (!pushed) {
+                    if ((runCoord.pos - stemRunCoord.pos) >= PartialBeamDistanceLimit) {
+                        // This loop takes care not to push stemRunCoord as that
+                        // is the artifact we created for convenience.
+                        RunCoord cur = runCoord;
+                        while (1) {
+                            const RunCoord prev = prevCoord.value(cur, RunCoord());
+                            if (!prev.isValid()) break;
+
+                            seg->partialBeamRunCoords << cur;
+                            cur = prev;
+                        }
+                        seg->rightFlagCount++;
                     }
-                    avgTransitions = int(qRound(qreal(sum)/numTransitions.size()));
-                }
-
-                if (j == 0) {
-                    seg->rightFlagCount += avgTransitions;
-                } else {
-                    seg->leftFlagCount += avgTransitions;
-                }
-                if (avgTransitions) {
-                    mDebug() << seg << numTransitions << endl;
                 }
             }
         }
+
+        // Now do it for left side of stem.
+        foreach (StemSegment *seg, stemSegments) {
+            const QRect rect = seg->boundingRect;
+            const RunCoord stemRunCoord(rect.left() - 1, Run(rect.top(), rect.height()));
+
+            QStack<RunCoord> stack; // For DFS
+            stack.push(stemRunCoord);
+
+            while (!stack.isEmpty()) {
+                const RunCoord runCoord = stack.pop();
+
+                if (!runCoord.isValid()) continue;
+
+                QList<Run> adjRuns = vRunImage.adjacentRunsInPreviousColumn(runCoord);
+
+                bool pushed = false;
+                foreach (const Run& adjRun, adjRuns) {
+                    RunCoord adjRunCoord(runCoord.pos - 1, adjRun);
+                    if (adjRunCoord.isValid() &&
+                            adjRunCoord.run.length >= MinimumPartialBeamRunlengthLimit)
+                    {
+                        prevCoord[adjRunCoord] = runCoord;
+                        stack.push(adjRunCoord);
+                        pushed = true;
+                    }
+                }
+
+                if (!pushed) {
+                    if (qAbs(runCoord.pos - stemRunCoord.pos) >= PartialBeamDistanceLimit) {
+                        // This loop takes care not to push stemRunCoord as that
+                        // is the artifact we created for convenience.
+                        RunCoord cur = runCoord;
+                        while (1) {
+                            const RunCoord prev = prevCoord.value(cur, RunCoord());
+                            if (!prev.isValid()) break;
+
+                            seg->partialBeamRunCoords << cur;
+                            cur = prev;
+                        }
+                        seg->leftFlagCount++;
+                    }
+                }
+            }
+        }
+
     }
-#endif
+
+    void StaffData::erasePartialBeams()
+    {
+        QPainter p(&workImage);
+
+        p.setPen(QColor(Qt::white));
+        p.setBrush(Qt::NoBrush);
+
+        foreach (const StemSegment *seg, stemSegments) {
+            foreach (const RunCoord &runCoord, seg->partialBeamRunCoords) {
+                p.drawLine(runCoord.pos, runCoord.run.pos, runCoord.pos, runCoord.run.endPos());
+            }
+        }
+    }
 
     QImage StaffData::staffImage() const
     {

@@ -156,6 +156,31 @@ namespace Munip
         return retval;
     }
 
+    QList<Run> RunlengthImage::adjacentRunsInPreviousLine(const RunCoord& runCoord) const
+    {
+        QList<Run> retval;
+
+        if (runCoord.pos <= 0 || runCoord.pos >= m_data.size()) return retval;
+
+        const int previousCoord = runCoord.pos - 1;
+
+        for (int i = runCoord.run.pos; i < runCoord.run.endPos(); ++i) {
+            Run r;
+            if (m_orientation == Qt::Horizontal) {
+                r = run(i, previousCoord);
+            } else {
+                r = run(previousCoord, i);
+            }
+
+            if (r.isValid()) {
+                retval << r;
+                i = r.endPos();
+            }
+        }
+
+        return retval;
+    }
+
     VerticalRunlengthImage::VerticalRunlengthImage(const QImage& image,
             const QColor& color) : RunlengthImage(image, Qt::Vertical, color)
     {
@@ -173,6 +198,11 @@ namespace Munip
     QList<Run> VerticalRunlengthImage::adjacentRunsInNextColumn(const RunCoord& runCoord) const
     {
         return adjacentRunsInNextLine(runCoord);
+    }
+
+    QList<Run> VerticalRunlengthImage::adjacentRunsInPreviousColumn(const RunCoord& runCoord) const
+    {
+        return adjacentRunsInPreviousLine(runCoord);
     }
 
     QImage convertToMonochrome(const QImage& image, int threshold)
