@@ -74,6 +74,8 @@ namespace Munip
 
         eraseChords();
         extractFlags();
+
+        eraseFlags();
     }
 
     void StaffData::findSymbolRegions()
@@ -403,6 +405,8 @@ namespace Munip
 
             while (!stack.isEmpty()) {
                 RunCoord runCoord = stack.pop();
+                visited << runCoord;
+
                 if (!runCoord.isValid()) continue;
 
                 QList<Run> adjRuns = vRunImage.adjacentRunsInNextColumn(runCoord);
@@ -552,6 +556,121 @@ namespace Munip
     void StaffData::extractFlags()
     {
         mDebug() << Q_FUNC_INFO;
+        VerticalRunlengthImage vRunImage(workImage);
+
+        QHash<RunCoord, RunCoord> prevCoord;
+
+        DataWarehouse *dw = DataWarehouse::instance();
+        const int MinimumFlagRunlengthLimit = dw->staffLineHeight().min << 1;
+        const int FlagDistanceLimit = int(qRound(.8 * dw->staffSpaceHeight().max));
+
+        foreach (StemSegment *seg, stemSegments) {
+            const QRect rect = seg->boundingRect;
+            const RunCoord stemRunCoord(rect.right() + 1, Run(rect.top(), rect.height()));
+
+            QRect flagBoundRect;
+
+            QStack<RunCoord> stack; // For DFS
+            stack.push(stemRunCoord);
+
+            while (!stack.isEmpty()) {
+                RunCoord runCoord = stack.pop();
+
+                if (!runCoord.isValid()) continue;
+
+                QList<Run> adjRuns = vRunImage.adjacentRunsInNextColumn(runCoord);
+
+                bool pushed = false;
+                foreach (const Run& adjRun, adjRuns) {
+                    RunCoord adjRunCoord(runCoord.pos + 1, adjRun);
+                    if (adjRunCoord.isValid() &&
+                            adjRunCoord.run.length >= MinimumFlagRunlengthLimit)
+                    {
+                        prevCoord[adjRunCoord] = runCoord;
+                        stack.push(adjRunCoord);
+                        pushed = true;
+                    }
+                }
+
+                if (!pushed) {
+                    if ((runCoord.pos - stemRunCoord.pos) >= FlagDistanceLimit) {
+                        // This loop takes care not to push stemRunCoord as that
+                        // is the artifact we created for convenience.
+                        RunCoord cur = runCoord;
+                        while (1) {
+                            const RunCoord prev = prevCoord.value(cur, RunCoord());
+                            if (!prev.isValid()) break;
+
+                            seg->flagRunCoords << cur;
+                            const QRect curRect(prev.pos, prev.run.pos, 1, prev.run.length);
+                            if (flagBoundRect.isNull()) {
+                                flagBoundRect = curRect;
+                            } else {
+                                flagBoundRect |= curRect;
+                            }
+                            cur = prev;
+                        }
+                    }
+                }
+            }
+
+
+            if (flagBoundRect.isNull()) continue;
+
+            QList<int> transitionsList;
+            for (int x = flagBoundRect.left(); x <= flagBoundRect.right(); ++x) {
+                int transitions = 0;
+                for (int y = flagBoundRect.top(); y <= flagBoundRect.bottom(); ++y) {
+                    Run run = vRunImage.run(x, y);
+                    if (!run.isValid()) continue;
+
+                    if (run.length >= MinimumFlagRunlengthLimit) ++transitions;
+                    y = run.endPos();
+                }
+                transitionsList << transitions;
+            }
+
+            int maxRunLength = -1;
+            int maxRunValue = -1;
+            for (int i = 0; i < transitionsList.size(); ++i) {
+                int runlength = 0;
+                for (; (i + runlength) < transitionsList.size(); ++runlength) {
+                    if (transitionsList[i + runlength] != transitionsList[i]) {
+                        break;
+                    }
+                }
+                if (runlength > maxRunLength) {
+                    maxRunLength = runlength;
+                    maxRunValue = transitionsList[i];
+                }
+                i += runlength - 1;
+            }
+
+            if (maxRunLength > 0) {
+                seg->rightFlagCount += maxRunValue;
+            }
+        }
+    }
+
+    void StaffData::eraseFlags()
+    {
+        QPainter p(&workImage);
+
+        p.setPen(QColor(Qt::white));
+        p.setBrush(Qt::NoBrush);
+
+        foreach (const StemSegment *seg, stemSegments) {
+            foreach (const RunCoord &runCoord, seg->flagRunCoords) {
+                p.drawLine(runCoord.pos, runCoord.run.pos, runCoord.pos, runCoord.run.endPos());
+            }
+        }
+    }
+
+
+#if 0
+    void StaffData::extractFlags()
+    {
+        mDebug() << Q_FUNC_INFO;
 
         const QRgb BlackColor = QColor(Qt::black).rgb();
         const QRect staffRect = workImage.rect();
@@ -619,6 +738,7 @@ namespace Munip
             }
         }
     }
+#endif
 
     QImage StaffData::staffImage() const
     {

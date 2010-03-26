@@ -2038,7 +2038,7 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw chords
-            if (0) {
+            if (1) {
                 QColor colors[5] = {
                     QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
                     QColor(Qt::red), QColor(Qt::darkCyan)
@@ -2052,6 +2052,18 @@ void SymbolAreaExtraction::process()
                         p.setBrush(colors[currentIndex]);
                         p.drawRect(r);
                         currentIndex = ((currentIndex + 1) % 5);
+                    }
+                }
+            }
+
+            // Draw flags.
+            if (1) {
+                p.setBrush(Qt::NoBrush);
+                p.setPen(QColor(Qt::darkGray));
+
+                foreach (StemSegment *seg, sd->stemSegments) {
+                    foreach (const RunCoord &runCoord, seg->flagRunCoords) {
+                        p.drawLine(runCoord.pos, runCoord.run.pos, runCoord.pos, runCoord.run.endPos());
                     }
                 }
             }

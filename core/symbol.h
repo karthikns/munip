@@ -42,6 +42,8 @@ namespace Munip
         int leftFlagCount;
         int rightFlagCount;
 
+        QSet<RunCoord> flagRunCoords;
+
         int totalFlagCount() const {
             return qMax(leftFlagCount, rightFlagCount);
         }
@@ -84,6 +86,8 @@ namespace Munip
 
         void eraseChords();
         void extractFlags();
+
+        void eraseFlags();
 
         QImage staffImage() const;
         QImage projectionImage(const QHash<int, int> &hash) const;
