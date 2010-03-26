@@ -394,7 +394,7 @@ namespace Munip
         QHash<RunCoord, RunCoord> prevCoord;
 
         DataWarehouse *dw = DataWarehouse::instance();
-        const int MinimumBeamRunlengthLimit = dw->staffSpaceHeight().min >> 1;
+        const int MinimumBeamRunlengthLimit = dw->staffLineHeight().min << 1;
 
         foreach (StemSegment *seg, stemSegments) {
             const QRect rect = seg->boundingRect;
