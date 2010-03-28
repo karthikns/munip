@@ -580,7 +580,6 @@ namespace Munip
                 Segment segment = Segment(start,end);
                 m_segments[y].push_back(segment);
 
-
                 countWhite = 0;
                 start = QPoint(x,y);
             }
@@ -602,6 +601,7 @@ namespace Munip
         QList<Segment> paths = segmentList;
 
         qSort( paths.begin(),paths.end(),segmentSortByWeight);
+        /*
         mDebug() << Q_FUNC_INFO << endl << "Paths:";
         for(int i = 0; i < paths.size(); i++) {
             mDebug() << paths[i].startPos() << paths[i].endPos()
@@ -610,7 +610,7 @@ namespace Munip
                 << paths[i].destinationPos();
         }
         mDebug();
-
+        */
         Segment maxWeightPath = paths[0];
 
         //prune the segments to find the ones with maximum weight
@@ -624,7 +624,7 @@ namespace Munip
         // Now construct the lines from optimal segments
 
         const int size = paths.size();
-        mDebug() << Q_FUNC_INFO << "Path size after pruning = " << size;
+//        mDebug() << Q_FUNC_INFO << "Path size after pruning = " << size;
 
         qSort(paths.begin(), paths.end(), segmentSortByConnectedComponentID);
         QSet<int> done;
@@ -639,7 +639,7 @@ namespace Munip
                 int weight = paths[i].weight();
                 StaffLine line(paths[i].startPos(),paths[i].destinationPos());
 
-                while (i+k < paths.size() && paths[i+k].connectedComponentID() == ID && paths[i+k].weight() == weight)
+                while (i+k < paths.size() && paths[i+k].connectedComponentID() == ID )
                 {
                     line.addSegment(paths[i+k]);
 
@@ -663,14 +663,14 @@ namespace Munip
         }
         qSort(m_lineList.begin(),m_lineList.end(),staffLineSort);
 
-        mDebug() << Q_FUNC_INFO << endl << "Line list: ";
+  /*      mDebug() << Q_FUNC_INFO << endl << "Line list: ";
         for(int i = 0; i < m_lineList.size(); i++) {
             mDebug() << m_lineList[i].startPos() << m_lineList[i].endPos()
                 << m_lineList[i].boundingBox();
         }
         mDebug();
         //m_lineList[i].displaySegments();
-
+*/
         drawDetectedLines();
         //removeLines();
     }
