@@ -331,7 +331,10 @@ void ImageWidget::drawForeground(QPainter *painter, const QRectF& rect)
 
 void ImageWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    m_mousePos = mapToScene(event->pos()).toPoint();
+    QPointF temp = mapToScene(event->pos());
+    m_mousePos.setX(int(temp.x()));
+    m_mousePos.setY(int(temp.y()));
+
     updateStatusMessage();
     QGraphicsView::mouseMoveEvent(event);
 }

@@ -599,10 +599,7 @@ namespace Munip
         }
 
         QList<Segment> segmentList = m_lookUpTable.uniqueKeys();
-        QList<Segment> paths;
-        foreach(Segment p,segmentList) {
-            paths.push_back(p);
-        }
+        QList<Segment> paths = segmentList;
 
         qSort( paths.begin(),paths.end(),segmentSortByWeight);
         mDebug() << Q_FUNC_INFO << endl << "Paths:";
