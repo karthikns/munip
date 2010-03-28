@@ -1429,6 +1429,9 @@ void StaffLineRemoval::process()
 {
     emit started();
 
+    QImage &imageRef = DataWarehouse::instance()->imageRefWithStaffLinesOnly();
+    imageRef = QImage(m_originalImage.size(), QImage::Format_Mono);
+    imageRef.fill(0xffffffff);
     crudeRemove();
     yellowToBlack();
     cleanupNoise();
@@ -1447,8 +1450,13 @@ void StaffLineRemoval::crudeRemove()
     const QRgb YellowColor = QColor(Qt::darkYellow).rgb();
     const QRgb WhiteColor = QColor(Qt::white).rgb();
 
+    QImage &imageRef = DataWarehouse::instance()->imageRefWithStaffLinesOnly();
+    QPainter imageRefPainter(&imageRef);
+    imageRefPainter.setPen(QColor(Qt::black));
+
     QPainter p;
     p.begin(&m_processedImage);
+
 
     const int staffLineHeight = DataWarehouse::instance()->staffLineHeight().dominantValue();
     const QList<Staff> staffList = DataWarehouse::instance()->staffList();
@@ -1491,6 +1499,7 @@ void StaffLineRemoval::crudeRemove()
                         ((aboveBlackPixels + belowBlackPixels) <= 2 * margin)) {
                     p.setPen(Qt::white);
                     p.drawLine(x, runStart, x, runEnd);
+                    imageRefPainter.drawLine(x, runStart, x, runEnd);
                 }
             }
         }
@@ -1503,6 +1512,9 @@ void StaffLineRemoval::cleanupNoise()
 {
     // Note these aren't indices but color instead.
     const QRgb BlackColor = QColor(Qt::black).rgb();
+    QImage &imageRef = DataWarehouse::instance()->imageRefWithStaffLinesOnly();
+    QPainter imageRefPainter(&imageRef);
+    imageRefPainter.setPen(QColor(Qt::black));
 
     QImage yetAnotherImage = m_processedImage;
     QPainter p;
@@ -1535,6 +1547,7 @@ void StaffLineRemoval::cleanupNoise()
                 if (runLength <= noiseLength) {
                     p.setPen(Qt::white);
                     p.drawLine(x, runStart, x, runEnd);
+                    imageRefPainter.drawLine(x, runStart, x, runEnd);
                 }
             }
         }
@@ -1561,6 +1574,10 @@ void StaffLineRemoval::yellowToBlack()
 
 void StaffLineRemoval::staffCleanUp()
 {
+    QImage &imageRef = DataWarehouse::instance()->imageRefWithStaffLinesOnly();
+    QPainter imageRefPainter(&imageRef);
+    imageRefPainter.setPen(QColor(Qt::black));
+
     DataWarehouse *dw = DataWarehouse::instance();
     const QList<Staff> staffList = dw->staffList();
     foreach (const Staff& staff, staffList) {
@@ -1637,9 +1654,12 @@ void StaffLineRemoval::staffCleanUp()
                     if(firstRowEmpty && lastRowEmpty)
                     {
 
-                        if(removeMatrix[2][1] != QPoint(-1,-1))
+                        if(removeMatrix[2][1] != QPoint(-1,-1)) {
                             m_processedImage.setPixel(removeMatrix[2][1],White);
+                            imageRefPainter.drawPoint(removeMatrix[2][1]);
+                        }
                         m_processedImage.setPixel(x,y,White);
+                        imageRefPainter.drawPoint(x, y);
                     }
                     for(int i = 0; i < 4; i++)
                         for(int j =0;j<3;j++)

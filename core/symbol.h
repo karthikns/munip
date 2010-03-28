@@ -64,6 +64,15 @@ namespace Munip
         }
     };
 
+    struct Region
+    {
+        int id;
+        QSet<QPoint> points;
+        QRect boundingRect;
+
+        Region() { id = 0; }
+    };
+
     struct StaffData
     {
         StaffData(const QImage& img, const Staff& staff);
@@ -95,7 +104,12 @@ namespace Munip
         void extractPartialBeams();
         void erasePartialBeams();
 
+        void enhanceConnectivity();
+
+        void extractRegions();
+
         QImage staffImage() const;
+        QImage staffImageWithStaffLinesOnly() const;
         QImage projectionImage(const QHash<int, int> &hash) const;
         QImage noteHeadHorizontalProjectionImage() const;
 
@@ -111,6 +125,7 @@ namespace Munip
 
         QList<NoteSegment*> noteSegments;
         QList<QList<RunCoord> > beamsRunCoords;
+        QHash<int, Region*> regions;
 
         const QImage& image;
         QImage workImage;

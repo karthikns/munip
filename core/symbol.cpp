@@ -6,6 +6,8 @@
 #include <QPainter>
 #include <QStack>
 
+#include <cmath>
+
 namespace Munip
 {
     static bool lessThanNoteSegmentPointers(const NoteSegment *l,
@@ -68,6 +70,10 @@ namespace Munip
 
         extractPartialBeams();
         erasePartialBeams();
+
+        enhanceConnectivity();
+
+        extractRegions();
     }
 
     void StaffData::findSymbolRegions()
@@ -816,6 +822,141 @@ namespace Munip
         }
     }
 
+    void StaffData::enhanceConnectivity()
+    {
+        QPainter p(&workImage);
+        p.setCompositionMode(QPainter::CompositionMode_Multiply);
+        p.drawImage(QPoint(0, 0), staffImageWithStaffLinesOnly());
+        return;
+        const QRgb WhiteColor = QColor(Qt::white).rgb();
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+        const int GapLimit = DataWarehouse::instance()->staffLineHeight().dominantValue();
+
+        // First enhance vertical
+        for (int x = 0; x < workImage.width(); ++x) {
+            for (int y = 0; y < workImage.height(); ++y) {
+                if (workImage.pixel(x, y) != WhiteColor) continue;
+
+                int runlength = 0;
+                for (; (y + runlength) < workImage.height(); ++runlength) {
+                    if (workImage.pixel(x, y + runlength) != WhiteColor) break;
+                }
+
+                if (runlength <= GapLimit) {
+                    for (int i = 0; i < runlength; ++i) {
+                        workImage.setPixel(x, y + i, BlackColor);
+                    }
+                }
+
+                y += runlength - 1;
+            }
+        }
+
+        // Next enhance vertical
+        for (int y = 0; y < workImage.height(); ++y) {
+            for (int x = 0; x < workImage.width(); ++x) {
+                if (workImage.pixel(x, y) != WhiteColor) continue;
+
+                int runlength = 0;
+                for (; (x + runlength) < workImage.width(); ++runlength) {
+                    if (workImage.pixel(x + runlength, y) != WhiteColor) break;
+                }
+
+                if (runlength <= GapLimit) {
+                    for (int i = 0; i < runlength; ++i) {
+                        workImage.setPixel(x + i, y, BlackColor);
+                    }
+                }
+
+                x += runlength - 1;
+            }
+        }
+    }
+
+    void StaffData::extractRegions()
+    {
+        const QRgb WhiteColor = QColor(Qt::white).rgb();
+        const QPoint deltas[4] = {
+            QPoint(-1, 0), QPoint(0, -1), QPoint(+1, 0), QPoint(0, +1)
+        };
+        QSet<QPoint> visited;
+
+        int id = 1;
+        for (int x = 0; x < workImage.width(); ++x) {
+            for (int y = 0; y < workImage.height(); ++y) {
+                const QPoint point(x, y);
+
+                if (workImage.pixel(point) != WhiteColor) continue;
+                if (visited.contains(point)) continue;
+
+                Region *region = new Region;
+                region->id = id;
+                regions.insert(id, region);
+
+                QStack<QPoint> stack;
+                stack.push(point);
+
+                while (!stack.isEmpty()) {
+                    const QPoint top = stack.pop();
+                    const QRect topRect(top, top);
+
+                    if (visited.contains(top)) continue;
+
+                    visited << top;
+                    region->points << top;
+                    if (region->boundingRect.isNull()) {
+                        region->boundingRect = topRect;
+                    } else {
+                        region->boundingRect |= topRect;
+                    }
+
+                    for (int i = 0; i < 4; ++i) {
+                        QPoint newPoint = top + deltas[i];
+                        if (newPoint.x() < 0 || newPoint.x() >= workImage.width()) {
+                            continue;
+                        }
+                        if (newPoint.y() < 0 || newPoint.y() >= workImage.height()) {
+                            continue;
+                        }
+                        if (workImage.pixel(newPoint) != WhiteColor) continue;
+                        if (visited.contains(newPoint)) continue;
+
+                        stack.push(newPoint);
+                    }
+                }
+
+                ++id;
+            }
+        }
+
+        DataWarehouse *dw = DataWarehouse::instance();
+        const int MinRadiusLimit = int(.2 * dw->staffSpaceHeight().min);
+        const int MaxRadiusLimit = int(0.5 * dw->staffSpaceHeight().min);
+        const int MinArea = M_PI * MinRadiusLimit * MinRadiusLimit;
+        const int MaxArea = M_PI * MaxRadiusLimit * MaxRadiusLimit;
+
+        mDebug() << Q_FUNC_INFO;
+        mDebug() << "Min : " << MinArea << "Max : " << MaxArea;
+
+        QPainter p(&workImage);
+        QColor color(Qt::green);
+        color.setAlpha(100);
+        //p.setBrush(color);
+        p.setPen(QColor(Qt::black));
+
+        QList<Region*> regionList = regions.values();
+        foreach (const Region *region, regionList) {
+            mDebug() << region->points.size();
+            if (region->points.size() >= MinArea && region->points.size() <= MaxArea) {
+                foreach (const QPoint &point, region->points) {
+                    p.drawPoint(point);
+                }
+            }
+        }
+
+        p.end();
+    }
+
     QImage StaffData::staffImage() const
     {
         const QRect r = staff.boundingRect();
@@ -824,6 +965,19 @@ namespace Munip
 
         QPainter p(&img);
         p.drawImage(QRect(0, 0, r.width(), r.height()), image, r);
+        p.end();
+
+        return img;
+    }
+
+    QImage StaffData::staffImageWithStaffLinesOnly() const
+    {
+        const QRect r = staff.boundingRect();
+        QImage img(r.size(), QImage::Format_ARGB32_Premultiplied);
+        QPainter p(&img);
+        p.drawImage(QRect(0, 0, r.width(), r.height()),
+                DataWarehouse::instance()->imageRefWithStaffLinesOnly(),
+                r);
         p.end();
 
         return img;

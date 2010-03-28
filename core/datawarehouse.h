@@ -35,6 +35,9 @@ namespace Munip {
         Range staffLineHeight() const;
         void setStaffLineHeight(const Range& value);
 
+        QImage imageWithStaffLinesOnly() const;
+        QImage& imageRefWithStaffLinesOnly();
+
     private:
         DataWarehouse();
         static DataWarehouse* m_dataWarehouse;
@@ -45,6 +48,7 @@ namespace Munip {
         Range m_staffLineHeight;
 
         QImage m_workImage;
+        QImage m_imageWithStaffLinesOnly;
 
         uint m_lineSize;
         QList<Staff> m_staffList;

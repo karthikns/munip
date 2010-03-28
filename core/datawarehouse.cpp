@@ -93,3 +93,13 @@ void DataWarehouse::setStaffLineHeight(const Range& value)
 {
     m_staffLineHeight = value;
 }
+
+QImage DataWarehouse::imageWithStaffLinesOnly() const
+{
+    return m_imageWithStaffLinesOnly;
+}
+
+QImage& DataWarehouse::imageRefWithStaffLinesOnly()
+{
+    return m_imageWithStaffLinesOnly;
+}
