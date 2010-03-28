@@ -1997,7 +1997,7 @@ void SymbolAreaExtraction::process()
                 p.setBrush(Qt::NoBrush);
                 QColor colors_beam[5] = {
                     QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
-                    QColor(Qt::red), QColor(Qt::darkCyan)
+                    QColor(Qt::magenta), QColor(Qt::darkCyan)
                 };
 
                 int i = 0;
@@ -2014,26 +2014,17 @@ void SymbolAreaExtraction::process()
             // Draw stems
             if (1) {
                 QColor colors[5] = {
-                    QColor(Qt::darkMagenta), QColor(Qt::blue), QColor(Qt::darkGreen),
-                    QColor(Qt::red), QColor(Qt::darkCyan)
+                    QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
+                    QColor(Qt::magenta), QColor(Qt::darkCyan)
                 };
                 p.setPen(Qt::NoPen);
-                foreach (const StemSegment *s, sd->stemSegments) {
+                foreach (const NoteSegment *noteSegment, sd->noteSegments) {
+                    const StemSegment *s = noteSegment->stemSegment;
+                    if (!s) continue;
+
                     QRect r = s->boundingRect.adjusted(-1, 0, +1, 0);
                     p.setBrush(colors[s->totalFlagCount() % 5]);
                     p.drawRect(r);
-                }
-            }
-
-
-            // Draw note regions.
-            if (0) {
-                QColor color = QColor(Qt::darkYellow);
-                color.setAlpha(100);
-                p.setBrush(color);
-                p.setPen(Qt::NoPen);
-                foreach (const NoteSegment *n, sd->noteSegments) {
-                    p.drawRect(n->boundingRect);
                 }
             }
 
@@ -2041,7 +2032,7 @@ void SymbolAreaExtraction::process()
             if (1) {
                 QColor colors[5] = {
                     QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
-                    QColor(Qt::red), QColor(Qt::darkCyan)
+                    QColor(Qt::magenta), QColor(Qt::darkCyan)
                 };
                 int currentIndex = 0;
 
@@ -2059,10 +2050,13 @@ void SymbolAreaExtraction::process()
             // Draw flags.
             if (1) {
                 p.setBrush(Qt::NoBrush);
-                p.setPen(QColor(Qt::darkGray));
+                p.setPen(Qt::darkGray);
 
-                foreach (StemSegment *seg, sd->stemSegments) {
-                    foreach (const RunCoord &runCoord, seg->flagRunCoords) {
+                foreach (const NoteSegment *noteSegment, sd->noteSegments) {
+                    const StemSegment *s = noteSegment->stemSegment;
+                    if (!s) continue;
+
+                    foreach (const RunCoord &runCoord, s->flagRunCoords) {
                         p.drawLine(runCoord.pos, runCoord.run.pos, runCoord.pos, runCoord.run.endPos());
                     }
                 }
@@ -2073,13 +2067,32 @@ void SymbolAreaExtraction::process()
                 p.setBrush(Qt::NoBrush);
                 p.setPen(QColor(Qt::cyan));
 
-                foreach (StemSegment *seg, sd->stemSegments) {
-                    foreach (const RunCoord &runCoord, seg->partialBeamRunCoords) {
+                foreach (const NoteSegment *noteSegment, sd->noteSegments) {
+                    const StemSegment *s = noteSegment->stemSegment;
+                    if (!s) continue;
+
+                    foreach (const RunCoord &runCoord, s->partialBeamRunCoords) {
                         p.drawLine(runCoord.pos, runCoord.run.pos, runCoord.pos, runCoord.run.endPos());
                     }
                 }
             }
 
+            // Draw note regions. (This should be last as it is translucent)
+            if (1) {
+                QColor color = QColor(Qt::darkYellow);
+                color.setAlpha(100);
+                QColor redColor = QColor(Qt::red);
+                redColor.setAlpha(100);
+                p.setPen(Qt::NoPen);
+                foreach (const NoteSegment *n, sd->noteSegments) {
+                    if (n->noteRects.isEmpty()) {
+                        p.setBrush(redColor);
+                    } else {
+                        p.setBrush(color);
+                    }
+                    p.drawRect(n->boundingRect);
+                }
+            }
 
             p.end();
 
@@ -2093,8 +2106,8 @@ void SymbolAreaExtraction::process()
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->maxProjections));
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->noteProjections));
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->temp));
-        p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectionImage());
-        //p.drawImage(QPoint(0, y), sd->workImage);
+        //p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectionImage());
+        p.drawImage(QPoint(0, y), sd->workImage);
 
         y += sh + 50;
     }

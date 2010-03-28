@@ -33,6 +33,7 @@ namespace Munip
 
     private:
         NoteSegment() { stemSegment = 0; }
+        //~NoteSegment() { delete stemSegment; }
     };
 
     struct StemSegment
@@ -109,7 +110,6 @@ namespace Munip
         QHash<int, int> temp;
 
         QList<NoteSegment*> noteSegments;
-        QList<StemSegment*> stemSegments;
         QList<QList<RunCoord> > beamsRunCoords;
 
         const QImage& image;

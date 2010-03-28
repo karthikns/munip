@@ -14,12 +14,6 @@ namespace Munip
         return l->boundingRect.left() < r->boundingRect.left();
     }
 
-    static bool lessThanStemSegmentPointers(const StemSegment* l,
-            const StemSegment* r)
-    {
-        return l->boundingRect.left() < r->boundingRect.left();
-    }
-
     QDebug operator<<(QDebug dbg, const NoteSegment* seg)
     {
         dbg.nospace() << "NoteSegment: [" << (void*)seg << "] " << seg->boundingRect;
@@ -44,10 +38,6 @@ namespace Munip
 
     StaffData::~StaffData()
     {
-        // First delete stem segments as they store pointer to note segment.
-        qDeleteAll(stemSegments);
-        stemSegments.clear();
-
         qDeleteAll(noteSegments);
         noteSegments.clear();
     }
@@ -367,11 +357,7 @@ namespace Munip
             stemSeg->boundingRect = stemRect;
             stemSeg->noteSegment = seg;
             seg->stemSegment = stemSeg;
-
-            stemSegments << stemSeg;
         }
-
-        qSort(stemSegments.begin(), stemSegments.end(), lessThanStemSegmentPointers);
     }
 
     void StaffData::eraseStems()
@@ -381,9 +367,13 @@ namespace Munip
         p.setPen(Qt::NoPen);
 
         // Erase all stems first
-        for (int i = 0; i < stemSegments.size(); ++i) {
-            p.drawRect(stemSegments[i]->boundingRect.adjusted(-1, 0, +1, 0));
+        foreach (NoteSegment *noteSegment, noteSegments) {
+            StemSegment *stemSegment = noteSegment->stemSegment;
+            if (!stemSegment) continue;
+
+            p.drawRect(stemSegment->boundingRect.adjusted(-1, 0, +1, 0));
         }
+
         p.end();
     }
 
@@ -399,8 +389,11 @@ namespace Munip
         DataWarehouse *dw = DataWarehouse::instance();
         const int MinimumBeamRunlengthLimit = dw->staffLineHeight().min << 1;
 
-        foreach (StemSegment *seg, stemSegments) {
-            const QRect rect = seg->boundingRect;
+        foreach (NoteSegment *noteSegment, noteSegments) {
+            StemSegment *stemSegment = noteSegment->stemSegment;
+            if (!stemSegment) continue;
+
+            const QRect rect = stemSegment->boundingRect;
             const RunCoord stemRunCoord(rect.right() + 1, Run(rect.top(), rect.height()));
 
             QStack<RunCoord> stack; // For DFS
@@ -429,11 +422,11 @@ namespace Munip
 
                 if (!pushed) {
                     StemSegment *right = stemSegmentForRunCoord(runCoord);
-                    if (right && right != seg) {
+                    if (right && right != stemSegment) {
                         QList<RunCoord> beamCoords;
 
                         right->leftFlagCount += 1;
-                        seg->rightFlagCount += 1;
+                        stemSegment->rightFlagCount += 1;
 
                         RunCoord cur = runCoord;
                         // This loop takes care not to push stemRunCoord as that
@@ -459,13 +452,16 @@ namespace Munip
     StemSegment* StaffData::stemSegmentForRunCoord(const RunCoord& runCoord)
     {
         const QRect runRect(runCoord.pos, runCoord.run.pos, 1, runCoord.run.length);
-        foreach (StemSegment *seg, stemSegments) {
-            QRect rect = seg->boundingRect;
+        foreach (NoteSegment *noteSegment, noteSegments) {
+            StemSegment *stemSegment = noteSegment->stemSegment;
+            if (!stemSegment) continue;
+
+            QRect rect = stemSegment->boundingRect;
             rect.setLeft(rect.left() - 2);
             rect.setTop(rect.top() - 1);
             rect.setBottom(rect.bottom() + 2);
             if (rect.intersects(runRect)) {
-                return seg;
+                return stemSegment;
             }
         }
         return 0;
@@ -587,8 +583,11 @@ namespace Munip
         const int MinimumFlagRunlengthLimit = dw->staffLineHeight().min << 1;
         const int FlagDistanceLimit = int(qRound(.8 * dw->staffSpaceHeight().max));
 
-        foreach (StemSegment *seg, stemSegments) {
-            const QRect rect = seg->boundingRect;
+        foreach (NoteSegment *noteSegment, noteSegments) {
+            StemSegment *stemSegment = noteSegment->stemSegment;
+            if (!stemSegment) continue;
+
+            const QRect rect = stemSegment->boundingRect;
             const RunCoord stemRunCoord(rect.right() + 1, Run(rect.top(), rect.height()));
 
             QRect flagBoundRect;
@@ -624,7 +623,7 @@ namespace Munip
                             const RunCoord prev = prevCoord.value(cur, RunCoord());
                             if (!prev.isValid()) break;
 
-                            seg->flagRunCoords << cur;
+                            stemSegment->flagRunCoords << cur;
                             const QRect curRect(prev.pos, prev.run.pos, 1, prev.run.length);
                             if (flagBoundRect.isNull()) {
                                 flagBoundRect = curRect;
@@ -670,7 +669,7 @@ namespace Munip
             }
 
             if (maxRunLength > 0) {
-                seg->rightFlagCount += maxRunValue;
+                stemSegment->rightFlagCount += maxRunValue;
             }
         }
     }
@@ -682,8 +681,11 @@ namespace Munip
         p.setPen(QColor(Qt::white));
         p.setBrush(Qt::NoBrush);
 
-        foreach (const StemSegment *seg, stemSegments) {
-            foreach (const RunCoord &runCoord, seg->flagRunCoords) {
+        foreach (NoteSegment *noteSegment, noteSegments) {
+            StemSegment *stemSegment = noteSegment->stemSegment;
+            if (!stemSegment) continue;
+
+            foreach (const RunCoord &runCoord, stemSegment->flagRunCoords) {
                 p.drawLine(runCoord.pos, runCoord.run.pos, runCoord.pos, runCoord.run.endPos());
             }
         }
@@ -700,8 +702,11 @@ namespace Munip
         const int MinimumPartialBeamRunlengthLimit = dw->staffLineHeight().min << 1;
         const int PartialBeamDistanceLimit = int(qRound(.33 * dw->staffSpaceHeight().max));
 
-        foreach (StemSegment *seg, stemSegments) {
-            const QRect rect = seg->boundingRect;
+        foreach (NoteSegment *noteSegment, noteSegments) {
+            StemSegment *stemSegment = noteSegment->stemSegment;
+            if (!stemSegment) continue;
+
+            const QRect rect = stemSegment->boundingRect;
             const RunCoord stemRunCoord(rect.right() + 1, Run(rect.top(), rect.height()));
 
             QStack<RunCoord> stack; // For DFS
@@ -735,18 +740,21 @@ namespace Munip
                             const RunCoord prev = prevCoord.value(cur, RunCoord());
                             if (!prev.isValid()) break;
 
-                            seg->partialBeamRunCoords << cur;
+                            stemSegment->partialBeamRunCoords << cur;
                             cur = prev;
                         }
-                        seg->rightFlagCount++;
+                        stemSegment->rightFlagCount++;
                     }
                 }
             }
         }
 
         // Now do it for left side of stem.
-        foreach (StemSegment *seg, stemSegments) {
-            const QRect rect = seg->boundingRect;
+        foreach (NoteSegment *noteSegment, noteSegments) {
+            StemSegment *stemSegment = noteSegment->stemSegment;
+            if (!stemSegment) continue;
+
+            const QRect rect = stemSegment->boundingRect;
             const RunCoord stemRunCoord(rect.left() - 1, Run(rect.top(), rect.height()));
 
             QStack<RunCoord> stack; // For DFS
@@ -780,10 +788,10 @@ namespace Munip
                             const RunCoord prev = prevCoord.value(cur, RunCoord());
                             if (!prev.isValid()) break;
 
-                            seg->partialBeamRunCoords << cur;
+                            stemSegment->partialBeamRunCoords << cur;
                             cur = prev;
                         }
-                        seg->leftFlagCount++;
+                        stemSegment->leftFlagCount++;
                     }
                 }
             }
@@ -798,8 +806,11 @@ namespace Munip
         p.setPen(QColor(Qt::white));
         p.setBrush(Qt::NoBrush);
 
-        foreach (const StemSegment *seg, stemSegments) {
-            foreach (const RunCoord &runCoord, seg->partialBeamRunCoords) {
+        foreach (NoteSegment *noteSegment, noteSegments) {
+            StemSegment *stemSegment = noteSegment->stemSegment;
+            if (!stemSegment) continue;
+
+            foreach (const RunCoord &runCoord, stemSegment->partialBeamRunCoords) {
                 p.drawLine(runCoord.pos, runCoord.run.pos, runCoord.pos, runCoord.run.endPos());
             }
         }
@@ -826,7 +837,7 @@ namespace Munip
         img.fill(0xffffffff);
 
         QPainter p(&img);
-        p.setPen(Qt::red);
+        p.setPen(Qt::blue);
         for (int x = r.left(); x <= r.right(); ++x) {
             QLineF line(x, r.bottom(), x, r.bottom() - hash[x]);
             p.drawLine(line);
@@ -844,7 +855,7 @@ namespace Munip
         QPainter p(&img);
 
         foreach (const NoteSegment* seg, noteSegments) {
-            p.setPen(QColor(Qt::red));
+            p.setPen(QColor(Qt::blue));
             QRect segRect = seg->boundingRect;
 
             QHash<int, int>::const_iterator it = seg->horizontalProjection.constBegin();
