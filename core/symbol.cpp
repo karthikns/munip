@@ -5,6 +5,7 @@
 #include <QDebug>
 #include <QPainter>
 #include <QStack>
+#include <QTime>
 
 #include <cmath>
 
@@ -875,34 +876,53 @@ namespace Munip
 
     void StaffData::extractRegions()
     {
+        QTime timer;
+        timer.start();
         const QRgb WhiteColor = QColor(Qt::white).rgb();
         const QPoint deltas[4] = {
             QPoint(-1, 0), QPoint(0, -1), QPoint(+1, 0), QPoint(0, +1)
         };
-        QSet<QPoint> visited;
 
-        int id = 1;
+        const int w = workImage.width();
+        const int h = workImage.height();
+        const int size = workImage.width() * workImage.height();
+
+        bool *visitedArray = new bool[size];
+        for (int i = 0; i < size; ++i) {
+            visitedArray[i] = false;
+        }
+
+        int *visitedArrayCalls = new int[size];
+        for (int i = 0; i < size; ++i) {
+            visitedArrayCalls[i] = 0;
+        }
+
+        int id = 0;
         for (int x = 0; x < workImage.width(); ++x) {
             for (int y = 0; y < workImage.height(); ++y) {
                 const QPoint point(x, y);
 
                 if (workImage.pixel(point) != WhiteColor) continue;
-                if (visited.contains(point)) continue;
+                ++visitedArrayCalls[y * w + x];
+                if (visitedArray[y * w + x]) continue;
 
                 Region *region = new Region;
                 region->id = id;
-                regions.insert(id, region);
+                regions << region;
 
                 QStack<QPoint> stack;
+                stack.reserve(size);
                 stack.push(point);
 
                 while (!stack.isEmpty()) {
                     const QPoint top = stack.pop();
                     const QRect topRect(top, top);
 
-                    if (visited.contains(top)) continue;
+                    ++visitedArrayCalls[top.y() * w + top.x()];
+                    if (visitedArray[top.y() * w + top.x()]) continue;
 
-                    visited << top;
+                    ++visitedArrayCalls[top.y() * w + top.x()];
+                    visitedArray[top.y() * w + top.x()] = true;
                     region->points << top;
                     if (region->boundingRect.isNull()) {
                         region->boundingRect = topRect;
@@ -919,7 +939,8 @@ namespace Munip
                             continue;
                         }
                         if (workImage.pixel(newPoint) != WhiteColor) continue;
-                        if (visited.contains(newPoint)) continue;
+                        ++visitedArrayCalls[newPoint.y() * w + newPoint.x()];
+                        if (visitedArray[newPoint.y() * w + newPoint.x()]) continue;
 
                         stack.push(newPoint);
                     }
@@ -935,18 +956,17 @@ namespace Munip
         const int MinArea = M_PI * MinRadiusLimit * MinRadiusLimit;
         const int MaxArea = M_PI * MaxRadiusLimit * MaxRadiusLimit;
 
-        mDebug() << Q_FUNC_INFO;
-        mDebug() << "Min : " << MinArea << "Max : " << MaxArea;
+//        mDebug() << Q_FUNC_INFO;
+//        mDebug() << "Min : " << MinArea << "Max : " << MaxArea;
 
         QPainter p(&workImage);
         QColor color(Qt::green);
         color.setAlpha(100);
         //p.setBrush(color);
-        p.setPen(QColor(Qt::black));
+        p.setPen(QColor(Qt::green));
 
-        QList<Region*> regionList = regions.values();
-        foreach (const Region *region, regionList) {
-            mDebug() << region->points.size();
+        foreach (const Region *region, regions) {
+//            mDebug() << region->points.size();
             if (region->points.size() >= MinArea && region->points.size() <= MaxArea) {
                 foreach (const QPoint &point, region->points) {
                     p.drawPoint(point);
@@ -955,6 +975,12 @@ namespace Munip
         }
 
         p.end();
+
+
+        mDebug() << Q_FUNC_INFO << "Took " << timer.elapsed() << " ms";
+
+        delete []visitedArray;
+        delete []visitedArrayCalls;
     }
 
     QImage StaffData::staffImage() const

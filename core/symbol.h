@@ -67,10 +67,10 @@ namespace Munip
     struct Region
     {
         int id;
-        QSet<QPoint> points;
+        QList<QPoint> points;
         QRect boundingRect;
 
-        Region() { id = 0; }
+        Region() { id = -1; }
     };
 
     struct StaffData
@@ -125,7 +125,7 @@ namespace Munip
 
         QList<NoteSegment*> noteSegments;
         QList<QList<RunCoord> > beamsRunCoords;
-        QHash<int, Region*> regions;
+        QList<Region*> regions;
 
         const QImage& image;
         QImage workImage;
