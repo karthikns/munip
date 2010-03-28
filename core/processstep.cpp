@@ -2037,7 +2037,7 @@ void SymbolAreaExtraction::process()
                 }
             }
 
-            // Draw chords
+            // Draw notes.
             if (1) {
                 QColor colors[5] = {
                     QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
@@ -2093,8 +2093,8 @@ void SymbolAreaExtraction::process()
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->maxProjections));
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->noteProjections));
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->temp));
-        //p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectionImage());
-        p.drawImage(QPoint(0, y), sd->workImage);
+        p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectionImage());
+        //p.drawImage(QPoint(0, y), sd->workImage);
 
         y += sh + 50;
     }

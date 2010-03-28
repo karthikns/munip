@@ -13,6 +13,7 @@ class QImage;
 namespace Munip
 {
     class Range;
+    class StemSegment;
 
     struct NoteSegment
     {
@@ -20,6 +21,7 @@ namespace Munip
 
         QRect boundingRect;
         QList<QRect> noteRects;
+        StemSegment *stemSegment;
 
         QHash<int, int> horizontalProjection;
 
@@ -30,7 +32,7 @@ namespace Munip
         }
 
     private:
-        NoteSegment() {}
+        NoteSegment() { stemSegment = 0; }
     };
 
     struct StemSegment
@@ -83,8 +85,8 @@ namespace Munip
         void extractBeams();
         void eraseBeams();
 
-        void extractChords();
-        void eraseChords();
+        void extractNotes();
+        void eraseNotes();
 
         void extractFlags();
         void eraseFlags();

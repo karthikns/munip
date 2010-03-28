@@ -70,8 +70,8 @@ namespace Munip
         extractBeams();
         eraseBeams();
 
-        extractChords();
-        eraseChords();
+        extractNotes();
+        eraseNotes();
 
         extractFlags();
         eraseFlags();
@@ -366,6 +366,7 @@ namespace Munip
             StemSegment *stemSeg = StemSegment::create();
             stemSeg->boundingRect = stemRect;
             stemSeg->noteSegment = seg;
+            seg->stemSegment = stemSeg;
 
             stemSegments << stemSeg;
         }
@@ -486,71 +487,91 @@ namespace Munip
         p.end();
     }
 
-    void StaffData::extractChords()
+    void StaffData::extractNotes()
     {
         const QRgb BlackColor = QColor(Qt::black).rgb();
 
         DataWarehouse *dw = DataWarehouse::instance();
-        const int margin = dw->staffSpaceHeight().min;
-        int verticalMargin = dw->staffSpaceHeight().min - dw->staffLineHeight().min;
+        const int extensionLimit = dw->staffSpaceHeight().min;
+        const int NoteWidthLimit = dw->staffSpaceHeight().min;
+        const int NoteHeightLimit = dw->staffSpaceHeight().min;// - dw->staffLineHeight().min;
 
-        for (int i = 0; i < noteSegments.size(); ++i) {
-            NoteSegment *seg = noteSegments[i];
+        foreach (NoteSegment *seg, noteSegments) {
+            if (!seg->stemSegment) continue;
+
             QRect segRect = seg->boundingRect;
+            QRect stemRect = seg->stemSegment->boundingRect;
 
-            QList<int> projHelper;
-            for (int y = segRect.top(); y <= segRect.bottom(); ++y) {
-                int count = 0;
-                for (int x = segRect.left(); x <= segRect.right(); ++x) {
-                    count += (workImage.pixel(x, y) == BlackColor);
-                }
-                if (count < margin) {
-                    projHelper << 0;
-                } else {
-                    projHelper << count;
-                }
+            int centersDistance = segRect.center().x() - stemRect.center().x();
+            bool isTowardsLeft = (centersDistance > 0);
+
+            QRect areaToProject;
+            areaToProject.setTop(qMax(stemRect.top() - extensionLimit, segRect.top()));
+            areaToProject.setBottom(qMin(stemRect.bottom() + extensionLimit, segRect.bottom()));
+            if (isTowardsLeft) {
+                areaToProject.setLeft(stemRect.right() + 1);
+                areaToProject.setRight(segRect.right());
+            } else {
+                areaToProject.setLeft(segRect.left());
+                areaToProject.setRight(stemRect.left() - 1);
             }
 
-            for (int i = 0; i < projHelper.size(); ++i) {
-                if (projHelper.at(i) == 0) continue;
-                int runlength = 0;
-                while ((i + runlength) < projHelper.size()) {
-                    if (projHelper.at(i+runlength) == 0) break;
-                    ++runlength;
+            QHash<int, int> projHelper;
+            for (int y = areaToProject.top(); y <= areaToProject.bottom(); ++y) {
+                int count = 0;
+                for (int x = areaToProject.left(); x <= areaToProject.right(); ++x) {
+                    count += (workImage.pixel(x, y) == BlackColor);
                 }
 
-                if (runlength < verticalMargin) {
+                projHelper.insert(y, count >= NoteWidthLimit ? count : 0);
+            }
+
+            // Now filter based on Height of H projection
+            QList<int> keys = projHelper.keys();
+            qSort(keys);
+
+            for (int i = keys.first(); i <= keys.last(); ++i) {
+                if (projHelper.value(i, 0) == 0) continue;
+
+                int runlength = 0;
+                for (; (i + runlength) <= keys.last(); ++runlength) {
+                    if (projHelper.value(i + runlength, 0) == 0) {
+                        break;
+                    }
+                }
+
+                // Nullify if not notehead
+                if (runlength < NoteHeightLimit) {
                     for (int j = 0; j < runlength; ++j) {
-                        projHelper[i+j] = 0;
+                        projHelper[i + j] = 0;
                     }
 
                 } else {
-                    int midY = segRect.top() + i + (runlength >> 1);
-                    QRect rect(segRect.left(), midY - margin, segRect.width(),
-                            margin * 2);
+                    int midY = i + (runlength >> 1);
+                    QRect rect(areaToProject.left(), midY - NoteHeightLimit, areaToProject.width(),
+                            NoteHeightLimit * 2);
+                    //QRect rect(areaToProject.left(), midY - NoteHeightLimit, areaToProject.width(),
+                    //        NoteHeightLimit * 2);
                     seg->noteRects << rect;
                 }
 
                 i += runlength - 1;
             }
 
-            seg->horizontalProjection.clear();
-            for (int i = 0; i < projHelper.size(); ++i) {
-                seg->horizontalProjection.insert(i + segRect.top(), projHelper.at(i));
-            }
+            seg->horizontalProjection = projHelper;
 
         }
     }
 
-    void StaffData::eraseChords()
+    void StaffData::eraseNotes()
     {
         QPainter p(&workImage);
         p.setBrush(QBrush(QColor(Qt::white)));
         p.setPen(Qt::NoPen);
 
         foreach (const NoteSegment* nSeg, noteSegments) {
-            foreach (const QRect &chordRect, nSeg->noteRects) {
-                p.drawRect(chordRect);
+            foreach (const QRect &noteRect, nSeg->noteRects) {
+                p.drawRect(noteRect);
             }
         }
     }
