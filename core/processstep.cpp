@@ -570,7 +570,6 @@ namespace Munip
                     x++;
                 Segment segment = Segment(start,end);
                 m_segments[y].push_back(segment);
-                mDebug() << segment.startPos()<<segment.endPos()<<Q_FUNC_INFO;
                 start = QPoint(x,y);
             }
         }
@@ -657,9 +656,11 @@ namespace Munip
                     index++;
                 }
                 qSort(connectedComponentList.begin(),connectedComponentList.end(),segmentSortByPosition);
+/*
                 foreach (Segment s,connectedComponentList) {
                     mDebug()<<s.startPos()<<s.endPos()<<s.connectedComponentID();
                 }
+*/
                 line.addSegmentList(connectedComponentList);
                 done.insert(ID);
                 if (m_lineList.isEmpty()||!m_lineList.last().aggregate(line))
