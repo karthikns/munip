@@ -14,6 +14,7 @@ namespace Munip
         m_endPos = end;
         m_destinationPos = end;
         m_connectedComponentID = -1;
+        m_sourcePos = start;
 
     }
 
@@ -70,6 +71,16 @@ namespace Munip
     int Segment ::connectedComponentID() const
     {
         return m_connectedComponentID;
+    }
+
+    void Segment::setSourcePos(const QPoint& position)
+    {
+        m_sourcePos = position;
+    }
+
+    QPoint Segment::sourcePos() const
+    {
+        return m_sourcePos;
     }
 
     QList<Segment> Segment ::getConnectedSegments(QList<Segment> list)

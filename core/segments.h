@@ -31,6 +31,9 @@ namespace Munip
         void setDestinationPos(const QPoint &position);
         QPoint destinationPos() const;
 
+        void setSourcePos(const QPoint& position);
+        QPoint sourcePos() const;
+
         int length() const;
 
         bool isValid() const;
@@ -48,6 +51,7 @@ namespace Munip
         QPoint m_endPos;
         int m_connectedComponentID;
         QPoint m_destinationPos;
+        QPoint m_sourcePos;
     };
 }
 

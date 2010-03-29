@@ -550,7 +550,7 @@ namespace Munip
     {
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
         const int Black = 1 - White;
-        int countWhite = 0;
+        //int countWhite = 0;
         QPoint start,end;
 
         for(int y = 0; y < m_processedImage.height(); y++)
@@ -560,27 +560,17 @@ namespace Munip
                 x++;
 
             start = QPoint(x,y);
-            countWhite = 0;
+            //countWhite = 0;
             while (x < m_processedImage.width())
             {
                 while (x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == Black)
                     x++;
-
-                while (x+countWhite < m_processedImage.width() && m_processedImage.pixelIndex(x+countWhite,y) == White)
-                    countWhite++;
-                if (checkDiscontinuity(countWhite))
-                    end = QPoint(x-1,y);
-                else {
-                    x += countWhite;
-                    continue;
-                }
-
-                x+= countWhite;
-
+                end = QPoint(x-1,y);
+                while (x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White)
+                    x++;
                 Segment segment = Segment(start,end);
                 m_segments[y].push_back(segment);
-
-                countWhite = 0;
+                mDebug() << segment.startPos()<<segment.endPos()<<Q_FUNC_INFO;
                 start = QPoint(x,y);
             }
         }
@@ -601,6 +591,7 @@ namespace Munip
         QList<Segment> paths = segmentList;
 
         qSort( paths.begin(),paths.end(),segmentSortByWeight);
+        qSort( segmentList.begin(),segmentList.end(),segmentSortByConnectedComponentID);
         /*
         mDebug() << Q_FUNC_INFO << endl << "Paths:";
         for(int i = 0; i < paths.size(); i++) {
@@ -632,13 +623,13 @@ namespace Munip
         i = 0;
         while (i < paths.size())
         {
-            int k = 0;
+            //int k = 0;
             if ( !done.contains(paths[i].connectedComponentID()))
             {
                 int ID = paths[i].connectedComponentID();
                 int weight = paths[i].weight();
                 StaffLine line(paths[i].startPos(),paths[i].destinationPos());
-
+/*
                 while (i+k < paths.size() && paths[i+k].connectedComponentID() == ID )
                 {
                     line.addSegment(paths[i+k]);
@@ -653,13 +644,30 @@ namespace Munip
 
 
                     k++;
+                }*/
+                //Clean up segments with the connected component id ID
+                
+                int index = 0;
+                QList<Segment> connectedComponentList;
+                while (index < segmentList.size() && segmentList[index].connectedComponentID() != ID) {
+                    index++;
                 }
+                while( index < segmentList.size() && segmentList[index].connectedComponentID() == ID) {
+                    connectedComponentList.push_back(segmentList[index]);
+                    index++;
+                }
+                qSort(connectedComponentList.begin(),connectedComponentList.end(),segmentSortByPosition);
+                foreach (Segment s,connectedComponentList) {
+                    mDebug()<<s.startPos()<<s.endPos()<<s.connectedComponentID();
+                }
+                line.addSegmentList(connectedComponentList);
                 done.insert(ID);
                 if (m_lineList.isEmpty()||!m_lineList.last().aggregate(line))
                     m_lineList.push_back(line);
             }
-            k = (k== 0)?1:k;
-            i+=k;
+            //k = (k== 0)?1:k;
+            //i+=k;
+            i++;
         }
         qSort(m_lineList.begin(),m_lineList.end(),staffLineSort);
 
@@ -726,6 +734,7 @@ Segment StaffLineDetect::findMaxPath(Segment segment)
                 continue;
             }
             seg = segment.getSegment(QPoint(startX + whiteCount, yMinus1), yMinus1Segments);
+            // set the source position
             if (seg.isValid()) break;
         }
     }
@@ -753,7 +762,28 @@ Segment StaffLineDetect::findMaxPath(Segment segment)
     return segment;
 }
 
+void StaffLineDetect::segmentCleanUp(const Segment& segment)
+{
 
+    const int White = m_originalImage.color(0) == 0xffffffff ? 0 : 1;
+    const int Black = 1-White;
+    const int y = segment.startPos().y();
+
+    for (int x = segment.startPos().x(); x <= segment.endPos().x();x++) {
+        if (y-1 > 0) {
+            if (x-1 > 0 && m_processedImage.pixelIndex(x-1,y-1) == Black) {
+                continue;
+            }
+            if ( m_processedImage.pixelIndex(x,y-1) == Black) {
+                continue;
+            }
+            if ( x+1 <= segment.endPos().x()+1 && m_processedImage.pixelIndex(x+1,y-1) == Black) {
+                continue;
+            }
+            m_processedImage.setPixel(x,y,White);
+        }
+    }
+}
 void StaffLineDetect::constructStaff()
 {
 

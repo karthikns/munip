@@ -191,7 +191,7 @@ namespace Munip {
 
         void findPaths();
         void drawDetectedLines();
-
+        void segmentCleanUp(const Segment& segment);
         int findTopHeight(QPoint pos,QImage& workImage);
         int findBottomHeight(QPoint pos,QImage& workImage);
 
