@@ -547,10 +547,10 @@ namespace Munip
 
 
     void StaffLineDetect::detectLines()
-    {
+    { 
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
         const int Black = 1 - White;
-        //int countWhite = 0;
+        int countWhite = 0;
         QPoint start,end;
 
         for(int y = 0; y < m_processedImage.height(); y++)
@@ -560,20 +560,33 @@ namespace Munip
                 x++;
 
             start = QPoint(x,y);
-            //countWhite = 0;
+            countWhite = 0;
             while (x < m_processedImage.width())
             {
                 while (x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == Black)
                     x++;
-                end = QPoint(x-1,y);
-                while (x < m_processedImage.width() && m_processedImage.pixelIndex(x,y) == White)
-                    x++;
+
+                while (x+countWhite < m_processedImage.width() && m_processedImage.pixelIndex(x+countWhite,y) == White)
+                    countWhite++;
+                if (checkDiscontinuity(countWhite))
+                    end = QPoint(x-1,y);
+                else {
+                    x += countWhite;
+                    countWhite = 0;
+                    continue;
+                }
+
+                x+= countWhite;
+
                 Segment segment = Segment(start,end);
                 m_segments[y].push_back(segment);
+
+                countWhite = 0;
                 start = QPoint(x,y);
             }
         }
-        findPaths();
+
+       findPaths();
 
     }
 
@@ -622,13 +635,13 @@ namespace Munip
         i = 0;
         while (i < paths.size())
         {
-            //int k = 0;
+            int k = 0;
             if ( !done.contains(paths[i].connectedComponentID()))
             {
                 int ID = paths[i].connectedComponentID();
                 int weight = paths[i].weight();
                 StaffLine line(paths[i].startPos(),paths[i].destinationPos());
-/*
+
                 while (i+k < paths.size() && paths[i+k].connectedComponentID() == ID )
                 {
                     line.addSegment(paths[i+k]);
@@ -643,32 +656,13 @@ namespace Munip
 
 
                     k++;
-                }*/
-                //Clean up segments with the connected component id ID
-                
-                int index = 0;
-                QList<Segment> connectedComponentList;
-                while (index < segmentList.size() && segmentList[index].connectedComponentID() != ID) {
-                    index++;
                 }
-                while( index < segmentList.size() && segmentList[index].connectedComponentID() == ID) {
-                    connectedComponentList.push_back(segmentList[index]);
-                    index++;
-                }
-                qSort(connectedComponentList.begin(),connectedComponentList.end(),segmentSortByPosition);
-/*
-                foreach (Segment s,connectedComponentList) {
-                    mDebug()<<s.startPos()<<s.endPos()<<s.connectedComponentID();
-                }
-*/
-                line.addSegmentList(connectedComponentList);
                 done.insert(ID);
                 if (m_lineList.isEmpty()||!m_lineList.last().aggregate(line))
                     m_lineList.push_back(line);
             }
-            //k = (k== 0)?1:k;
-            //i+=k;
-            i++;
+            k = (k== 0)?1:k;
+            i+=k;
         }
         qSort(m_lineList.begin(),m_lineList.end(),staffLineSort);
 
