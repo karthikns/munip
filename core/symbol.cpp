@@ -888,13 +888,10 @@ namespace Munip
         const int size = workImage.width() * workImage.height();
 
         bool *visitedArray = new bool[size];
-        for (int i = 0; i < size; ++i) {
-            visitedArray[i] = false;
-        }
-
-        int *visitedArrayCalls = new int[size];
-        for (int i = 0; i < size; ++i) {
-            visitedArrayCalls[i] = 0;
+        for (int x = 0; x < workImage.width(); ++x) {
+            for (int y = 0; y < workImage.height(); ++y) {
+                visitedArray[y * w + x] = (workImage.pixel(x, y) != WhiteColor);
+            }
         }
 
         int id = 0;
@@ -902,8 +899,6 @@ namespace Munip
             for (int y = 0; y < workImage.height(); ++y) {
                 const QPoint point(x, y);
 
-                if (workImage.pixel(point) != WhiteColor) continue;
-                ++visitedArrayCalls[y * w + x];
                 if (visitedArray[y * w + x]) continue;
 
                 Region *region = new Region;
@@ -918,10 +913,8 @@ namespace Munip
                     const QPoint top = stack.pop();
                     const QRect topRect(top, top);
 
-                    ++visitedArrayCalls[top.y() * w + top.x()];
                     if (visitedArray[top.y() * w + top.x()]) continue;
 
-                    ++visitedArrayCalls[top.y() * w + top.x()];
                     visitedArray[top.y() * w + top.x()] = true;
                     region->points << top;
                     if (region->boundingRect.isNull()) {
@@ -938,8 +931,6 @@ namespace Munip
                         if (newPoint.y() < 0 || newPoint.y() >= workImage.height()) {
                             continue;
                         }
-                        if (workImage.pixel(newPoint) != WhiteColor) continue;
-                        ++visitedArrayCalls[newPoint.y() * w + newPoint.x()];
                         if (visitedArray[newPoint.y() * w + newPoint.x()]) continue;
 
                         stack.push(newPoint);
@@ -980,7 +971,6 @@ namespace Munip
         mDebug() << Q_FUNC_INFO << "Took " << timer.elapsed() << " ms";
 
         delete []visitedArray;
-        delete []visitedArrayCalls;
     }
 
     QImage StaffData::staffImage() const
