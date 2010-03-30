@@ -879,6 +879,8 @@ namespace Munip
         QTime timer;
         timer.start();
         const QRgb WhiteColor = QColor(Qt::white).rgb();
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+        const QRgb YellowColor = QColor(Qt::yellow).rgb();
         const QPoint deltas[4] = {
             QPoint(-1, 0), QPoint(0, -1), QPoint(+1, 0), QPoint(0, +1)
         };
@@ -951,8 +953,8 @@ namespace Munip
 //        mDebug() << "Min : " << MinArea << "Max : " << MaxArea;
 
         QPainter p(&workImage);
-        QColor color(Qt::green);
-        color.setAlpha(100);
+        //QColor color(Qt::green);
+        //color.setAlpha(100);
         //p.setBrush(color);
         p.setPen(QColor(Qt::green));
 
@@ -966,6 +968,79 @@ namespace Munip
         }
 
         p.end();
+
+        for (int x = 0; x < workImage.width(); ++x) {
+            for (int y = 0; y < workImage.height(); ++y) {
+                visitedArray[y * w + x] = false;
+            }
+        }
+
+        foreach (Region *region, regions) {
+            if (region->points.size() < MinArea && region->points.size() > MaxArea) {
+                continue;
+            }
+
+            QList<QPoint> blacks;
+            foreach (const QPoint point, region->points) {
+                for (int i = 0; i < 4; ++i) {
+                    QPoint newPoint = point + deltas[i];
+                    if (newPoint.x() < 0 || newPoint.x() >= workImage.width()) {
+                        continue;
+                    }
+                    if (newPoint.y() < 0 || newPoint.y() >= workImage.height()) {
+                        continue;
+                    }
+
+                    if (workImage.pixel(newPoint) == BlackColor) {
+                        blacks << newPoint;
+                    }
+                }
+            }
+
+            foreach (const QPoint point, blacks) {
+                visitedArray[point.y() * w + point.x()] = true;
+            }
+
+            while (!blacks.isEmpty()) {
+                QList<QPoint> newBlacks;
+
+                foreach (const QPoint point, blacks) {
+                    bool anyWhiteSurround = false;
+
+                    QList<QPoint> neighborBlacks;
+                    for (int i = 0; i < 4; ++i) {
+                        QPoint newPoint = point + deltas[i];
+
+                        if (newPoint.x() < 0 || newPoint.x() >= workImage.width()) {
+                            continue;
+                        }
+                        if (newPoint.y() < 0 || newPoint.y() >= workImage.height()) {
+                            continue;
+                        }
+
+                        if (workImage.pixel(newPoint) == WhiteColor) {
+                            anyWhiteSurround = true;
+                        }
+
+                        if (workImage.pixel(newPoint) == BlackColor &&
+                                visitedArray[newPoint.y() * w + newPoint.x()] == false) {
+                            neighborBlacks << newPoint;
+                            visitedArray[newPoint.y() * w + newPoint.x()] = true;
+                        }
+                    }
+
+                    if (anyWhiteSurround) continue;
+
+                    workImage.setPixel(point, YellowColor);
+                    newBlacks += neighborBlacks;
+                }
+
+                blacks = newBlacks;
+            }
+
+
+
+        }
 
 
         mDebug() << Q_FUNC_INFO << "Took " << timer.elapsed() << " ms";
