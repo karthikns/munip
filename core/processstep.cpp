@@ -2134,6 +2134,59 @@ void SymbolAreaExtraction::process()
                 }
             }
 
+            // Draw stems of hollow notes
+            if (1) {
+                QColor colors[5] = {
+                    QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
+                    QColor(Qt::magenta), QColor(Qt::darkCyan)
+                };
+                p.setPen(Qt::NoPen);
+                foreach (const NoteSegment *noteSegment, sd->hollowNoteSegments) {
+                    const StemSegment *s = noteSegment->stemSegment;
+                    if (!s) continue;
+
+                    QRect r = s->boundingRect.adjusted(-1, 0, +1, 0);
+                    p.setBrush(colors[s->totalFlagCount() % 5]);
+                    p.drawRect(r);
+                }
+            }
+
+            // Draw hollow notes.
+            if (1) {
+                QColor colors[5] = {
+                    QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
+                    QColor(Qt::magenta), QColor(Qt::darkCyan)
+                };
+                int currentIndex = 0;
+
+                p.setPen(Qt::NoPen);
+                foreach (const NoteSegment *n, sd->hollowNoteSegments) {
+                    foreach (const QRect& r, n->noteRects) {
+                        colors[currentIndex].setAlpha(100);
+                        p.setBrush(colors[currentIndex]);
+                        p.drawRect(r);
+                        currentIndex = ((currentIndex + 1) % 5);
+                    }
+                }
+            }
+
+            // Draw half and whole note regions. (This should be last as it is translucent)
+            if (1) {
+                QColor color = QColor(Qt::darkGreen);
+                color.setAlpha(100);
+                QColor redColor = QColor(Qt::red);
+                redColor.setAlpha(100);
+                p.setPen(Qt::NoPen);
+                foreach (const NoteSegment *n, sd->hollowNoteSegments) {
+                    if (n->noteRects.isEmpty()) {
+                        p.setBrush(redColor);
+                    } else {
+                        p.setBrush(color);
+                    }
+                    p.drawRect(n->boundingRect);
+                }
+            }
+
             p.end();
 
         }
@@ -2147,7 +2200,10 @@ void SymbolAreaExtraction::process()
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->noteProjections));
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->temp));
         //p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectionImage());
-        p.drawImage(QPoint(0, y), sd->workImage);
+        //p.drawImage(QPoint(0, y), sd->workImage);
+        //p.drawImage(QPoint(0, y), sd->projectionImage(sd->hollowNoteMaxProjections));
+        //p.drawImage(QPoint(0, y), sd->projectionImage(sd->hollowNoteProjections));
+        p.drawImage(QPoint(0, y), sd->hollowNoteHeadHorizontalProjectionImage());
 
         y += sh + 50;
     }

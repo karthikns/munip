@@ -105,13 +105,18 @@ namespace Munip
         void erasePartialBeams();
 
         void enhanceConnectivity();
-
         void extractRegions();
+
+        void findHollowNoteMaxProjections();
+        void extractHollowNoteSegments();
+        void extractHollowNoteStemSegments();
+        void extractHollowNotes();
 
         QImage staffImage() const;
         QImage staffImageWithStaffLinesOnly() const;
         QImage projectionImage(const QHash<int, int> &hash) const;
         QImage noteHeadHorizontalProjectionImage() const;
+        QImage hollowNoteHeadHorizontalProjectionImage() const;
 
         int SlidingWindowSize;
 
@@ -119,13 +124,17 @@ namespace Munip
         QList<QRect> symbolRects;
         QHash<int, int> maxProjections;
         QHash<int, int> noteProjections;
-        QHash<int, int> stemsProjections;
 
         QHash<int, int> temp;
+
+        QHash<int, int> hollowNoteMaxProjections;
+        QHash<int, int> hollowNoteProjections;
 
         QList<NoteSegment*> noteSegments;
         QList<QList<RunCoord> > beamsRunCoords;
         QList<Region*> regions;
+
+        QList<NoteSegment*> hollowNoteSegments;
 
         const QImage& image;
         QImage workImage;

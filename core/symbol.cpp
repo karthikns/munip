@@ -73,8 +73,14 @@ namespace Munip
         erasePartialBeams();
 
         enhanceConnectivity();
-
         extractRegions();
+
+        findHollowNoteMaxProjections();
+
+        extractHollowNoteSegments();
+        extractHollowNoteStemSegments();
+
+        extractHollowNotes();
     }
 
     void StaffData::findSymbolRegions()
@@ -827,7 +833,6 @@ namespace Munip
     {
         // First fix 2 pixel disconnectivity
         const QRgb BlackColor = QColor(Qt::black).rgb();
-        const QRgb WhiteColor = QColor(Qt::white).rgb();
 
         const QPoint connectorMatrix[4][4] =
         {
@@ -944,9 +949,8 @@ namespace Munip
         }
 
         DataWarehouse *dw = DataWarehouse::instance();
-        const int MinRadiusLimit = int(.2 * dw->staffSpaceHeight().min);
         const int MaxRadiusLimit = int(0.5 * dw->staffSpaceHeight().min);
-        const int MinArea = 1; //M_PI * MinRadiusLimit * MinRadiusLimit;
+        const int MinArea = 1;
         const int MaxArea = M_PI * MaxRadiusLimit * MaxRadiusLimit;
 
         if (0) {
@@ -972,6 +976,393 @@ namespace Munip
 
         mDebug() << Q_FUNC_INFO << "Took " << timer.elapsed() << " ms";
         delete []visitedArray;
+    }
+
+    void StaffData::findHollowNoteMaxProjections()
+    {
+        QRect r = workImage.rect();
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+
+        QList<QRect> rectsToProcess;
+        // First extract regions to process
+        {
+            QImage img(workImage.size(), QImage::Format_Mono);
+            img.fill(QColor(Qt::black).rgb());
+
+            QPainter p(&img);
+            foreach (const NoteSegment *noteSegment, noteSegments) {
+                p.fillRect(noteSegment->boundingRect, QBrush(QColor(Qt::white)));
+            }
+
+            p.end();
+
+            for (int x = 0; x < img.width(); ++x) {
+                if (img.pixel(x, 0) != BlackColor) continue;
+
+                int width = 0;
+                for (; (x + width) < img.width(); ++width) {
+                    if (img.pixel(x + width, 0) != BlackColor) break;
+                }
+
+                if (width >= SlidingWindowSize) {
+                    rectsToProcess << QRect(x, 0, width, img.height());
+                }
+
+                x += width - 1;
+            }
+        }
+
+        foreach (const QRect& sr, rectsToProcess) {
+            for (int x = sr.left(); x <= sr.right() - SlidingWindowSize; ++x) {
+                QList<int> projectionHelper;
+
+                for (int y = sr.top(); y <= sr.bottom(); ++y) {
+                    int count = 0;
+
+                    for (int i = 0; i < SlidingWindowSize && (x+i) <= sr.right(); ++i) {
+
+                        // The following condition eliminates 90% of false positives!!!
+                        // It mainly discards the count if it the row begins with white pixel.
+                        if (i == 0 && workImage.pixel(x+i, y) != BlackColor) break;
+
+                        count += (workImage.pixel(x+i, y) == BlackColor);
+                    }
+                    projectionHelper << count;
+
+                }
+
+                int peakHValue = determinePeakHValueFrom(projectionHelper);
+                for (int i = 0; i < SlidingWindowSize && (x+i) <= sr.right(); ++i) {
+                    hollowNoteMaxProjections[x+i] = qMax(hollowNoteMaxProjections[x+i], peakHValue);
+                }
+            }
+        }
+    }
+
+    void StaffData::extractHollowNoteSegments()
+    {
+        DataWarehouse *dw = DataWarehouse::instance();
+        int n1_2 = 2 * (dw->staffLineHeight().max);
+        hollowNoteProjections = filter(Range(1, 100),
+                Range(n1_2, n1_2 + dw->staffSpaceHeight().max),
+                hollowNoteMaxProjections);
+
+        hollowNoteProjections = filter(Range(1, 100),
+                Range(n1_2 + dw->staffSpaceHeight().min - dw->staffLineHeight().min - 1, 100),
+                hollowNoteProjections);
+
+        // temp is just for debugging purpose.
+        temp = hollowNoteProjections;
+
+
+        // Removal of false positives.
+        QList<int> keys = hollowNoteProjections.keys();
+        qSort(keys);
+
+
+        // Fill up very thin gaps. (aka the bald note head region ;) )
+        const int ThinGapLimit = (dw->staffLineHeight().min >> 1);
+
+        for (int i = keys.first(); i <= keys.last(); ++i) {
+            if (hollowNoteProjections.value(i, 0) > 0) continue;
+
+            int runlength = 0;
+            for (; (i + runlength) <= keys.last(); ++runlength) {
+                if (hollowNoteProjections.value(i+runlength, 0) > 0) break;
+            }
+
+            if (runlength <= ThinGapLimit) {
+                // valueToInsert will be min of the values surrounding '0' run.
+                int valueToInsert = qMin(hollowNoteProjections.value(i-1, 0),
+                        hollowNoteProjections.value(i+runlength, 0));
+                for (int j = i; j < (i+runlength); ++j) {
+                    hollowNoteProjections[j] = valueToInsert;
+                }
+            }
+
+            i += runlength - 1;
+        }
+
+        // Update the keys variable as we inserted few in above loop.
+        keys = hollowNoteProjections.keys();
+        qSort(keys);
+
+        // Remove peak region which are very thin or very thick.
+        // IMPT: 110% the staffSpaceHeight max is really good choice for HOLLOW NOTES
+        //       found through experimentation.
+        const int ThinRegionLimit = int(qRound(1.1 * dw->staffSpaceHeight().max));
+        const int ThickRegionLimit = dw->staffSpaceHeight().max << 1;
+
+        for (int i = keys.first(); i <= keys.last(); ++i) {
+            if (hollowNoteProjections.value(i, 0) == 0) continue;
+
+            int runlength = 0;
+            for (; (i+runlength) <= keys.last(); ++runlength) {
+                if (hollowNoteProjections.value(i+runlength, 0) == 0) break;
+            }
+
+            if (runlength <= ThinRegionLimit || runlength >= ThickRegionLimit) {
+                for (int j = i; j < (i+runlength); ++j) {
+                    hollowNoteProjections[j] = 0;
+                }
+            }
+
+            i += runlength - 1;
+        }
+
+        // Update the keys as we added some new keys
+        keys = hollowNoteProjections.keys();
+        qSort(keys);
+
+        // Now fill up noteSegments list (datastructure construction)
+        const QRect r = workImage.rect();
+        const int top = r.top();
+        const int height = r.height();
+        const int noteWidth = 2 * DataWarehouse::instance()->staffSpaceHeight().min;
+
+        for (int i = keys.first(); i <= keys.last(); ++i) {
+            if (hollowNoteProjections.value(i, 0) == 0) continue;
+
+            int runlength = 0;
+            for (; (i+runlength) <= keys.last(); ++runlength) {
+                if (hollowNoteProjections.value(i+runlength, 0) == 0) break;
+            }
+
+
+            int xCenter = i + (runlength >> 1);
+            NoteSegment *n = NoteSegment::create();
+            // n->boundingRect = QRect(xCenter - noteWidth, top, noteWidth * 2, height);
+            n->boundingRect = QRect(xCenter - (noteWidth >> 1), top, noteWidth, height);
+            //n->boundingRect = QRect(key, top, runlength, height);
+
+            hollowNoteSegments << n;
+
+            i += runlength - 1;
+        }
+
+        qSort(hollowNoteSegments.begin(), hollowNoteSegments.end(),
+                lessThanNoteSegmentPointers);
+
+        mDebug() << Q_FUNC_INFO << endl << "Hollow Note segments <sorted>: ";
+        foreach (NoteSegment *seg, hollowNoteSegments) {
+            mDebug() << seg;
+        }
+        mDebug();
+    }
+
+    void StaffData::extractHollowNoteStemSegments()
+    {
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+
+        DataWarehouse *dw = DataWarehouse::instance();
+        const int lineHeight = dw->staffLineHeight().min * 2;
+
+        const int StemHeightLimit = dw->staffSpaceHeight().max +
+            2 * dw->staffLineHeight().max;
+
+        foreach (NoteSegment* seg, hollowNoteSegments) {
+            QRect rect = seg->boundingRect;
+            rect.setLeft(qMax(0, rect.left() - lineHeight));
+            rect.setRight(qMin(workImage.width() - 1, rect.right() + lineHeight));
+
+            int xWithMaxRunLength = -1;
+            Run maxRun;
+            for (int x = rect.left(); x <= rect.right(); ++x) {
+                // Runlength info for x.
+                for (int y = rect.top(); y <= rect.bottom(); ++y) {
+                    if (workImage.pixel(x, y) != BlackColor) continue;
+
+                    int runlength = 0;
+                    for (; (y + runlength) <= rect.bottom() &&
+                            workImage.pixel(x, y + runlength) == BlackColor; ++runlength);
+
+                    Run run(y, runlength);
+
+                    if (xWithMaxRunLength < 0 || run.length > maxRun.length) {
+                        xWithMaxRunLength = x;
+                        maxRun = run;
+                    }
+
+                    y += runlength - 1;
+                }
+            }
+
+            if (maxRun.length <= StemHeightLimit) continue;
+
+            const int margin = qRound(.8 * maxRun.length);
+            int xLimit = qMin(xWithMaxRunLength + lineHeight, rect.right());
+            QRect stemRect(xWithMaxRunLength, maxRun.pos, 1, maxRun.length);
+            for (int x = xWithMaxRunLength + 1; x <= xLimit; ++x) {
+                int count = 0;
+                for (int y = maxRun.pos; y < (maxRun.pos + maxRun.length); ++y) {
+                    count += (workImage.pixel(x, y) == BlackColor);
+                }
+
+                if (count >= margin) {
+                    stemRect.setRight(x);
+                } else {
+                    break;
+                }
+            }
+
+            xLimit = qMax(rect.left(), xWithMaxRunLength - lineHeight);
+            for (int x = xWithMaxRunLength - 1; x >= xLimit; --x) {
+                int count = 0;
+                for (int y = maxRun.pos; y < (maxRun.pos + maxRun.length); ++y) {
+                    count += (workImage.pixel(x, y) == BlackColor);
+                }
+
+                if (count >= margin) {
+                    stemRect.setLeft(x);
+                } else {
+                    break;
+                }
+            }
+
+            StemSegment *stemSeg = StemSegment::create();
+            stemSeg->boundingRect = stemRect;
+            stemSeg->noteSegment = seg;
+            seg->stemSegment = stemSeg;
+        }
+    }
+
+    void StaffData::extractHollowNotes()
+    {
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+
+        DataWarehouse *dw = DataWarehouse::instance();
+        const int extensionLimit = dw->staffSpaceHeight().min;
+        const int NoteWidthLimit = dw->staffSpaceHeight().min;
+        const int NoteHeightLimit = dw->staffSpaceHeight().min;// - dw->staffLineHeight().min;
+
+        // First extract half notes (with stem segments)
+        foreach (NoteSegment *seg, hollowNoteSegments) {
+            if (!seg->stemSegment) continue;
+
+            QRect segRect = seg->boundingRect;
+            QRect stemRect = seg->stemSegment->boundingRect;
+
+            int centersDistance = segRect.center().x() - stemRect.center().x();
+            bool isTowardsLeft = (centersDistance > 0);
+
+            QRect areaToProject;
+            areaToProject.setTop(qMax(stemRect.top() - extensionLimit, segRect.top()));
+            areaToProject.setBottom(qMin(stemRect.bottom() + extensionLimit, segRect.bottom()));
+            if (isTowardsLeft) {
+                areaToProject.setLeft(stemRect.right() + 1);
+                areaToProject.setRight(segRect.right());
+            } else {
+                areaToProject.setLeft(segRect.left());
+                areaToProject.setRight(stemRect.left() - 1);
+            }
+
+            QHash<int, int> projHelper;
+            for (int y = areaToProject.top(); y <= areaToProject.bottom(); ++y) {
+                int count = 0;
+                for (int x = areaToProject.left(); x <= areaToProject.right(); ++x) {
+                    count += (workImage.pixel(x, y) == BlackColor);
+                }
+
+                projHelper.insert(y, count >= NoteWidthLimit ? count : 0);
+            }
+
+            // Now filter based on Height of H projection
+            QList<int> keys = projHelper.keys();
+            qSort(keys);
+
+            for (int i = keys.first(); i <= keys.last(); ++i) {
+                if (projHelper.value(i, 0) == 0) continue;
+
+                int runlength = 0;
+                for (; (i + runlength) <= keys.last(); ++runlength) {
+                    if (projHelper.value(i + runlength, 0) == 0) {
+                        break;
+                    }
+                }
+
+                // Nullify if not notehead
+                if (runlength < NoteHeightLimit) {
+                    for (int j = 0; j < runlength; ++j) {
+                        projHelper[i + j] = 0;
+                    }
+
+                } else {
+                    int midY = i + (runlength >> 1);
+                    QRect rect(areaToProject.left(), midY - NoteHeightLimit, areaToProject.width(),
+                            NoteHeightLimit * 2);
+                    //QRect rect(areaToProject.left(), midY - NoteHeightLimit, areaToProject.width(),
+                    //        NoteHeightLimit * 2);
+                    seg->noteRects << rect;
+                }
+
+                i += runlength - 1;
+            }
+
+            seg->horizontalProjection = projHelper;
+        }
+
+        const int WholeNoteWidthLimit = dw->staffSpaceHeight().min;
+        const int WholeNoteHeightLimit = dw->staffSpaceHeight().min;
+
+        foreach (NoteSegment *seg, hollowNoteSegments) {
+            if (seg->stemSegment) continue;
+
+            QRect segRect = seg->boundingRect;
+
+            for (int y = segRect.top(); y <= segRect.bottom(); ++y) {
+                int maxRun = -1;
+                for (int x = segRect.left(); x <= segRect.right(); ++x) {
+                    if (workImage.pixel(x, y) != BlackColor) continue;
+
+                    int runlength = 0;
+                    for (; (x + runlength) <= segRect.right(); ++runlength) {
+                        if (workImage.pixel(x, y) != BlackColor) break;
+                    }
+
+                    maxRun = qMax(maxRun, runlength);
+
+                    x += runlength - 1;
+                }
+
+                if (maxRun < WholeNoteWidthLimit) {
+                    maxRun = 0;
+                }
+
+                seg->horizontalProjection.insert(y, maxRun);
+            }
+
+            // Now filter based on Height of H projection
+            QList<int> keys = seg->horizontalProjection.keys();
+            qSort(keys);
+
+            for (int i = keys.first(); i <= keys.last(); ++i) {
+                if (seg->horizontalProjection.value(i, 0) == 0) continue;
+
+                int runlength = 0;
+                for (; (i + runlength) <= keys.last(); ++runlength) {
+                    if (seg->horizontalProjection.value(i + runlength, 0) == 0) {
+                        break;
+                    }
+                }
+
+                // Nullify if not notehead
+                if (runlength < WholeNoteHeightLimit) {
+                    for (int j = 0; j < runlength; ++j) {
+                        seg->horizontalProjection[i + j] = 0;
+                    }
+
+                } else {
+                    int midY = i + (runlength >> 1);
+                    QRect rect(segRect.left(), midY - WholeNoteHeightLimit, segRect.width(),
+                            WholeNoteHeightLimit * 2);
+                    //QRect rect(areaToProject.left(), midY - NoteHeightLimit, areaToProject.width(),
+                    //        NoteHeightLimit * 2);
+                    seg->noteRects << rect;
+                }
+
+                i += runlength - 1;
+            }
+        }
     }
 
     QImage StaffData::staffImage() const
@@ -1026,6 +1417,31 @@ namespace Munip
         QPainter p(&img);
 
         foreach (const NoteSegment* seg, noteSegments) {
+            p.setPen(QColor(Qt::blue));
+            QRect segRect = seg->boundingRect;
+
+            QHash<int, int>::const_iterator it = seg->horizontalProjection.constBegin();
+            while (it != seg->horizontalProjection.constEnd()) {
+                p.drawLine(segRect.left(), it.key(),
+                        segRect.left() + it.value(), it.key());
+                ++it;
+            }
+            p.setPen(QColor(Qt::blue));
+            p.drawRect(segRect);
+        }
+
+        p.end();
+        return img;
+    }
+
+    QImage StaffData::hollowNoteHeadHorizontalProjectionImage() const
+    {
+        QImage img(workImage.size(), QImage::Format_ARGB32_Premultiplied);
+        img.fill(0xffffffff);
+
+        QPainter p(&img);
+
+        foreach (const NoteSegment* seg, hollowNoteSegments) {
             p.setPen(QColor(Qt::blue));
             QRect segRect = seg->boundingRect;
 
