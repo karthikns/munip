@@ -825,62 +825,62 @@ namespace Munip
 
     void StaffData::enhanceConnectivity()
     {
+        // First fix 2 pixel disconnectivity
+        const QRgb BlackColor = QColor(Qt::black).rgb();
+        const QRgb WhiteColor = QColor(Qt::white).rgb();
+
+        const QPoint connectorMatrix[4][4] =
+        {
+            { QPoint(0, 0), QPoint(1, 1), QPoint(1, 2), QPoint(1, 2) },
+            { QPoint(1, 1), QPoint(1, 1), QPoint(1, 2), QPoint(1, 2) },
+            { QPoint(1, 1), QPoint(1, 1), QPoint(2, 2), QPoint(2, 3) },
+            { QPoint(2, 1), QPoint(2, 1), QPoint(2, 2), QPoint(3, 3) }
+        };
+        QImage a(workImage.size(), QImage::Format_ARGB32_Premultiplied);
+        a.fill(0xffffffff);
+
+        for (int x = 0; x < workImage.width() - 4; ++x) {
+            for (int y = 0; y < workImage.height() - 4; ++y) {
+
+                for (int i = 0; i < 3; ++i) {
+                    for (int j = 0; j < 3; ++j) {
+                        if (workImage.pixel(x, y + i) == BlackColor &&
+                                workImage.pixel(x + 3, y + j) == BlackColor) {
+                            a.setPixel(x + 1, y + connectorMatrix[i][j].x(), BlackColor);
+                            a.setPixel(x + 2, y + connectorMatrix[i][j].y(), BlackColor);
+                        }
+                    }
+                }
+            }
+        }
+        for (int x = 0; x < workImage.width() - 4; ++x) {
+            for (int y = 0; y < workImage.height() - 4; ++y) {
+
+                for (int i = 0; i < 3; ++i) {
+                    for (int j = 0; j < 3; ++j) {
+                        if (workImage.pixel(x + i, y) == BlackColor &&
+                                workImage.pixel(x + i, y + 3) == BlackColor) {
+                            a.setPixel(x + connectorMatrix[i][j].x(), y + 1, BlackColor);
+                            a.setPixel(x + connectorMatrix[i][j].y(), y + 2, BlackColor);
+                        }
+                    }
+                }
+            }
+        }
         QPainter p(&workImage);
         p.setCompositionMode(QPainter::CompositionMode_Multiply);
         p.drawImage(QPoint(0, 0), staffImageWithStaffLinesOnly());
-        return;
-        const QRgb WhiteColor = QColor(Qt::white).rgb();
-        const QRgb BlackColor = QColor(Qt::black).rgb();
-        const int GapLimit = DataWarehouse::instance()->staffLineHeight().dominantValue();
-
-        // First enhance vertical
-        for (int x = 0; x < workImage.width(); ++x) {
-            for (int y = 0; y < workImage.height(); ++y) {
-                if (workImage.pixel(x, y) != WhiteColor) continue;
-
-                int runlength = 0;
-                for (; (y + runlength) < workImage.height(); ++runlength) {
-                    if (workImage.pixel(x, y + runlength) != WhiteColor) break;
-                }
-
-                if (runlength <= GapLimit) {
-                    for (int i = 0; i < runlength; ++i) {
-                        workImage.setPixel(x, y + i, BlackColor);
-                    }
-                }
-
-                y += runlength - 1;
-            }
-        }
-
-        // Next enhance vertical
-        for (int y = 0; y < workImage.height(); ++y) {
-            for (int x = 0; x < workImage.width(); ++x) {
-                if (workImage.pixel(x, y) != WhiteColor) continue;
-
-                int runlength = 0;
-                for (; (x + runlength) < workImage.width(); ++runlength) {
-                    if (workImage.pixel(x + runlength, y) != WhiteColor) break;
-                }
-
-                if (runlength <= GapLimit) {
-                    for (int i = 0; i < runlength; ++i) {
-                        workImage.setPixel(x + i, y, BlackColor);
-                    }
-                }
-
-                x += runlength - 1;
-            }
-        }
+        p.drawImage(QPoint(0, 0), a);
+        p.end();
     }
 
     void StaffData::extractRegions()
     {
         QTime timer;
         timer.start();
+
         const QRgb WhiteColor = QColor(Qt::white).rgb();
-        const QRgb BlackColor = QColor(Qt::black).rgb();
-        const QRgb YellowColor = QColor(Qt::yellow).rgb();
+
         const QPoint deltas[4] = {
             QPoint(-1, 0), QPoint(0, -1), QPoint(+1, 0), QPoint(0, +1)
         };
@@ -890,15 +890,15 @@ namespace Munip
         const int size = workImage.width() * workImage.height();
 
         bool *visitedArray = new bool[size];
-        for (int x = 0; x < workImage.width(); ++x) {
-            for (int y = 0; y < workImage.height(); ++y) {
+        for (int x = 0; x < w; ++x) {
+            for (int y = 0; y < h; ++y) {
                 visitedArray[y * w + x] = (workImage.pixel(x, y) != WhiteColor);
             }
         }
 
         int id = 0;
-        for (int x = 0; x < workImage.width(); ++x) {
-            for (int y = 0; y < workImage.height(); ++y) {
+        for (int x = 0; x < w; ++x) {
+            for (int y = 0; y < h; ++y) {
                 const QPoint point(x, y);
 
                 if (visitedArray[y * w + x]) continue;
@@ -946,20 +946,21 @@ namespace Munip
         DataWarehouse *dw = DataWarehouse::instance();
         const int MinRadiusLimit = int(.2 * dw->staffSpaceHeight().min);
         const int MaxRadiusLimit = int(0.5 * dw->staffSpaceHeight().min);
-        const int MinArea = M_PI * MinRadiusLimit * MinRadiusLimit;
+        const int MinArea = 1; //M_PI * MinRadiusLimit * MinRadiusLimit;
         const int MaxArea = M_PI * MaxRadiusLimit * MaxRadiusLimit;
 
-//        mDebug() << Q_FUNC_INFO;
-//        mDebug() << "Min : " << MinArea << "Max : " << MaxArea;
+        if (0) {
+            mDebug() << Q_FUNC_INFO;
+            mDebug() << "Min : " << MinArea << "Max : " << MaxArea;
+            foreach (const Region *region, regions) {
+                mDebug() << region->points.size();
+            }
+        }
 
         QPainter p(&workImage);
-        //QColor color(Qt::green);
-        //color.setAlpha(100);
-        //p.setBrush(color);
-        p.setPen(QColor(Qt::green));
+        p.setPen(QColor(Qt::black));
 
         foreach (const Region *region, regions) {
-//            mDebug() << region->points.size();
             if (region->points.size() >= MinArea && region->points.size() <= MaxArea) {
                 foreach (const QPoint &point, region->points) {
                     p.drawPoint(point);
@@ -969,82 +970,7 @@ namespace Munip
 
         p.end();
 
-        for (int x = 0; x < workImage.width(); ++x) {
-            for (int y = 0; y < workImage.height(); ++y) {
-                visitedArray[y * w + x] = false;
-            }
-        }
-
-        foreach (Region *region, regions) {
-            if (region->points.size() < MinArea && region->points.size() > MaxArea) {
-                continue;
-            }
-
-            QList<QPoint> blacks;
-            foreach (const QPoint point, region->points) {
-                for (int i = 0; i < 4; ++i) {
-                    QPoint newPoint = point + deltas[i];
-                    if (newPoint.x() < 0 || newPoint.x() >= workImage.width()) {
-                        continue;
-                    }
-                    if (newPoint.y() < 0 || newPoint.y() >= workImage.height()) {
-                        continue;
-                    }
-
-                    if (workImage.pixel(newPoint) == BlackColor) {
-                        blacks << newPoint;
-                    }
-                }
-            }
-
-            foreach (const QPoint point, blacks) {
-                visitedArray[point.y() * w + point.x()] = true;
-            }
-
-            while (!blacks.isEmpty()) {
-                QList<QPoint> newBlacks;
-
-                foreach (const QPoint point, blacks) {
-                    bool anyWhiteSurround = false;
-
-                    QList<QPoint> neighborBlacks;
-                    for (int i = 0; i < 4; ++i) {
-                        QPoint newPoint = point + deltas[i];
-
-                        if (newPoint.x() < 0 || newPoint.x() >= workImage.width()) {
-                            continue;
-                        }
-                        if (newPoint.y() < 0 || newPoint.y() >= workImage.height()) {
-                            continue;
-                        }
-
-                        if (workImage.pixel(newPoint) == WhiteColor) {
-                            anyWhiteSurround = true;
-                        }
-
-                        if (workImage.pixel(newPoint) == BlackColor &&
-                                visitedArray[newPoint.y() * w + newPoint.x()] == false) {
-                            neighborBlacks << newPoint;
-                            visitedArray[newPoint.y() * w + newPoint.x()] = true;
-                        }
-                    }
-
-                    if (anyWhiteSurround) continue;
-
-                    workImage.setPixel(point, YellowColor);
-                    newBlacks += neighborBlacks;
-                }
-
-                blacks = newBlacks;
-            }
-
-
-
-        }
-
-
         mDebug() << Q_FUNC_INFO << "Took " << timer.elapsed() << " ms";
-
         delete []visitedArray;
     }
 
