@@ -626,7 +626,6 @@ namespace Munip
 
         // Now construct the lines from optimal segments
 
-        const int size = paths.size();
 //        mDebug() << Q_FUNC_INFO << "Path size after pruning = " << size;
 
         qSort(paths.begin(), paths.end(), segmentSortByConnectedComponentID);
@@ -639,7 +638,6 @@ namespace Munip
             if ( !done.contains(paths[i].connectedComponentID()))
             {
                 int ID = paths[i].connectedComponentID();
-                int weight = paths[i].weight();
                 StaffLine line(paths[i].startPos(),paths[i].destinationPos());
 
                 while (i+k < paths.size() && paths[i+k].connectedComponentID() == ID )
