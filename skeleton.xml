@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE score-partwise PUBLIC "-//Recordare//DTD MusicXML 1.0 Partwise//EN" "/musicxml/partwise.dtd">
+<score-partwise>
+	<identification>
+		<encoding>
+			<software>Guitar Pro 5</software>
+			<encoding-description>MusicXML 1.0</encoding-description>
+		</encoding>
+	</identification>
+
+	<part-list>
+		<score-part id="P1"/>
+	</part-list>
+	
+	<part id="P1">
+		<measure number="1">
+		</measure>
+	</part>
+	
+</score-partwise>
