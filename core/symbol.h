@@ -15,6 +15,13 @@ namespace Munip
     class Range;
     class StemSegment;
 
+    struct NoteInfo
+    {
+        QString step;
+        QString octave;
+        QString type;
+    };
+
     struct NoteSegment
     {
         static NoteSegment* create() { return new NoteSegment; }
@@ -22,8 +29,12 @@ namespace Munip
         QRect boundingRect;
         QList<QRect> noteRects;
         StemSegment *stemSegment;
+        bool isNoteHeadFilled;
 
         QHash<int, int> horizontalProjection;
+
+        QList<NoteInfo> chordInfo(const QImage &lineImage) const;
+
 
         /// Its enough to compare bounding rectangles as two note segments
         /// can't have same bounds.
@@ -32,7 +43,7 @@ namespace Munip
         }
 
     private:
-        NoteSegment() { stemSegment = 0; }
+        NoteSegment() { stemSegment = 0; isNoteHeadFilled = false; }
         //~NoteSegment() { delete stemSegment; }
     };
 
@@ -112,8 +123,11 @@ namespace Munip
         void extractHollowNoteStemSegments();
         void extractHollowNotes();
 
+        static void generateMusicXML(const QList<StaffData*> &staffDatas);
+
         QImage staffImage() const;
-        QImage staffImageWithStaffLinesOnly() const;
+        QImage staffImageWithRemovedStaffLinesOnly() const;
+        QImage imageWithStaffLines() const;
         QImage projectionImage(const QHash<int, int> &hash) const;
         QImage noteHeadHorizontalProjectionImage() const;
         QImage hollowNoteHeadHorizontalProjectionImage() const;

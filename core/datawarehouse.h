@@ -10,6 +10,8 @@
 
 namespace Munip {
 
+    class StaffData;
+
     class DataWarehouse
     {
     public:
@@ -35,8 +37,11 @@ namespace Munip {
         Range staffLineHeight() const;
         void setStaffLineHeight(const Range& value);
 
-        QImage imageWithStaffLinesOnly() const;
-        QImage& imageRefWithStaffLinesOnly();
+        QList<StaffData*> staffDatas() const;
+        void setStaffDatas(const QList<StaffData*> &sd);
+
+        QImage imageWithRemovedStaffLinesOnly() const;
+        QImage& imageRefWithRemovedStaffLinesOnly();
 
     private:
         DataWarehouse();
@@ -48,10 +53,11 @@ namespace Munip {
         Range m_staffLineHeight;
 
         QImage m_workImage;
-        QImage m_imageWithStaffLinesOnly;
+        QImage m_imageWithRemovedStaffLinesOnly;
 
         uint m_lineSize;
         QList<Staff> m_staffList;
+        QList<StaffData*> m_staffDatas;
     };
 }
 #endif

@@ -9,6 +9,7 @@
 #include "tools.h"
 
 #include <QAction>
+#include <QDesktopServices>
 #include <QDir>
 #include <QFile>
 #include <QInputDialog>
@@ -22,6 +23,7 @@
 #include <QStack>
 #include <QTextStream>
 #include <QList>
+#include <QUrl>
 
 #include <iostream>
 #include <cmath>
@@ -159,10 +161,12 @@ namespace Munip
             step = new StaffParamExtraction(originalImage, queue);
         else if (className == QByteArray("ImageRotation"))
             step = new ImageRotation(originalImage, queue);
-        else if (className == QByteArray("ImageCluster"))
-            step = new ImageCluster(originalImage, queue);
         else if (className == QByteArray("SymbolAreaExtraction"))
             step = new SymbolAreaExtraction(originalImage, queue);
+        else if (className == QByteArray("Player"))
+            step = new Player(originalImage, queue);
+        else if (className == QByteArray("ImageCluster"))
+            step = new ImageCluster(originalImage, queue);
 
         return step;
     }
@@ -173,8 +177,9 @@ namespace Munip
         static QByteArray classes[] =
         {
             "MonoChromeConversion", "SkewCorrection", "StaffLineDetect",
-            "StaffLineRemoval", "SymbolAreaExtraction","StaffParamExtraction",
-            "ImageCluster", "GrayScaleConversion", "ImageRotation"
+            "StaffLineRemoval", "SymbolAreaExtraction", "Player",
+            "StaffParamExtraction", "ImageCluster", "GrayScaleConversion",
+            "ImageRotation"
         };
 
         if (actions.isEmpty()) {
@@ -640,7 +645,8 @@ namespace Munip
                 int ID = paths[i].connectedComponentID();
                 StaffLine line(paths[i].startPos(),paths[i].destinationPos());
 
-                while (i+k < paths.size() && paths[i+k].connectedComponentID() == ID )
+                int weight = paths[i].weight();
+                while (i+k < paths.size() && paths[i+k].connectedComponentID() == ID && paths[i+k].weight() == weight)
                 {
                     line.addSegment(paths[i+k]);
 
@@ -1452,7 +1458,7 @@ void StaffLineRemoval::process()
 {
     emit started();
 
-    QImage &imageRef = DataWarehouse::instance()->imageRefWithStaffLinesOnly();
+    QImage &imageRef = DataWarehouse::instance()->imageRefWithRemovedStaffLinesOnly();
     imageRef = QImage(m_originalImage.size(), QImage::Format_Mono);
     imageRef.fill(0xffffffff);
     crudeRemove();
@@ -1473,7 +1479,7 @@ void StaffLineRemoval::crudeRemove()
     const QRgb YellowColor = QColor(Qt::darkYellow).rgb();
     const QRgb WhiteColor = QColor(Qt::white).rgb();
 
-    QImage &imageRef = DataWarehouse::instance()->imageRefWithStaffLinesOnly();
+    QImage &imageRef = DataWarehouse::instance()->imageRefWithRemovedStaffLinesOnly();
     QPainter imageRefPainter(&imageRef);
     imageRefPainter.setPen(QColor(Qt::black));
 
@@ -1535,7 +1541,7 @@ void StaffLineRemoval::cleanupNoise()
 {
     // Note these aren't indices but color instead.
     const QRgb BlackColor = QColor(Qt::black).rgb();
-    QImage &imageRef = DataWarehouse::instance()->imageRefWithStaffLinesOnly();
+    QImage &imageRef = DataWarehouse::instance()->imageRefWithRemovedStaffLinesOnly();
     QPainter imageRefPainter(&imageRef);
     imageRefPainter.setPen(QColor(Qt::black));
 
@@ -1597,7 +1603,7 @@ void StaffLineRemoval::yellowToBlack()
 
 void StaffLineRemoval::staffCleanUp()
 {
-    QImage &imageRef = DataWarehouse::instance()->imageRefWithStaffLinesOnly();
+    QImage &imageRef = DataWarehouse::instance()->imageRefWithRemovedStaffLinesOnly();
     QPainter imageRefPainter(&imageRef);
     imageRefPainter.setPen(QColor(Qt::black));
 
@@ -2200,16 +2206,31 @@ void SymbolAreaExtraction::process()
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->noteProjections));
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->temp));
         //p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectionImage());
-        //p.drawImage(QPoint(0, y), sd->workImage);
+        p.drawImage(QPoint(0, y), sd->workImage);
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->hollowNoteMaxProjections));
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->hollowNoteProjections));
-        p.drawImage(QPoint(0, y), sd->hollowNoteHeadHorizontalProjectionImage());
+        //p.drawImage(QPoint(0, y), sd->hollowNoteHeadHorizontalProjectionImage());
+        //p.drawImage(QPoint(0, y), sd->imageWithStaffLines());
 
         y += sh + 50;
     }
 
-    qDeleteAll(staffDatas);
-    staffDatas.clear();
+    dw->setStaffDatas(staffDatas);
+
+    emit ended();
+}
+
+Player::Player(const QImage &originalImage, ProcessQueue *queue) :
+    ProcessStep(originalImage, queue)
+{
+}
+
+void Player::process()
+{
+    emit started();
+
+    StaffData::generateMusicXML(DataWarehouse::instance()->staffDatas());
+    QDesktopServices::openUrl(QUrl("play.html"));
 
     emit ended();
 }

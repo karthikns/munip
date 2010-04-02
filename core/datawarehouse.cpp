@@ -2,6 +2,7 @@
 #include "staff.h"
 #include "mainwindow.h"
 #include "imagewidget.h"
+#include "symbol.h"
 
 using namespace Munip;
 
@@ -94,12 +95,22 @@ void DataWarehouse::setStaffLineHeight(const Range& value)
     m_staffLineHeight = value;
 }
 
-QImage DataWarehouse::imageWithStaffLinesOnly() const
+QList<StaffData*> DataWarehouse::staffDatas() const
 {
-    return m_imageWithStaffLinesOnly;
+    return m_staffDatas;
 }
 
-QImage& DataWarehouse::imageRefWithStaffLinesOnly()
+void DataWarehouse::setStaffDatas(const QList<StaffData*> &sd)
 {
-    return m_imageWithStaffLinesOnly;
+    m_staffDatas = sd;
+}
+
+QImage DataWarehouse::imageWithRemovedStaffLinesOnly() const
+{
+    return m_imageWithRemovedStaffLinesOnly;
+}
+
+QImage& DataWarehouse::imageRefWithRemovedStaffLinesOnly()
+{
+    return m_imageWithRemovedStaffLinesOnly;
 }

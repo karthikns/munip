@@ -1,5 +1,6 @@
 #include "symbol.h"
 #include "datawarehouse.h"
+#include "XmlConverter.h"
 
 #include <QColor>
 #include <QDebug>
@@ -27,6 +28,92 @@ namespace Munip
     {
         dbg.nospace() << "StemSegment: [" << (void*)seg << "] " << seg->boundingRect;
         return dbg.space();
+    }
+
+    QColor noteOctaveToColor(char note, int octave)
+    {
+        int gray = octave * 10 + (note - 'A');
+        return QColor(gray, gray, gray);
+    }
+
+    QPair<char, int> colorToNoteOctave(const QColor& color)
+    {
+        int gray = qGray(color.rgb());
+        int octave = gray/10;
+        char note = 'A' + (gray % 10);
+
+        return qMakePair(note, octave);
+    }
+
+    static QString noteTypeFromDenominator(int denominator)
+    {
+        switch (denominator) {
+            case 1: return "whole";
+            case 2: return "half";
+            case 4: return "quarter";
+            case 8: return "eighth";
+            case 16: return "16th";
+            case 32: return "32th";
+            case 64: return "64th";
+        }
+        return QString();
+    }
+
+    QList<NoteInfo> NoteSegment::chordInfo(const QImage &lineImage) const
+    {
+        const QRgb WhiteColor = QColor(Qt::white).rgb();
+        int denominator = 1;
+        if (isNoteHeadFilled) {
+            denominator <<= 2;
+            if (stemSegment) {
+                denominator <<= stemSegment->totalFlagCount();
+            }
+
+        } else {
+            if (stemSegment) {
+                denominator *= 2;
+            }
+        }
+
+        QList<NoteInfo> retval;
+
+        const QString type = noteTypeFromDenominator(denominator);
+
+
+        foreach (const QRect &rect, noteRects) {
+            QPoint center = rect.center();
+
+            int aboveY = center.y() - 1;
+            int belowY = center.y() + 1;
+
+            while (aboveY >= 0 &&
+                    lineImage.pixel(center.x(), aboveY) == WhiteColor) {
+                --aboveY;
+            }
+
+            while (belowY < lineImage.height() &&
+                    lineImage.pixel(center.x(), belowY) == WhiteColor) {
+                ++belowY;
+            }
+
+            QPair<char, int> noteOctave;
+            if (qAbs(aboveY - center.y()) < qAbs(belowY - center.y())) {
+                noteOctave = colorToNoteOctave(QColor(lineImage.pixel(center.x(), aboveY)));
+            } else {
+                noteOctave = colorToNoteOctave(QColor(lineImage.pixel(center.x(), belowY)));
+            }
+
+            NoteInfo noteInfo;
+
+            noteInfo.octave = QString::number(noteOctave.second);
+            noteInfo.step.append(noteOctave.first);
+            noteInfo.type = type;
+
+            retval << noteInfo;
+        }
+
+
+        return retval;
     }
 
     StaffData::StaffData(const QImage& img, const Staff& stf) :
@@ -259,6 +346,7 @@ namespace Munip
 
             int xCenter = i + (runlength >> 1);
             NoteSegment *n = NoteSegment::create();
+            n->isNoteHeadFilled = true;
             // n->boundingRect = QRect(xCenter - noteWidth, top, noteWidth * 2, height);
             n->boundingRect = QRect(xCenter - (noteWidth >> 1), top, noteWidth, height);
             // TODO: BoundingRect should include beams, but thats not being drawn. Check that.
@@ -874,7 +962,7 @@ namespace Munip
         }
         QPainter p(&workImage);
         p.setCompositionMode(QPainter::CompositionMode_Multiply);
-        p.drawImage(QPoint(0, 0), staffImageWithStaffLinesOnly());
+        p.drawImage(QPoint(0, 0), staffImageWithRemovedStaffLinesOnly());
         p.drawImage(QPoint(0, 0), a);
         p.end();
     }
@@ -1131,6 +1219,7 @@ namespace Munip
 
             int xCenter = i + (runlength >> 1);
             NoteSegment *n = NoteSegment::create();
+            n->isNoteHeadFilled = false;
             // n->boundingRect = QRect(xCenter - noteWidth, top, noteWidth * 2, height);
             n->boundingRect = QRect(xCenter - (noteWidth >> 1), top, noteWidth, height);
             //n->boundingRect = QRect(key, top, runlength, height);
@@ -1148,6 +1237,30 @@ namespace Munip
             mDebug() << seg;
         }
         mDebug();
+    }
+
+    void StaffData::generateMusicXML(const QList<StaffData*> &staffDatas)
+    {
+        XmlConverter converter("play.xml", 120, 4, 4);
+
+        foreach (const StaffData *sd, staffDatas) {
+            QList<NoteSegment*> allSegments = sd->noteSegments + sd->hollowNoteSegments;
+            qSort(allSegments.begin(), allSegments.end(),
+                    lessThanNoteSegmentPointers);
+
+            QImage img = sd->imageWithStaffLines();
+            foreach (NoteSegment *segment, allSegments) {
+                QList<NoteInfo> infoList = segment->chordInfo(img);
+                if (infoList.isEmpty()) continue;
+
+                NoteInfo info = infoList.first();
+
+                converter.addPlainNote(info.step, info.octave, info.type);
+            }
+        }
+
+        converter.domTreeToXmlFile();
+        qDebug() << Q_FUNC_INFO << "Error code:" << converter.getErrorCode();
     }
 
     void StaffData::extractHollowNoteStemSegments()
@@ -1378,14 +1491,144 @@ namespace Munip
         return img;
     }
 
-    QImage StaffData::staffImageWithStaffLinesOnly() const
+    QImage StaffData::staffImageWithRemovedStaffLinesOnly() const
     {
         const QRect r = staff.boundingRect();
         QImage img(r.size(), QImage::Format_ARGB32_Premultiplied);
         QPainter p(&img);
         p.drawImage(QRect(0, 0, r.width(), r.height()),
-                DataWarehouse::instance()->imageRefWithStaffLinesOnly(),
+                DataWarehouse::instance()->imageRefWithRemovedStaffLinesOnly(),
                 r);
+        p.end();
+
+        return img;
+    }
+
+
+
+    QImage StaffData::imageWithStaffLines() const
+    {
+        const QRect r = staff.boundingRect();
+        QImage img(r.size(), QImage::Format_ARGB32_Premultiplied);
+        img.fill(0xffffffff);
+
+        const QPoint delta = -(staff.boundingRect().topLeft());
+
+        QPainter p(&img);
+        const QList<StaffLine> staffLines = staff.staffLines();
+
+        QList<QPair<char, int> > noteOctaveList;
+        noteOctaveList << qMakePair('C', 7);
+        noteOctaveList << qMakePair('B', 6);
+
+        noteOctaveList << qMakePair('A', 6);
+        noteOctaveList << qMakePair('G', 6);
+
+        noteOctaveList << qMakePair('F', 6);
+        noteOctaveList << qMakePair('E', 6);
+
+        noteOctaveList << qMakePair('D', 6);
+        noteOctaveList << qMakePair('C', 6);
+
+        noteOctaveList << qMakePair('B', 5);
+        noteOctaveList << qMakePair('A', 5);
+
+        noteOctaveList << qMakePair('G', 5);
+        // Staff line starts
+        noteOctaveList << qMakePair('F', 5);
+        noteOctaveList << qMakePair('E', 5);
+
+        noteOctaveList << qMakePair('D', 5);
+        noteOctaveList << qMakePair('C', 5);
+
+        noteOctaveList << qMakePair('B', 4);
+        noteOctaveList << qMakePair('A', 4);
+
+        noteOctaveList << qMakePair('G', 4);
+        noteOctaveList << qMakePair('F', 4);
+
+        noteOctaveList << qMakePair('E', 4);
+        // Staff line ends
+
+        noteOctaveList << qMakePair('D', 4);
+
+        noteOctaveList << qMakePair('C', 4);
+        noteOctaveList << qMakePair('B', 3);
+
+        noteOctaveList << qMakePair('A', 3);
+        noteOctaveList << qMakePair('G', 3);
+
+        noteOctaveList << qMakePair('F', 3);
+        noteOctaveList << qMakePair('E', 3);
+
+        noteOctaveList << qMakePair('D', 3);
+        noteOctaveList << qMakePair('C', 3);
+
+        noteOctaveList << qMakePair('B', 2);
+        noteOctaveList << qMakePair('A', 2);
+
+        int i = 11;
+        DataWarehouse *dw = DataWarehouse::instance();
+        const int Shift = (dw->staffSpaceHeight().dominantValue() >> 1) +
+            (dw->staffLineHeight().dominantValue() >> 1);
+
+        foreach (const StaffLine& staffLine, staffLines) {
+            p.setPen(noteOctaveToColor(noteOctaveList[i].first, noteOctaveList[i].second));
+            ++i;
+            const QList<Segment> segments = staffLine.segments();
+            foreach (const Segment& seg, segments) {
+                p.drawLine(seg.startPos() + delta, seg.endPos() + delta);
+            }
+
+            if (1 || ((i % 2) != 0)) {
+                p.setPen(noteOctaveToColor(noteOctaveList[i].first, noteOctaveList[i].second));
+                foreach (const Segment& seg, segments) {
+                    p.drawLine(seg.startPos() + delta + QPoint(0, Shift),
+                            seg.endPos() + delta + QPoint(0, Shift));
+                }
+            }
+            ++i;
+        }
+
+        QList<Segment> segments = staffLines.last().segments();
+        int yDelta = (delta + (QPoint(0, Shift) * 2)).y();
+
+        for (; i < noteOctaveList.size(); ++i) {
+            bool toBreak = false;
+            p.setPen(noteOctaveToColor(noteOctaveList[i].first, noteOctaveList[i].second));
+            foreach (const Segment& seg, segments) {
+                if ((seg.startPos() + QPoint(0, yDelta)).y() >= workImage.height()) {
+                    toBreak = true;
+                    break;
+                }
+                p.drawLine(seg.startPos() + QPoint(delta.x(), yDelta),
+                        seg.endPos() + QPoint(delta.x(), yDelta));
+            }
+
+            yDelta += Shift;
+
+            if (toBreak) break;
+        }
+
+        segments = staffLines.first().segments();
+        yDelta = (delta - QPoint(0, Shift)).y();
+        for (i = 10; i >= 0; --i) {
+            bool toBreak = false;
+            p.setPen(noteOctaveToColor(noteOctaveList[i].first, noteOctaveList[i].second));
+            foreach (const Segment& seg, segments) {
+                if ((seg.startPos() + QPoint(0, yDelta)).y() < 0) {
+                    toBreak = true;
+                    break;
+                }
+                p.drawLine(seg.startPos() + QPoint(delta.x(), yDelta),
+                        seg.endPos() + QPoint(delta.x(), yDelta));
+            }
+
+            yDelta -= Shift;
+
+            if (toBreak) break;
+        }
+
         p.end();
 
         return img;
