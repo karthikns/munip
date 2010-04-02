@@ -3,7 +3,7 @@
 
 QHash<QString,int> XmlConverter::typeHash;
 
-void XmlConverter :: initTypes()
+void XmlConverter::initTypes()
 {
     typeHash.insert("whole",  64);
     typeHash.insert("half",   32);
@@ -15,7 +15,7 @@ void XmlConverter :: initTypes()
 }
 
 
-XmlConverter :: XmlConverter(QString outputFile, int t, int b, int bType) :
+XmlConverter::XmlConverter(QString outputFile, int t, int b, int bType):
         currentMeasure(0), currentBarCount(0), startTieSet(false), endTieSet(false), slurSet(false), errorCode(0), outputFileName(outputFile)
 {
     QFile file("skeleton.xml");
@@ -43,7 +43,7 @@ XmlConverter :: XmlConverter(QString outputFile, int t, int b, int bType) :
     maxBarCount = beats * 64 / beatType;
 }
 
-void XmlConverter :: setTempo()
+void XmlConverter::setTempo()
 {
     QDomElement soundElement  = doc.createElement("sound");
     soundElement.setAttribute("pan","8");
@@ -56,7 +56,7 @@ void XmlConverter :: setTempo()
     node.insertBefore(fragment, node.firstChild());
 }
 
-void XmlConverter :: setBeatBeatType()
+void XmlConverter::setBeatBeatType()
 {
     QDomElement attributesElement  = doc.createElement("attributes");
     QDomElement timeElement = doc.createElement("time");
@@ -140,13 +140,13 @@ void XmlConverter::addPlainNote(QString step, QString octave, QString type)
     node.insertAfter(fragment, node.lastChild());
 }
 
-void XmlConverter :: addChord(QList<QString> step, QList<QString> octave, QString type)
+void XmlConverter::addChord(QList<QString> step, QList<QString> octave, QString type)
 {
     if(currentBarCount >= maxBarCount)
         addMeasure();
     currentBarCount += typeHash[type];
 
-    int length = step.length() < octave.length() ? step.length() : octave.length();
+    int length = step.length() < octave.length() ? step.length():octave.length();
 
     QDomDocumentFragment fragment = doc.createDocumentFragment();
 
@@ -226,12 +226,12 @@ void XmlConverter::addMeasure()
     node.insertAfter(fragment, node.lastChild());
 }
 
-void XmlConverter :: enableTie()
+void XmlConverter::enableTie()
 {
     startTieSet = true;
 }
 
-void XmlConverter :: disableTie()
+void XmlConverter::disableTie()
 {
     startTieSet = false;
 }
@@ -243,12 +243,12 @@ void XmlConverter::endSlur()
     slurSet = true;
 }
 
-void XmlConverter :: DomTreeToXmlString(QString&string)
+void XmlConverter::domTreeToXmlString(QString&string)
 {
     string = qPrintable(doc.toString(4));
 }
 
-void XmlConverter :: DomTreeToXmlFile()
+void XmlConverter::domTreeToXmlFile()
 {
     if(errorCode)
     {
@@ -267,7 +267,7 @@ void XmlConverter :: DomTreeToXmlFile()
     outfile.close();
 }
 
-int XmlConverter :: getErrorCode() const
+int XmlConverter::getErrorCode() const
 {
     return errorCode;
 }

@@ -50,8 +50,8 @@ public:
     void disableTie();
     void endSlur();  // Auto Disables
 
-    void DomTreeToXmlString(QString &string);
-    void DomTreeToXmlFile();
+    void domTreeToXmlString(QString &string);
+    void domTreeToXmlFile();
 
     int getErrorCode() const;
 

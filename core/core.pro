@@ -1,6 +1,7 @@
 TEMPLATE = lib
 TARGET = core
 CONFIG += static
+QT += xml
 
 # Input
 HEADERS += datawarehouse.h \
@@ -13,7 +14,8 @@ HEADERS += datawarehouse.h \
     staff.h \
     tools.h \
     cluster.h \
-    symbol.h
+    symbol.h \
+    XmlConverter.h
 SOURCES += datawarehouse.cpp \
     imagewidget.cpp \
     mainwindow.cpp \
@@ -25,7 +27,8 @@ SOURCES += datawarehouse.cpp \
     tools.cpp \
     cluster.cpp \
     symbol.cpp \
-    unused.cpp
+    unused.cpp \
+    XmlConverter.cpp
 
 MOC_DIR = .tmp
 UI_DIR = .tmp

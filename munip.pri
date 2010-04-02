@@ -4,6 +4,7 @@ RCC_DIR = .tmp
 OBJECTS_DIR = .tmp
 
 CONFIG += debug qtestlib
+QT += xml
 win32 {
     CONFIG += console
 }
