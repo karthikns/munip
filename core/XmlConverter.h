@@ -16,12 +16,15 @@ FEATURES:
 INTERFACE USAGE SPECIFICS:
 
 -- Call XmlConverter::initTypes() before any object of the class is instantiated
+   - Made it self initializing in constructor (gopala)
 -- Error Code can be obtained anytime using XmlConverter::getErrorCode()
       >> 0 - No Error
       >> 1 - Configuration File Not Present/No Read Permissions
       >> 2 - Configuration File Xml Parse Error
       >> 3 - Output file creation failed
       >> 4 - Trying to end a tie when a slur is supposed to end
+      >> 5 - Bad Octave Parameter
+      >> 6 - Bad Type Parameter
 -- "step" takes values "C", "D", "E", "F", "G", "A", "B"
 -- "octave" takes values "1" to "7"
 -- "type" takes values "whole", "half", "quarter", "16th", "32th", "64th"
@@ -39,6 +42,7 @@ public:
     static void initTypes();
 private:
     static QHash<QString,int> typeHash;
+    static bool typesInitialized;
 
 public:
     XmlConverter(QString outputFile, int tempo=120, int b=4, int bType=4);
@@ -59,6 +63,9 @@ private:
     void addMeasure();
     void setTempo();
     void setBeatBeatType();
+
+    void validateParam(QString step, QString octave, QString type);
+    void validateParam(QList<QString> step, QList<QString> octave, QString type);
 
     QDomDocument doc;
     int tempo;

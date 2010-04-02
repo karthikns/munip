@@ -14,6 +14,16 @@
 	
 	<part id="P1">
 		<measure number="1">
+			<attributes>
+				<divisions>1</divisions>
+			<key>
+					<fifths>0</fifths>
+				</key>
+				<clef>
+					<sign>G</sign>
+					<line>2</line>
+				</clef>
+			</attributes>
 		</measure>
 	</part>
 	

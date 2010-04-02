@@ -1,7 +1,9 @@
 #include "XmlConverter.h"
 #include <QtXml>
+#include <QRegExp>
 
 QHash<QString,int> XmlConverter::typeHash;
+bool XmlConverter::typesInitialized = false;
 
 void XmlConverter::initTypes()
 {
@@ -12,12 +14,18 @@ void XmlConverter::initTypes()
     typeHash.insert("16th",    4);
     typeHash.insert("32th",    2);
     typeHash.insert("64th",    1);
+
+    typesInitialized = true;
 }
 
 
 XmlConverter::XmlConverter(QString outputFile, int t, int b, int bType):
         currentMeasure(0), currentBarCount(0), startTieSet(false), endTieSet(false), slurSet(false), errorCode(0), outputFileName(outputFile)
 {
+    if (!typesInitialized) {
+        initTypes();
+    }
+
     QFile file("skeleton.xml");
     if (!file.open(QIODevice::ReadOnly))
         errorCode = 1;                                      // Config File Not Present/No Open Permissions
@@ -46,7 +54,6 @@ XmlConverter::XmlConverter(QString outputFile, int t, int b, int bType):
 void XmlConverter::setTempo()
 {
     QDomElement soundElement  = doc.createElement("sound");
-    soundElement.setAttribute("pan","8");
     soundElement.setAttribute("tempo",tempo);
 
     QDomDocumentFragment fragment = doc.createDocumentFragment();
@@ -58,7 +65,6 @@ void XmlConverter::setTempo()
 
 void XmlConverter::setBeatBeatType()
 {
-    QDomElement attributesElement  = doc.createElement("attributes");
     QDomElement timeElement = doc.createElement("time");
     QDomElement beatsElement  = doc.createElement("beats");
     QDomElement beatTypeElement= doc.createElement("beat-type");
@@ -71,18 +77,22 @@ void XmlConverter::setBeatBeatType()
 
     timeElement.appendChild(beatsElement);
     timeElement.appendChild(beatTypeElement);
-    attributesElement.appendChild(timeElement);
 
     QDomDocumentFragment fragment = doc.createDocumentFragment();
-    fragment.appendChild(attributesElement);
+    fragment.appendChild(timeElement);
 
-    QDomNode node = doc.elementsByTagName("measure").at(0);
+    QDomNode node = doc.elementsByTagName("attributes").at(0);
     node.insertBefore(fragment, node.firstChild());
 }
 
 
 void XmlConverter::addPlainNote(QString step, QString octave, QString type)
 {
+    validateParam(step, octave, type);
+
+    if(getErrorCode())
+        return;
+
     if(currentBarCount >= maxBarCount)
         addMeasure();
     currentBarCount += typeHash[type];
@@ -93,14 +103,17 @@ void XmlConverter::addPlainNote(QString step, QString octave, QString type)
     QDomElement pitchElement = doc.createElement("pitch");
     QDomElement stepElement  = doc.createElement("step");
     QDomElement octaveElement= doc.createElement("octave");
+    QDomElement durationElement=doc.createElement("duration");
     QDomElement typeElement  = doc.createElement("type");
 
     QDomText stepText = doc.createTextNode(step);
     QDomText octaveText = doc.createTextNode(octave);
+    QDomText durationText = doc.createTextNode(QString::number(typeHash[type]));
     QDomText typeText = doc.createTextNode(type);
 
     stepElement.appendChild(stepText);
     octaveElement.appendChild(octaveText);
+    durationElement.appendChild(durationText);
     typeElement.appendChild(typeText);
 
     pitchElement.appendChild(stepElement);
@@ -132,16 +145,24 @@ void XmlConverter::addPlainNote(QString step, QString octave, QString type)
         slurSet=false;
     }
 
+    noteElement.appendChild(durationElement);
     noteElement.appendChild(typeElement);
 
     fragment.appendChild(noteElement);
 
     QDomNode node = doc.elementsByTagName("measure").at(currentMeasure);
     node.insertAfter(fragment, node.lastChild());
+
+    qDebug() << Q_FUNC_INFO << step << octave << type;
 }
 
 void XmlConverter::addChord(QList<QString> step, QList<QString> octave, QString type)
 {
+    validateParam(step, octave, type);
+
+    if(getErrorCode())
+        return;
+
     if(currentBarCount >= maxBarCount)
         addMeasure();
     currentBarCount += typeHash[type];
@@ -157,14 +178,17 @@ void XmlConverter::addChord(QList<QString> step, QList<QString> octave, QString 
         QDomElement pitchElement = doc.createElement("pitch");
         QDomElement stepElement  = doc.createElement("step");
         QDomElement octaveElement= doc.createElement("octave");
+        QDomElement durationElement=doc.createElement("duration");
         QDomElement typeElement  = doc.createElement("type");
 
         QDomText stepText = doc.createTextNode(step[i]);
         QDomText octaveText = doc.createTextNode(octave[i]);
+        QDomText durationText = doc.createTextNode(QString::number(typeHash[type]));
         QDomText typeText = doc.createTextNode(type);
 
         stepElement.appendChild(stepText);
         octaveElement.appendChild(octaveText);
+        durationElement.appendChild(durationText);
         typeElement.appendChild(typeText);
 
         pitchElement.appendChild(stepElement);
@@ -201,6 +225,7 @@ void XmlConverter::addChord(QList<QString> step, QList<QString> octave, QString 
                 slurSet=false;
         }
 
+        noteElement.appendChild(durationElement);
         noteElement.appendChild(typeElement);
 
         fragment.appendChild(noteElement);
@@ -265,6 +290,35 @@ void XmlConverter::domTreeToXmlFile()
     QByteArray data = doc.toByteArray(4);
     outfile.write(data);
     outfile.close();
+}
+
+void XmlConverter::validateParam(QString step, QString octave, QString type)
+{
+    QRegExp stepValidator("^[A-G]$");
+    if(stepValidator.indexIn(step) == -1)
+    {
+        errorCode = 7;
+        return;
+    }
+    QRegExp octaveValidator("^[1-7]$");
+    if(octaveValidator.indexIn(octave) == -1)
+    {
+        errorCode = 5;
+        return;
+    }
+    QRegExp typeValidator("^(whole|half|quarter|eighth|16th|32th|64th)$");
+    if(typeValidator.indexIn(type) == -1)
+    {
+        errorCode = 6;
+        return;
+    }
+}
+
+void XmlConverter::validateParam(QList<QString>step, QList<QString>octave, QString type)
+{
+    int length = step.length() < octave.length() ? step.length():octave.length();
+    for(int i=0; i<length; ++i)
+        validateParam(step[i],octave[i],type);
 }
 
 int XmlConverter::getErrorCode() const
