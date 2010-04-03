@@ -7,6 +7,8 @@ class ImageWidget;
 class QLabel;
 class QMdiArea;
 class QMdiSubWindow;
+class QTabWiget;
+class QWebView;
 
 class MainWindow : public QMainWindow
 {
@@ -33,6 +35,7 @@ public slots:
     void slotToggleShowGrid(bool b);
 
     void slotProjection();
+    void slotPlay();
 
     void slotAboutMunip();
 
@@ -42,9 +45,12 @@ private slots:
     void slotOnSubWindowActivate(QMdiSubWindow *);
 
 private:
+    void setupWebView();
     void setupActions();
 
     QAction *m_showGridAction;
+    QTabWidget *m_tabWidget;
+    QWebView *m_webView;
     QMdiArea *m_mdiArea;
 
     QLabel *m_coordinateLabel;

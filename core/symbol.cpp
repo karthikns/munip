@@ -1239,10 +1239,11 @@ namespace Munip
         mDebug();
     }
 
-    void StaffData::generateMusicXML(const QList<StaffData*> &staffDatas)
+    QString StaffData::generateMusicXML(int tempo, int num, int denom)
     {
-        XmlConverter converter("play.xml", 120, 4, 4);
+        XmlConverter converter("play.xml", tempo, num, denom);
 
+        QList<StaffData*> staffDatas = DataWarehouse::instance()->staffDatas();
         foreach (const StaffData *sd, staffDatas) {
             QList<NoteSegment*> allSegments = sd->noteSegments + sd->hollowNoteSegments;
             qSort(allSegments.begin(), allSegments.end(),
@@ -1261,6 +1262,11 @@ namespace Munip
 
         converter.domTreeToXmlFile();
         qDebug() << Q_FUNC_INFO << "Error code:" << converter.getErrorCode();
+
+        QString string;
+        converter.domTreeToXmlString(string);
+
+        return string;
     }
 
     void StaffData::extractHollowNoteStemSegments()

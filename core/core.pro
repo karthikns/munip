@@ -1,7 +1,7 @@
 TEMPLATE = lib
 TARGET = core
 CONFIG += static
-QT += xml
+QT += xml webkit
 
 # Input
 HEADERS += datawarehouse.h \

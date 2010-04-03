@@ -11,5 +11,7 @@ tags
 munip
 skewDetectionTest
 symbolDetectionTest
+startSession.sh
+play.xml
 
 test_output

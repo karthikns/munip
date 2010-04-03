@@ -123,7 +123,7 @@ namespace Munip
         void extractHollowNoteStemSegments();
         void extractHollowNotes();
 
-        static void generateMusicXML(const QList<StaffData*> &staffDatas);
+        static QString generateMusicXML(int tempo = 120, int num = 4, int deonm = 4);
 
         QImage staffImage() const;
         QImage staffImageWithRemovedStaffLinesOnly() const;

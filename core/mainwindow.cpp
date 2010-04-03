@@ -4,13 +4,17 @@
 #include "projection.h"
 #include "processstep.h"
 #include "sidebar.h"
+#include "symbol.h"
 #include "tools.h"
 
 #include <QAction>
 #include <QApplication>
 #include <QDebug>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QDir>
 #include <QDockWidget>
+#include <QDomDocument>
 #include <QFileDialog>
 #include <QLabel>
 #include <QMdiArea>
@@ -18,18 +22,30 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QScopedPointer>
+#include <QSpinBox>
 #include <QStatusBar>
+#include <QTabWidget>
 #include <QToolBar>
+#include <QVBoxLayout>
+#include <QWebView>
 
 MainWindow* MainWindow::m_instance = 0;
 
 MainWindow::MainWindow()
 {
     m_showGridAction = 0;
+    m_tabWidget = new QTabWidget;
+    setCentralWidget(m_tabWidget);
+
     m_mdiArea = new QMdiArea(this);
+
+    m_tabWidget->addTab(m_mdiArea, QIcon(), "Images");
+
     m_coordinateLabel = new QLabel(this);
 
-    setCentralWidget(m_mdiArea);
+
+    setupWebView();
     setupActions();
 
     connect(m_mdiArea, SIGNAL(subWindowActivated(QMdiSubWindow*)),
@@ -49,6 +65,14 @@ MainWindow::~MainWindow()
 MainWindow* MainWindow::instance()
 {
     return m_instance;
+}
+
+void MainWindow::setupWebView()
+{
+    QWebSettings::globalSettings()->setAttribute(QWebSettings::PluginsEnabled, true);
+    m_webView = new QWebView;
+
+    m_tabWidget->addTab(m_webView, QIcon(), "Player");
 }
 
 void MainWindow::setupActions()
@@ -134,11 +158,27 @@ void MainWindow::setupActions()
     projectionAction->setStatusTip(tr("Calculates horizontal projection of the image"));;
     connect(projectionAction, SIGNAL(triggered()), this, SLOT(slotProjection()));
 
+    QAction *playAction = new QAction(tr("&Play"), this);
+    playAction->setShortcut(tr("Ctrl+P"));
+    playAction->setStatusTip(tr("Plays the result of latest symbol detection"));
+    connect(playAction, SIGNAL(triggered()), this, SLOT(slotPlay()));
+
     QMenu *processMenu = menuBar->addMenu(tr("&Process"));
     SideBar *processBar = new SideBar();
+    int i = 1;
     foreach (Munip::ProcessStepAction *action, psActions) {
+        action->setShortcut(QString("Ctrl+%1").arg(i));
         processMenu->addAction(action);
         processBar->addAction(action);
+
+        if(i == 5) {
+            ++i;
+            playAction->setShortcut(QString("Ctrl+%1").arg(i));
+            processMenu->addAction(playAction);
+            processBar->addAction(playAction);
+       }
+
+       ++i;
     }
 
     processMenu->addAction(projectionAction);
@@ -193,6 +233,7 @@ void MainWindow::slotOpen()
         QMdiSubWindow *sub = m_mdiArea->addSubWindow(imgWidget);
         sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
         sub->show();
+        m_tabWidget->setCurrentIndex(0);
     }
 }
 
@@ -263,6 +304,76 @@ void MainWindow::slotProjection()
     QMdiSubWindow *sub = m_mdiArea->addSubWindow(wid);
     sub->widget()->setAttribute(Qt::WA_DeleteOnClose);
     sub->show();
+}
+
+void MainWindow::slotPlay()
+{
+    int tempo = 120;
+    int numerator = 4;
+    int denominator = 4;
+
+    {
+        QScopedPointer<QDialog> dialog(new QDialog);
+        QString data[3] = { "Tempo", "Numerator", "Denominator" };
+        int defaultValues[3] = { tempo, numerator, denominator };
+        int mins[3] = { 80, 1, 1 };
+        int maxs[3] = { 160, 64, 64 };
+
+        QVBoxLayout *layout = new QVBoxLayout(dialog.data());
+        QGridLayout *grid = new QGridLayout;
+        layout->addLayout(grid);
+        QDialogButtonBox *box = new QDialogButtonBox(dialog.data());
+        box->setOrientation(Qt::Horizontal);
+        box->setStandardButtons(QDialogButtonBox::Ok);
+
+        dialog.data()->connect(box, SIGNAL(accepted()), SLOT(accept()));
+
+        for (int i = 0; i < 3; ++i) {
+            QString caption = data[i];
+            caption.prepend('&');
+            QLabel *label = new QLabel(caption);
+            label->setAlignment(Qt::AlignRight);
+
+            QSpinBox *spinBox = new QSpinBox;
+            spinBox->setObjectName(data[i]);
+            spinBox->setRange(mins[i], maxs[i]);
+            spinBox->setValue(defaultValues[i]);
+            label->setBuddy(spinBox);
+
+            grid->addWidget(label, i, 0, Qt::AlignRight);
+            grid->addWidget(spinBox, i, 1, Qt::AlignRight);
+        }
+
+
+        layout->addWidget(box);
+
+        QSpinBox * temp = qFindChild<QSpinBox*>(dialog.data(), data[1]);
+        if (temp) temp->setFocus();
+
+        int code = dialog->exec();
+
+        if (code == QDialog::Accepted) {
+            temp = qFindChild<QSpinBox*>(dialog.data(), data[0]);
+            if (temp) tempo = temp->value();
+
+            temp = qFindChild<QSpinBox*>(dialog.data(), data[1]);
+            if (temp) numerator = temp->value();
+
+            temp = qFindChild<QSpinBox*>(dialog.data(), data[2]);
+            if (temp) denominator = temp->value();
+        }
+    }
+
+    qDebug() << Q_FUNC_INFO << tempo << numerator << denominator;
+    Munip::StaffData::generateMusicXML(tempo, numerator, denominator);
+
+    QFile file(":/resources/play.html");
+    file.open(QIODevice::ReadOnly);
+    QByteArray content = file.readAll();
+
+    m_webView->setHtml(content, QUrl::fromLocalFile(QDir::currentPath() + "/"));
+
+    m_tabWidget->setCurrentIndex(1);
 }
 
 void MainWindow::slotAboutMunip()

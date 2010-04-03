@@ -285,15 +285,6 @@ namespace Munip {
     private:
         static int InvalidStaffSpaceHeight;
     };
-
-    class Player : public ProcessStep
-    {
-        Q_OBJECT
-    public:
-        Player(const QImage &originalImage, ProcessQueue *queue = 0);
-        virtual void process();
-    };
-
 }
 
 #endif

@@ -163,8 +163,6 @@ namespace Munip
             step = new ImageRotation(originalImage, queue);
         else if (className == QByteArray("SymbolAreaExtraction"))
             step = new SymbolAreaExtraction(originalImage, queue);
-        else if (className == QByteArray("Player"))
-            step = new Player(originalImage, queue);
         else if (className == QByteArray("ImageCluster"))
             step = new ImageCluster(originalImage, queue);
 
@@ -177,7 +175,7 @@ namespace Munip
         static QByteArray classes[] =
         {
             "MonoChromeConversion", "SkewCorrection", "StaffLineDetect",
-            "StaffLineRemoval", "SymbolAreaExtraction", "Player",
+            "StaffLineRemoval", "SymbolAreaExtraction",
             "StaffParamExtraction", "ImageCluster", "GrayScaleConversion",
             "ImageRotation"
         };
@@ -187,7 +185,6 @@ namespace Munip
             for (int i = 0; i < size; ++i) {
                 ProcessStepAction *newAction = new ProcessStepAction(classes[i]);
                 newAction->setParent(parent);
-                newAction->setShortcut(QString("Ctrl+%1").arg(i+1));
                 actions << newAction;
             }
         }
@@ -552,7 +549,7 @@ namespace Munip
 
 
     void StaffLineDetect::detectLines()
-    { 
+    {
         const int White = m_processedImage.color(0) == 0xffffffff ? 0 : 1;
         const int Black = 1 - White;
         int countWhite = 0;
@@ -2216,21 +2213,6 @@ void SymbolAreaExtraction::process()
     }
 
     dw->setStaffDatas(staffDatas);
-
-    emit ended();
-}
-
-Player::Player(const QImage &originalImage, ProcessQueue *queue) :
-    ProcessStep(originalImage, queue)
-{
-}
-
-void Player::process()
-{
-    emit started();
-
-    StaffData::generateMusicXML(DataWarehouse::instance()->staffDatas());
-    QDesktopServices::openUrl(QUrl("play.html"));
 
     emit ended();
 }

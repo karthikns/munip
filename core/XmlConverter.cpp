@@ -26,7 +26,7 @@ XmlConverter::XmlConverter(QString outputFile, int t, int b, int bType):
         initTypes();
     }
 
-    QFile file("skeleton.xml");
+    QFile file(":/resources/skeleton.xml");
     if (!file.open(QIODevice::ReadOnly))
         errorCode = 1;                                      // Config File Not Present/No Open Permissions
 
@@ -268,9 +268,9 @@ void XmlConverter::endSlur()
     slurSet = true;
 }
 
-void XmlConverter::domTreeToXmlString(QString&string)
+void XmlConverter::domTreeToXmlString(QString &string)
 {
-    string = qPrintable(doc.toString(4));
+    string = doc.toString(4);
 }
 
 void XmlConverter::domTreeToXmlFile()
