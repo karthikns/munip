@@ -22,6 +22,7 @@
 #include <QSet>
 #include <QStack>
 #include <QTextStream>
+#include <QTime>
 #include <QList>
 #include <QUrl>
 
@@ -135,7 +136,10 @@ namespace Munip
         }
 
         DataWarehouse::instance()->setWorkImage(imgWidget->image());
+        QTime timer;
+        timer.start();
         step->process();
+        qDebug() << m_className << " : Took " << timer.elapsed() << " msecs";
 
         ImageWidget *processed = new ImageWidget(step->processedImage());
         processed->setWidgetID(IDGenerator::gen());
@@ -176,8 +180,8 @@ namespace Munip
         {
             "MonoChromeConversion", "SkewCorrection", "StaffLineDetect",
             "StaffLineRemoval", "SymbolAreaExtraction",
-            "StaffParamExtraction", "ImageCluster", "GrayScaleConversion",
-            "ImageRotation"
+            "StaffParamExtraction", "ImageCluster", "ImageRotation",
+            "GrayScaleConversion"
         };
 
         if (actions.isEmpty()) {
