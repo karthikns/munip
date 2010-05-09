@@ -64,6 +64,11 @@ namespace Munip {
 
         ProcessQueue* processQueue() const;
 
+        bool failed() const;
+        QString failMessage() const;
+
+        void setFailed(const QString& message);
+
     Q_SIGNALS:
         void started();
         void ended();
@@ -80,6 +85,9 @@ namespace Munip {
 
         QPointer<ProcessQueue> m_processQueue;
         bool m_processCompleted;
+
+        bool m_processFailed;
+        QString m_failMessage;
     };
 
     class ProcessQueue : public QObject, public QQueue<ProcessStep*>

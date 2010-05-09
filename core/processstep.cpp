@@ -49,7 +49,8 @@ namespace Munip
         m_originalImage(originalImage),
         m_processedImage(originalImage),
         m_processQueue(processQueue),
-        m_processCompleted(false)
+        m_processCompleted(false),
+        m_processFailed(false)
     {
         if (!m_processQueue.isNull())
             m_processQueue->enqueue(this);
@@ -106,6 +107,22 @@ namespace Munip
         m_processCompleted = false;
     }
 
+    bool ProcessStep::failed() const
+    {
+        return m_processFailed;
+    }
+
+    QString ProcessStep::failMessage() const
+    {
+        return m_failMessage;
+    }
+
+    void ProcessStep::setFailed(const QString &message)
+    {
+        m_processFailed = true;
+        m_failMessage = message;
+    }
+
     void ProcessStep::slotEnded()
     {
         m_processCompleted = true;
@@ -132,6 +149,11 @@ namespace Munip
         QScopedPointer<ProcessStep> step(
                 ProcessStepFactory::create(m_className, imgWidget->image()));
         if (step.isNull()) {
+            return;
+        }
+
+        if (step->failed()) {
+            MainWindow::instance()->slotStatusErrorMessage(step->failMessage());
             return;
         }
 
@@ -255,7 +277,9 @@ namespace Munip
         m_workImage(originalImage),
         m_lineSliceSize(20)//(int)originalImage.width()*0.05)
     {
-        Q_ASSERT(m_originalImage.format() == QImage::Format_Mono);
+        if (m_originalImage.format() != QImage::Format_Mono) {
+            setFailed("Expected monochrome image");
+        }
         //m_lineSliceSize = (int)originalImage.width()*0.05;
     }
 
@@ -410,7 +434,6 @@ namespace Munip
         QList<double> covmat = Munip::covariance(points, mean);
         if (covmat[1] == 0)
             return 0;
-        Q_ASSERT(covmat[1] != 0);
         double eigenvalue = Munip::highestEigenValue(covmat);
         double slope = (eigenvalue - covmat[0]) / (covmat[1]);
         return slope;
@@ -419,7 +442,9 @@ namespace Munip
     StaffLineDetect::StaffLineDetect(const QImage& originalImage, ProcessQueue *queue) :
         ProcessStep(originalImage, queue)
     {
-        Q_ASSERT(originalImage.format() == QImage::Format_Mono);
+        if (m_originalImage.format() != QImage::Format_Mono) {
+            setFailed("Expected monochrome image");
+        }
         m_connectedComponentID = 1;
         //memset(m_imageMap,0,sizeof(m_imageMap));
     }
@@ -1452,7 +1477,6 @@ QList<Segment> StaffLineDetect::findAdjacentSymbolSegments(Segment segment,QImag
 StaffLineRemoval::StaffLineRemoval(const QImage& originalImage, ProcessQueue *queue) :
     ProcessStep(originalImage, queue)
 {
-    Q_ASSERT(originalImage.format() == QImage::Format_ARGB32_Premultiplied);
 }
 
 void StaffLineRemoval::process()
@@ -1707,9 +1731,11 @@ StaffParamExtraction::StaffParamExtraction(const QImage& originalImage,
     ProcessStep(originalImage, queue),
     m_drawGraph(drawGraph)
 {
-    Q_ASSERT(originalImage.format() == QImage::Format_Mono);
-    // Ensure non zero dimension;
-    Q_ASSERT(originalImage.height() * originalImage.width() > 0);
+    if (m_originalImage.format() != QImage::Format_Mono) {
+        setFailed("Expected monochrome image");
+    } else if (m_originalImage.height() * m_originalImage.width() == 0) {
+        setFailed("Expected non null image");
+    }
 }
 
 StaffParamExtraction::StaffParamExtraction(const QImage& originalImage,
@@ -1717,9 +1743,11 @@ StaffParamExtraction::StaffParamExtraction(const QImage& originalImage,
     ProcessStep(originalImage, queue),
     m_drawGraph(true)
 {
-    Q_ASSERT(originalImage.format() == QImage::Format_Mono);
-    // Ensure non zero dimension;
-    Q_ASSERT(originalImage.height() * originalImage.width() > 0);
+    if (m_originalImage.format() != QImage::Format_Mono) {
+        setFailed("Expected monochrome image");
+    } else if (m_originalImage.height() * m_originalImage.width() == 0) {
+        setFailed("Expected non null image");
+    }
 }
 
 void StaffParamExtraction::process()
@@ -1938,6 +1966,9 @@ int ImageCluster::InvalidStaffSpaceHeight = -1;
 ImageCluster::ImageCluster(const QImage& originalImage, ProcessQueue *queue) :
     ProcessStep(originalImage, queue)
 {
+    if (m_originalImage.format() != QImage::Format_Mono) {
+        setFailed("Expected monochrome image");
+    }
     m_clusterSet.setRadius(ImageCluster::InvalidStaffSpaceHeight);
     m_clusterSet.setMinPoints(ImageCluster::InvalidStaffSpaceHeight);
 }
@@ -1945,6 +1976,9 @@ ImageCluster::ImageCluster(const QImage& originalImage, ProcessQueue *queue) :
 ImageCluster::ImageCluster(const QImage& originalImage, int staffSpaceHeight , ProcessQueue *queue) :
     ProcessStep(originalImage, queue)
 {
+    if (m_originalImage.format() != QImage::Format_Mono) {
+        setFailed("Expected monochrome image");
+    }
     QPair<int, int> p = ImageCluster::clusterParams(staffSpaceHeight);
     m_clusterSet.setRadius(p.first);
     m_clusterSet.setMinPoints(p.second);

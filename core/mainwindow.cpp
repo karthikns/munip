@@ -410,6 +410,11 @@ void MainWindow::slotStatusMessage(const QString& msg)
     m_coordinateLabel->setText(msg);
 }
 
+void MainWindow::slotStatusErrorMessage(const QString& msg)
+{
+    statusBar()->showMessage(msg, 2000);
+}
+
 void MainWindow::slotOnSubWindowActivate(QMdiSubWindow *)
 {
     ImageWidget *img = activeImageWidget();

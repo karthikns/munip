@@ -40,6 +40,7 @@ public slots:
     void slotAboutMunip();
 
     void slotStatusMessage(const QString& status);
+    void slotStatusErrorMessage(const QString& status);
 
 private slots:
     void slotOnSubWindowActivate(QMdiSubWindow *);

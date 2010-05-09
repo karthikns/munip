@@ -65,9 +65,12 @@ namespace Munip {
         QGraphicsView::resizeEvent(event);
     }
 
-    ProjectionData horizontalProjection(const QImage& image)
+    ProjectionData horizontalProjection(const QImage& img)
     {
-        Q_ASSERT(image.format() == QImage::Format_Mono);
+        QImage image = img;
+        if (image.format() != QImage::Format_Mono) {
+            image = Munip::convertToMonochrome(img, 200);
+        }
         ProjectionData data;
         const int Black = image.color(0) == 0xffffffff ? 1 : 0;
 
@@ -91,8 +94,7 @@ namespace Munip {
         for(int x = 0; x < image.width(); ++x) {
             for(int y = 0; y < image.height(); ++y) {
                 QRgb rgb = image.pixel(x, y);
-                Q_ASSERT(qRed(rgb) == qBlue(rgb) && qBlue(rgb) == qGreen(rgb));
-                ++data[qRed(rgb)];
+                ++data[qGray(rgb)];
             }
         }
         return data;
