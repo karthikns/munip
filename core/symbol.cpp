@@ -45,6 +45,11 @@ namespace Munip
         return qMakePair(note, octave);
     }
 
+    uint qHash(const QPair<char, int> &noteOctavePair)
+    {
+        return int(noteOctavePair.first) * 100 + (noteOctavePair.second);
+    }
+
     static QString noteTypeFromDenominator(int denominator)
     {
         switch (denominator) {
@@ -79,34 +84,54 @@ namespace Munip
 
         const QString type = noteTypeFromDenominator(denominator);
 
+        QHash<QPair<char, int>, int> frequencyTable;
 
         foreach (const QRect &rect, noteRects) {
-            QPoint center = rect.center();
+            for (int x = rect.left(); x <= rect.right(); ++x) {
+                int startY = rect.center().y();
 
-            int aboveY = center.y() - 1;
-            int belowY = center.y() + 1;
+                int aboveY = startY - 1;
+                int belowY = startY + 1;
 
-            while (aboveY >= 0 &&
-                    lineImage.pixel(center.x(), aboveY) == WhiteColor) {
-                --aboveY;
+                while (aboveY >= 0 &&
+                        lineImage.pixel(x, aboveY) == WhiteColor) {
+                    --aboveY;
+                }
+
+                while (belowY < lineImage.height() &&
+                        lineImage.pixel(x, belowY) == WhiteColor) {
+                    ++belowY;
+                }
+
+                QPair<char, int> noteOctave;
+                if (qAbs(aboveY - startY) < qAbs(belowY - startY)) {
+                    noteOctave = colorToNoteOctave(QColor(lineImage.pixel(x, aboveY)));
+                } else {
+                    noteOctave = colorToNoteOctave(QColor(lineImage.pixel(x, belowY)));
+                }
+
+                frequencyTable[noteOctave]++;
             }
 
-            while (belowY < lineImage.height() &&
-                    lineImage.pixel(center.x(), belowY) == WhiteColor) {
-                ++belowY;
+            // Now find the entry with max frequency.
+            QHash<QPair<char, int>, int>::iterator it = frequencyTable.begin();
+
+            int maxFreq = -1;
+            QPair<char, int> maxNoteOctaveValue;
+            while (it != frequencyTable.end()) {
+               if (it.value() > maxFreq) {
+                   maxFreq = it.value();
+                   maxNoteOctaveValue = it.key();
+                }
+                ++it;
             }
 
-            QPair<char, int> noteOctave;
-            if (qAbs(aboveY - center.y()) < qAbs(belowY - center.y())) {
-                noteOctave = colorToNoteOctave(QColor(lineImage.pixel(center.x(), aboveY)));
-            } else {
-                noteOctave = colorToNoteOctave(QColor(lineImage.pixel(center.x(), belowY)));
-            }
+            Q_ASSERT(maxFreq != -1);
 
             NoteInfo noteInfo;
 
-            noteInfo.octave = QString::number(noteOctave.second);
-            noteInfo.step.append(noteOctave.first);
+            noteInfo.octave = QString::number(maxNoteOctaveValue.second);
+            noteInfo.step.append(maxNoteOctaveValue.first);
             noteInfo.type = type;
 
             retval << noteInfo;

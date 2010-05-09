@@ -2032,6 +2032,14 @@ void SymbolAreaExtraction::process()
     m_processedImage.fill(0xffffffff);
     QPainter p(&m_processedImage);
 
+    const bool drawBeamPoints = true;
+    const bool drawStems = true;
+    const bool drawQuarterNotes = true;
+    const bool drawFlags = true;
+    const bool drawPartialBeams = true;
+    const bool drawNoteClassification = true;
+    const bool drawHalfNoteStems = true;
+    const bool drawHalfAndWholeNotes = true;
     int y = 0;
     foreach (StaffData *sd, staffDatas) {
         QImage img = sd->staffImage();
@@ -2040,7 +2048,7 @@ void SymbolAreaExtraction::process()
             // p.fillRect(0, 0, img.width(), img.height(), QBrush(Qt::white));
 
             // Draw beam points
-            if (1) {
+            if (drawBeamPoints) {
                 p.setBrush(Qt::NoBrush);
                 QColor colors_beam[5] = {
                     QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
@@ -2059,7 +2067,7 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw stems
-            if (1) {
+            if (drawStems) {
                 QColor colors[5] = {
                     QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
                     QColor(Qt::magenta), QColor(Qt::darkCyan)
@@ -2076,7 +2084,7 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw notes.
-            if (1) {
+            if (drawQuarterNotes) {
                 QColor colors[5] = {
                     QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
                     QColor(Qt::magenta), QColor(Qt::darkCyan)
@@ -2095,7 +2103,7 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw flags.
-            if (1) {
+            if (drawFlags) {
                 p.setBrush(Qt::NoBrush);
                 p.setPen(Qt::darkGray);
 
@@ -2110,7 +2118,7 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw partial beams.
-            if (1) {
+            if (drawPartialBeams) {
                 p.setBrush(Qt::NoBrush);
                 p.setPen(QColor(Qt::cyan));
 
@@ -2125,7 +2133,7 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw note regions. (This should be last as it is translucent)
-            if (1) {
+            if (drawNoteClassification) {
                 QColor color = QColor(Qt::darkYellow);
                 color.setAlpha(100);
                 QColor redColor = QColor(Qt::red);
@@ -2142,7 +2150,7 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw stems of hollow notes
-            if (1) {
+            if (drawHalfNoteStems) {
                 QColor colors[5] = {
                     QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
                     QColor(Qt::magenta), QColor(Qt::darkCyan)
@@ -2159,7 +2167,7 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw hollow notes.
-            if (1) {
+            if (drawHalfAndWholeNotes) {
                 QColor colors[5] = {
                     QColor(Qt::darkYellow), QColor(Qt::blue), QColor(Qt::darkGreen),
                     QColor(Qt::magenta), QColor(Qt::darkCyan)
@@ -2178,7 +2186,7 @@ void SymbolAreaExtraction::process()
             }
 
             // Draw half and whole note regions. (This should be last as it is translucent)
-            if (1) {
+            if (drawNoteClassification) {
                 QColor color = QColor(Qt::darkGreen);
                 color.setAlpha(100);
                 QColor redColor = QColor(Qt::red);
@@ -2207,7 +2215,8 @@ void SymbolAreaExtraction::process()
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->noteProjections));
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->temp));
         //p.drawImage(QPoint(0, y), sd->noteHeadHorizontalProjectionImage());
-        p.drawImage(QPoint(0, y), sd->workImage);
+        //p.drawImage(QPoint(0, y), sd->workImage);
+        p.drawImage(QPoint(0, y), sd->staffImage());
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->hollowNoteMaxProjections));
         //p.drawImage(QPoint(0, y), sd->projectionImage(sd->hollowNoteProjections));
         //p.drawImage(QPoint(0, y), sd->hollowNoteHeadHorizontalProjectionImage());

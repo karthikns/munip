@@ -236,7 +236,8 @@ void MainWindow::addSubWindow(QWidget *widget)
 void MainWindow::slotOpen()
 {
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open file"),
-                                                    QDir::currentPath() + QDir::separator() + QString("images"),
+                                                    QDir::currentPath() + QDir::separator() + QString("images")
+                                                    + QDir::separator() + QString("Test Images"),
                                                     tr("Images (*.png *.xpm *.jpg *.bmp)"));
     if (!fileName.isEmpty()) {
         ImageWidget *imgWidget = new ImageWidget(fileName);
