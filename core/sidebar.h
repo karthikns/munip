@@ -2,10 +2,16 @@
 #define SIDEBAR_H
 
 #include <QMap>
-#include <QWidget>
+#include <QPushButton>
 
-class QPushButton;
 class QVBoxLayout;
+
+class SideBarButton : public QPushButton
+{
+Q_OBJECT
+public:
+    SideBarButton(const QIcon &icon, const QString &text, QWidget *parent = 0);
+};
 
 class SideBar : public QWidget
 {
@@ -21,7 +27,7 @@ protected:
     void paintEvent(QPaintEvent*);
 
 private:
-    QMap<QAction *, QPushButton *> m_actionButtonMap;
+    QMap<QAction *, SideBarButton *> m_actionButtonMap;
     QVBoxLayout *m_layout;
 };
 

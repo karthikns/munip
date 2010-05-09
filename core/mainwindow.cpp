@@ -44,9 +44,11 @@ MainWindow::MainWindow()
 
     m_coordinateLabel = new QLabel(this);
 
+    setIconSize(QSize(16, 16));
 
     setupWebView();
     setupActions();
+    applyStyle();
 
     connect(m_mdiArea, SIGNAL(subWindowActivated(QMdiSubWindow*)),
             this, SLOT(slotOnSubWindowActivate(QMdiSubWindow*)));
@@ -107,6 +109,7 @@ void MainWindow::setupActions()
     quitAction->setStatusTip(tr("Quit application"));
     connect(quitAction, SIGNAL(triggered()), this, SLOT(slotQuit()));
 
+    QToolBar *toolBar = addToolBar("ToolBar");
     QMenu *fileMenu = menuBar->addMenu(tr("&File"));
     fileMenu->addAction(openAction);
     fileMenu->addAction(saveAction);
@@ -115,13 +118,13 @@ void MainWindow::setupActions()
     fileMenu->addAction(closeAllAction);
     fileMenu->addSeparator();
     fileMenu->addAction(quitAction);
-    QToolBar *fileBar = addToolBar(tr("&File"));
-    fileBar->addAction(openAction);
-    fileBar->addAction(saveAction);
-    fileBar->addAction(saveAsAction);
-    fileBar->addAction(closeAction);
-    fileBar->addAction(closeAllAction);
-    fileBar->addAction(quitAction);
+    toolBar->addAction(openAction);
+    toolBar->addAction(saveAction);
+    toolBar->addAction(saveAsAction);
+    toolBar->addAction(closeAction);
+    toolBar->addAction(closeAllAction);
+    toolBar->addAction(quitAction);
+    toolBar->addSeparator();
 
 
     QAction *zoomInAction = new QAction(QIcon(":/resources/zoom-in.png"), tr("Zoom &in"), this);
@@ -146,10 +149,10 @@ void MainWindow::setupActions()
     viewMenu->addAction(zoomOutAction);
     viewMenu->addSeparator();
     viewMenu->addAction(m_showGridAction);
-    QToolBar *viewBar = addToolBar(tr("&View"));
-    viewBar->addAction(zoomInAction);
-    viewBar->addAction(zoomOutAction);
-    viewBar->addAction(m_showGridAction);
+    toolBar->addAction(zoomInAction);
+    toolBar->addAction(zoomOutAction);
+    toolBar->addAction(m_showGridAction);
+    toolBar->addSeparator();
 
     QList<Munip::ProcessStepAction*> psActions = Munip::ProcessStepFactory::actions(this);
 
@@ -195,13 +198,21 @@ void MainWindow::setupActions()
 
     QMenu *helpMenu = menuBar->addMenu(tr("&Help"));
     helpMenu->addAction(aboutAction);
-    QToolBar *helpBar = addToolBar("&Help");
-    helpBar->addAction(aboutAction);
+    toolBar->addAction(aboutAction);
 
     QStatusBar *s = statusBar(); //create statusbar
     s->addPermanentWidget(m_coordinateLabel);
     m_coordinateLabel->show();
     m_coordinateLabel->setText("hello");
+}
+
+void MainWindow::applyStyle()
+{
+    QFile styleFile(":/resources/style.css");
+    if (styleFile.open(QIODevice::ReadOnly)) {
+        QByteArray styleText = styleFile.readAll();
+        setStyleSheet(styleText);
+    }
 }
 
 ImageWidget* MainWindow::activeImageWidget() const

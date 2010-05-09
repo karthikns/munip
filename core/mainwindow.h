@@ -47,6 +47,7 @@ private slots:
 private:
     void setupWebView();
     void setupActions();
+    void applyStyle();
 
     QAction *m_showGridAction;
     QTabWidget *m_tabWidget;

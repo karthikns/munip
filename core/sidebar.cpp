@@ -3,10 +3,14 @@
 #include <QAction>
 #include <QDebug>
 #include <QPainter>
-#include <QPushButton>
 #include <QStyle>
 #include <QStyleOption>
 #include <QVBoxLayout>
+
+SideBarButton::SideBarButton(const QIcon &icon, const QString &text, QWidget *parent) :
+    QPushButton(icon, text, parent)
+{
+}
 
 SideBar::SideBar(QWidget *parent) : QWidget(parent)
 {
@@ -25,27 +29,10 @@ void SideBar::addAction(QAction *action)
         qWarning() << "Trying to add already added action";
         return;
     }
-    QPushButton *button = new QPushButton(action->icon(),
+    SideBarButton *button = new SideBarButton(action->icon(),
                                           action->text(),
                                           this);
-    const char* buttonStyleSheet =
-        "QPushButton {"
-        "     background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0.036, y2:1, stop:0 rgba(141, 140, 121, 255), stop:0.494845 rgba(43, 42, 8, 255), stop:1 rgba(141, 140, 121, 255));"
-        "     border-style: outset;"
-        "     border-width: 2px;"
-        "     border-radius: 10px;"
-        "     border-color: beige;"
-        "     font: bold 14px;"
-        "     min-width: 10em;"
-        "     padding: 6px;"
-        "     color: #E3EAA1;"
-        " }"
-        " QPushButton:pressed {"
-        "     background-color:qlineargradient(spread:pad, x1:0, y1:0, x2:0.036, y2:1, stop:0 rgba(43, 42, 8, 255), stop:0.494845 rgba(141, 140, 121, 255), stop:1 rgba(34, 32, 11, 255));"
-        "     border-style: inset;"
-        " }; ";
 
-    button->setStyleSheet(buttonStyleSheet);
     button->setCheckable(action->isCheckable());
     if (action->isCheckable()) {
         button->setChecked(action->isChecked());

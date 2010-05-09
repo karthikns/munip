@@ -11,5 +11,6 @@
         <file>resources/zoom-out.png</file>
         <file>resources/play.html</file>
         <file>resources/skeleton.xml</file>
+        <file>resources/style.css</file>
     </qresource>
 </RCC>
