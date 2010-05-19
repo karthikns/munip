@@ -12,5 +12,6 @@
         <file>resources/play.html</file>
         <file>resources/skeleton.xml</file>
         <file>resources/style.css</file>
+        <file>resources/FreeDots.jar</file>
     </qresource>
 </RCC>

@@ -22,10 +22,13 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QProcess>
 #include <QScopedPointer>
+#include <QSplitter>
 #include <QSpinBox>
 #include <QStatusBar>
 #include <QTabWidget>
+#include <QTextEdit>
 #include <QToolBar>
 #include <QVBoxLayout>
 #include <QWebView>
@@ -46,7 +49,7 @@ MainWindow::MainWindow()
 
     setIconSize(QSize(16, 16));
 
-    setupWebView();
+    setup2ndTab();
     setupActions();
     applyStyle();
 
@@ -69,12 +72,24 @@ MainWindow* MainWindow::instance()
     return m_instance;
 }
 
-void MainWindow::setupWebView()
+void MainWindow::setup2ndTab()
 {
+    QFile file(":/resources/FreeDots.jar");
+    QFileInfo info(file);
+    qDebug() << file.fileName();
+
     QWebSettings::globalSettings()->setAttribute(QWebSettings::PluginsEnabled, true);
     m_webView = new QWebView;
 
-    m_tabWidget->addTab(m_webView, QIcon(), "Player");
+    m_brailleView = new QTextEdit;
+    m_brailleView->setReadOnly(true);
+    m_brailleView->setFontPointSize(20);
+
+    QSplitter *splitter = new QSplitter(Qt::Vertical);
+    splitter->addWidget(m_webView);
+    splitter->addWidget(m_brailleView);
+
+    m_tabWidget->addTab(splitter, QIcon(), "Player/Braille");
 }
 
 void MainWindow::setupActions()
@@ -384,6 +399,13 @@ void MainWindow::slotPlay()
     QByteArray content = file.readAll();
 
     m_webView->setHtml(content, QUrl::fromLocalFile(QDir::currentPath() + "/"));
+
+    m_brailleTranscriptionProcess = new QProcess;
+    m_brailleTranscriptionProcess->start("java -jar app/resources/FreeDots.jar -nw play.xml");
+    m_brailleTranscriptionProcess->waitForFinished();
+    QByteArray output = m_brailleTranscriptionProcess->readAllStandardOutput();
+    QString utf8 = QString::fromUtf8(output);
+    m_brailleView->setText(utf8);
 
     m_tabWidget->setCurrentIndex(1);
 }

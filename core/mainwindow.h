@@ -7,7 +7,9 @@ class ImageWidget;
 class QLabel;
 class QMdiArea;
 class QMdiSubWindow;
+class QProcess;
 class QTabWiget;
+class QTextEdit;
 class QWebView;
 
 class MainWindow : public QMainWindow
@@ -46,14 +48,16 @@ private slots:
     void slotOnSubWindowActivate(QMdiSubWindow *);
 
 private:
-    void setupWebView();
+    void setup2ndTab();
     void setupActions();
     void applyStyle();
 
     QAction *m_showGridAction;
     QTabWidget *m_tabWidget;
     QWebView *m_webView;
+    QTextEdit *m_brailleView;
     QMdiArea *m_mdiArea;
+    QProcess *m_brailleTranscriptionProcess;
 
     QLabel *m_coordinateLabel;
     static MainWindow* m_instance;
