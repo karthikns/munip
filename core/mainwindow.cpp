@@ -403,8 +403,13 @@ void MainWindow::slotPlay()
     QDir().setCurrent(currentDir);
 
     QProcessEnvironment sysEnvironment = QProcessEnvironment::systemEnvironment();
-    QString processString = QString("java -jar \"%1\" -nw \"%2/play.xml\"")
+    QString processString = QString("java -jar \"%1\" -nw %2 \"%3/play.xml\"")
                             .arg(sysEnvironment.value("FREEDOTS", "freedots.jar"))
+#if defined(Q_OS_WIN32) || defined(Q_OS_MAC)
+                            .arg()
+#else
+                            .arg("-p")
+#endif
                             .arg(QDir().currentPath());
     m_brailleTranscriptionProcess->start(processString);
 }
