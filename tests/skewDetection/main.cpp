@@ -7,11 +7,13 @@
 
 #include "processstep.h"
 
+extern bool EnableMDebugOutput;
+
 class tst_SkewDetection : public QObject
 {
 Q_OBJECT
 public:
-    tst_SkewDetection() : calculatedAngle(0.0) {}
+    tst_SkewDetection() : calculatedAngle(0.0) {EnableMDebugOutput = false;}
 
 public Q_SLOTS:
     void slotCalculatedAngle(qreal angle) { calculatedAngle = angle; }
@@ -19,6 +21,9 @@ public Q_SLOTS:
 private Q_SLOTS:
     void skewDetect_data();
     void skewDetect();
+
+    void benchmarkSkewCorrect_data();
+    void benchmarkSkewCorrect();
 
     void cleanupTestCase();
 
@@ -45,8 +50,16 @@ void tst_SkewDetection::skewDetect_data()
         qreal actualAngle;
     };
 
+#undef OLD
+
+#ifdef OLD
     static const QString prefix = "images/";
+#else
+    static const QString prefix = "images/Test Images/";
+#endif
+
     #define S QString
+#ifdef OLD
     Data data[] = {
         { S("music4.bmp"), -7.99 },
 
@@ -62,6 +75,22 @@ void tst_SkewDetection::skewDetect_data()
 
         { S("music1.bmp"), -4.94 }
     };
+
+#else
+    Data data[] = {
+        { S("janaganamana.png"), 0.0 },
+        { S("krishna_ne_begane.png"), 0.0 },
+        { S("lightly row.png"), 0.0 },
+        { S("little brown jug.png"), 0.0 },
+        { S("london bridge.png"), 0.0 },
+        { S("singh is king.png"), 0.0 },
+        { S("swanee river.png"), 0.0 },
+        { S("ten little indians.png"), 0.0 },
+        { S("twinkle.png"), 0.0 },
+        { S("we wish you a merry christmas1 3-4.png"), 0.0 },
+        { S("we wish you a merry christmas2 3-4.png"), 0.0 }
+    };
+#endif
     #undef S
 
     for (uint i = 0; i < sizeof(data)/sizeof(Data); ++i) {
@@ -207,6 +236,69 @@ void tst_SkewDetection::cleanupTestCase()
    args << secondArg;
 
    QProcess::execute(QString("gnuplot"), args);
+}
+
+void tst_SkewDetection::benchmarkSkewCorrect_data()
+{
+    QTest::addColumn<bool>("useNewSkewCorrection");
+    QTest::addColumn<QImage>("image");
+
+    QString fileNames[] = {
+        "janaganamana.png",
+        "krishna_ne_begane.png",
+        "lightly row.png",
+        "little brown jug.png",
+        "london bridge.png",
+        "singh is king.png",
+        "swanee river.png",
+        "ten little indians.png",
+        "twinkle.png",
+        "we wish you a merry christmas1 3-4.png",
+        "we wish you a merry christmas2 3-4.png"
+    };
+
+    qreal angles[] = {
+        1, -1, 2, -2, -3, 3, 5, -6, 30, -22, 8
+    };
+
+    const QString New = "NewSkewCorrection";
+    const QString Old = "OldSkewCorrection";
+    const QString prefix = "images/Test Images/";
+
+    for (uint i = 0; i < (sizeof(angles)/sizeof(qreal)); ++i) {
+        QImage image(prefix + fileNames[i]);
+        {
+            QScopedPointer<Munip::ProcessStep> mono(new Munip::MonoChromeConversion(image));
+            mono->process();
+            image = mono->processedImage();
+        }
+
+        {
+            QScopedPointer<Munip::ProcessStep> rotate(new Munip::ImageRotation(image, angles[i]));
+            rotate->process();
+            image = rotate->processedImage();
+        }
+
+        QTest::newRow(qPrintable(Old + "--" + fileNames[i])) << false << image;
+        QTest::newRow(qPrintable(New + "--" + fileNames[i])) << true << image;
+    }
+}
+
+void tst_SkewDetection::benchmarkSkewCorrect()
+{
+    QFETCH(bool, useNewSkewCorrection);
+    QFETCH(QImage, image);
+    if (useNewSkewCorrection) {
+        QBENCHMARK {
+            QScopedPointer<Munip::ProcessStep> skewCorrect(new Munip::NewSkewCorrection(image));
+            skewCorrect->process();
+        }
+    } else {
+        QBENCHMARK {
+            QScopedPointer<Munip::ProcessStep> skewCorrect(new Munip::SkewCorrection(image));
+            skewCorrect->process();
+        }
+    }
 }
 
 QTEST_MAIN(tst_SkewDetection)

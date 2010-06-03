@@ -295,5 +295,35 @@ namespace Munip {
     };
 }
 
+namespace Munip
+{
+    class NewSkewCorrection : public ProcessStep
+    {
+        Q_OBJECT;
+    public:
+        NewSkewCorrection(const QImage& originalImage, ProcessQueue *processqueue = 0);
+        virtual void process();
+
+        double detectSkew();
+        void dfs(int x, int y, QList<QPoint> &points, int index);
+        void upDfs(int x, int y, QList<QPoint> &points, int index);
+        void downDfs(int x, int y, QList<QPoint> &points, int index);
+        double findSkew(QList<QPoint> &points, int count);
+
+        QList<double> skewList() const { return m_skewList; }
+
+    Q_SIGNALS:
+        void angleCalculated(qreal angleInDegrees);
+
+    private:
+        QImage m_workImage;
+        const int m_lineSliceSize;
+        //const float m_skewPrecision;
+        QList<double> m_skewList;
+        QList<double> m_upSkewList;
+        QList<double> m_downSkewList;
+    };
+} // namespace Munip
+
 #endif
 

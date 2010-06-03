@@ -235,24 +235,30 @@ namespace Munip
         return monochromed;
     }
 
-    QPointF meanOfPoints(const QList<QPoint>& pixels)
+    QPointF meanOfPoints(const QList<QPoint> &pixels, int size)
     {
         QPointF mean;
+        if (size < 0) {
+            size = pixels.size();
+        }
 
-        foreach(const QPoint &pixel, pixels) {
+        for (int i = 0; i < size; ++i) {
+            const QPoint &pixel = pixels.at(i);
             mean.rx() += pixel.x();
             mean.ry() += pixel.y();
         }
 
-        if(pixels.size()==0)
+        if(size == 0) {
             return mean;
+        }
 
-        mean /= pixels.size();
+        mean /= size;
         return mean;
     }
 
 
-    QList<double> covariance(const QList<QPoint>& blackPixels, QPointF mean)
+    QList<double> covariance(const QList<QPoint> &blackPixels,
+            const QPointF &mean, int size)
     {
         QList<double> varianceMatrix;
         varianceMatrix << 0 << 0 << 0 << 0;
@@ -263,7 +269,12 @@ namespace Munip
         double &vyy = varianceMatrix[3];
 
 
-        foreach(const QPoint& pixel, blackPixels) {
+        if (size < 0) {
+            size = blackPixels.size();
+        }
+
+        for (int i = 0; i < size; ++i) {
+            const QPoint &pixel = blackPixels.at(i);
             vxx += ( pixel.x() - mean.x() ) * ( pixel.x() - mean.x() );
             vyx = vxy += ( pixel.x() - mean.x() ) * ( pixel.y() - mean.y() );
             vyy += ( pixel.y() - mean.y() ) * ( pixel.y() - mean.y() );

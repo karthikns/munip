@@ -7,7 +7,6 @@
 #include "mainwindow.h"
 #include "projection.h"
 #include "tools.h"
-
 #include <QAction>
 #include <QDesktopServices>
 #include <QDir>
@@ -161,7 +160,7 @@ namespace Munip
         QTime timer;
         timer.start();
         step->process();
-        qDebug() << m_className << " : Took " << timer.elapsed() << " msecs";
+        mDebug() << m_className << " : Took " << timer.elapsed() << " msecs";
 
         ImageWidget *processed = new ImageWidget(step->processedImage());
         processed->setWidgetID(IDGenerator::gen());
@@ -191,6 +190,8 @@ namespace Munip
             step = new SymbolAreaExtraction(originalImage, queue);
         else if (className == QByteArray("ImageCluster"))
             step = new ImageCluster(originalImage, queue);
+        else if (className == QByteArray("NewSkewCorrection"))
+            step = new NewSkewCorrection(originalImage, queue);
 
         return step;
     }
@@ -203,7 +204,7 @@ namespace Munip
             "MonoChromeConversion", "SkewCorrection", "StaffLineDetect",
             "StaffLineRemoval", "SymbolAreaExtraction",
             "StaffParamExtraction", "ImageCluster", "ImageRotation",
-            "GrayScaleConversion"
+            "GrayScaleConversion", "NewSkewCorrection"
         };
 
         if (actions.isEmpty()) {
@@ -288,7 +289,7 @@ namespace Munip
         emit started();
         const double theta = std::atan(detectSkew());
         const double angle = -180.0/M_PI * theta;
-        mDebug() << Q_FUNC_INFO << angle << endl;
+        mDebug() << Q_FUNC_INFO << "Angle: " << angle << endl;
         if (theta == 0.0) {
             emit ended();
             return;
@@ -382,6 +383,7 @@ namespace Munip
             skew += m_skewList[i];
         skew /= modefrequency;
 
+        mDebug() << Q_FUNC_INFO << "Skew: " << skew;
         return skew;
     }
 
@@ -2265,3 +2267,332 @@ void SymbolAreaExtraction::process()
 }
 
 }
+
+namespace Munip
+{
+
+    NewSkewCorrection::NewSkewCorrection(const QImage& originalImage, ProcessQueue *queue) :
+        ProcessStep(originalImage, queue),
+        m_workImage(originalImage),
+        m_lineSliceSize((int)originalImage.width()*0.05)
+    {
+        if (m_originalImage.format() != QImage::Format_Mono) {
+            setFailed("Expected monochrome image");
+        }
+        //m_lineSliceSize = (int)originalImage.width()*0.05;
+    }
+
+    void NewSkewCorrection::process()
+    {
+        emit started();
+        const double theta = std::atan(detectSkew());
+        const double angle = -180.0/M_PI * theta;
+        mDebug() << Q_FUNC_INFO << "Angle: " << angle << endl;
+        if (theta == 0.0) {
+            emit ended();
+            return;
+        }
+
+        QTransform transform, trueTransform;
+        emit angleCalculated(-angle);
+        transform.rotate(angle);
+        // Find out the true tranformation used (automatically adjusted
+        // by QImage::transformed method)
+        trueTransform = m_processedImage.trueMatrix(transform, m_processedImage.width(),
+                m_processedImage.height());
+
+        // Processed image will have the transformed image rotated by
+        // staff skew after following operation. Apart from that it also
+        // has black triangular corners produced due to bounding rect
+        // extentsion.
+        m_processedImage = m_processedImage.transformed(transform, Qt::FastTransformation);
+        m_processedImage = Munip::convertToMonochrome(m_processedImage, 240);
+
+
+        // Calculate the black triangular areas as single polygon.
+        const QPolygonF oldImageTransformedRect = trueTransform.map(QPolygonF(QRectF(m_originalImage.rect())));
+        const QPolygonF newImageRect = QPolygonF(QRectF(m_processedImage.rect()));
+        const QPolygonF remainingBlackTriangularAreas = newImageRect.subtracted(oldImageTransformedRect);
+
+        // Now simply fill the above obtained polygon with white to
+        // eliminate the black corner triangle.
+        //
+        // NOTE: Pen width = 2 ensures there is no faint line garbage
+        //       left behind.
+        QPainter painter(&m_processedImage);
+        painter.setPen(QPen(Qt::white, 2));
+        painter.setBrush(QBrush(Qt::white));
+        painter.drawPolygon(remainingBlackTriangularAreas);
+        painter.end();
+
+        emit ended();
+    }
+
+    double NewSkewCorrection::detectSkew()
+    {
+        int x = 0, y = 0;
+        const int Black = m_workImage.color(0) == 0xffffffff ? 1 : 0;
+
+        QList<QPoint> points = QVector<QPoint>(10000).toList();
+
+        double upSkew = 0.0;
+        do {
+            for(x = 0;  x < m_workImage.width(); x++) {
+                for(y = 0; y < m_workImage.height(); y++) {
+                    if (m_workImage.pixelIndex(x,y) == Black) {
+                        upDfs(x, y, points, 0);
+                    }
+                }
+            }
+
+            // Computation of the skew with highest frequency
+            qSort(m_upSkewList.begin(), m_upSkewList.end());
+
+            /*        mDebug() << endl << Q_FUNC_INFO << "Display the list";
+                      foreach(double skew, m_skewList) {
+                      mDebug() << skew;
+                      }
+                      mDebug() << endl;
+                      */
+
+            int i = 0, n = m_upSkewList.size();
+            if (n == 0) {
+                upSkew = 0.0;
+                break;
+            }
+
+            int modefrequency = 0;
+            int maxstartindex = -1, maxendindex = -1;
+            while (i <= n-1)
+            {
+                int runlength = 1;
+                double t = m_upSkewList[i];
+                int runvalue = (int) (t * 100);
+                while (i + runlength <= n-1 && (int)(m_upSkewList[i+runlength]*100) == runvalue) {
+                    runlength++;
+                }
+                if (runlength > modefrequency)
+                {
+                    modefrequency = runlength;
+                    maxstartindex = i;
+                    maxendindex = i + runlength - 1;
+                }
+                i += runlength;
+            }
+
+            double skew = 0;
+            for(int i = maxstartindex; i <= maxendindex; i++)
+                skew += m_upSkewList[i];
+            skew /= modefrequency;
+
+            upSkew = skew;
+        } while (false);
+
+        m_workImage = m_originalImage;
+
+        double downSkew = 0.0;
+        do {
+            for(x = 0;  x < m_workImage.width(); x++) {
+                for(y = 0; y < m_workImage.height(); y++) {
+                    if (m_workImage.pixelIndex(x,y) == Black) {
+                        downDfs(x, y, points, 0);
+                    }
+                }
+            }
+
+            // Computation of the skew with highest frequency
+            qSort(m_downSkewList.begin(), m_downSkewList.end());
+
+            /*        mDebug() << endl << Q_FUNC_INFO << "Display the list";
+                      foreach(double skew, m_skewList) {
+                      mDebug() << skew;
+                      }
+                      mDebug() << endl;
+                      */
+
+            int i = 0, n = m_downSkewList.size();
+            if (n == 0) {
+                downSkew = 0.0;
+                break;
+            }
+
+            int modefrequency = 0;
+            int maxstartindex = -1, maxendindex = -1;
+            while (i <= n-1)
+            {
+                int runlength = 1;
+                double t = m_downSkewList[i];
+                int runvalue = (int) (t * 100);
+                while (i + runlength <= n-1 && (int)(m_downSkewList[i+runlength]*100) == runvalue) {
+                    runlength++;
+                }
+                if (runlength > modefrequency)
+                {
+                    modefrequency = runlength;
+                    maxstartindex = i;
+                    maxendindex = i + runlength - 1;
+                }
+                i += runlength;
+            }
+
+            double skew = 0;
+            for(int i = maxstartindex; i <= maxendindex; i++)
+                skew += m_downSkewList[i];
+            skew /= modefrequency;
+
+            downSkew = skew;
+        } while (false);
+
+        //double skew = upSkew * m_upSkewList.size() + downSkew * m_downSkewList.size();
+        //skew /= (m_upSkewList.size() + m_downSkewList.size());
+
+        double skew = ((m_upSkewList.size() > m_downSkewList.size()) ? upSkew : downSkew);
+
+        mDebug();
+        mDebug() << Q_FUNC_INFO << "Up: " << upSkew << m_upSkewList.size();
+        mDebug() << Q_FUNC_INFO << "Down: " << downSkew << m_downSkewList.size();
+        mDebug() << Q_FUNC_INFO << "Skew: " << skew;
+        mDebug();
+
+        return skew;
+    }
+
+
+    void NewSkewCorrection::dfs(int x,int y, QList<QPoint> &points, int index)
+    {
+        const int Black = m_workImage.color(0) == 0xffffffff ? 1 : 0;
+        const int White = 1 - Black;
+
+        m_workImage.setPixel(x, y, White);
+        if (index >= points.size()) {
+            QVector<QPoint> vec = points.toVector();
+            vec.resize(points.size() * 2);
+            points = vec.toList();
+        }
+
+        points[index] = QPoint(x, y);
+
+        const bool xPlus1Valid = (x+1 >= 0 && x+1 < m_workImage.width());
+        const bool yMinus1Valid = (y-1 >= 0 && y-1 < m_workImage.height());
+        const bool yPlus1Valid = (y+1 >= 0 && y+1 < m_workImage.height());
+
+
+        bool noBlacks = (!xPlus1Valid) ||
+            ((m_workImage.pixelIndex(x+1, y) == White) &&
+             (!yMinus1Valid || m_workImage.pixelIndex(x+1, y-1) == White) &&
+             (!yPlus1Valid || m_workImage.pixelIndex(x+1, y+1) == White));
+        if (noBlacks && (index + 1) >= m_lineSliceSize)
+        {
+            double skew = findSkew(points, index + 1);
+            m_skewList.push_back(skew);
+            return;
+        }
+
+        if (xPlus1Valid) {
+            if (yPlus1Valid && m_workImage.pixelIndex(x+1, y+1) == Black)
+            {
+                dfs(x+1, y+1, points, index + 1);
+            }
+            if (m_workImage.pixelIndex(x+1, y) == Black)
+            {
+                dfs(x+1, y, points, index + 1);
+            }
+            if (yMinus1Valid && m_workImage.pixelIndex(x+1, y-1))
+            {
+                dfs(x+1, y-1, points, index + 1);
+            }
+        }
+    }
+
+    void NewSkewCorrection::upDfs(int x,int y, QList<QPoint> &points, int index)
+    {
+        const int Black = m_workImage.color(0) == 0xffffffff ? 1 : 0;
+        const int White = 1 - Black;
+
+        m_workImage.setPixel(x, y, White);
+        if (index >= points.size()) {
+            QVector<QPoint> vec = points.toVector();
+            vec.resize(points.size() * 2);
+            points = vec.toList();
+        }
+
+        points[index] = QPoint(x, y);
+
+        const bool xPlus1Valid = (x+1 >= 0 && x+1 < m_workImage.width());
+        const bool yMinus1Valid = (y-1 >= 0 && y-1 < m_workImage.height());
+
+
+        bool noBlacks = (!xPlus1Valid) ||
+            ((m_workImage.pixelIndex(x+1, y) == White) &&
+             (!yMinus1Valid || m_workImage.pixelIndex(x+1, y-1) == White));
+        if (noBlacks && (index + 1) >= m_lineSliceSize)
+        {
+            double skew = findSkew(points, index + 1);
+            m_upSkewList.push_back(skew);
+            return;
+        }
+
+        if (xPlus1Valid) {
+            if (m_workImage.pixelIndex(x+1, y) == Black)
+            {
+                upDfs(x+1, y, points, index + 1);
+            }
+            if (yMinus1Valid && m_workImage.pixelIndex(x+1, y-1))
+            {
+                upDfs(x+1, y-1, points, index + 1);
+            }
+        }
+    }
+
+    void NewSkewCorrection::downDfs(int x,int y, QList<QPoint> &points, int index)
+    {
+        const int Black = m_workImage.color(0) == 0xffffffff ? 1 : 0;
+        const int White = 1 - Black;
+
+        m_workImage.setPixel(x, y, White);
+        if (index >= points.size()) {
+            QVector<QPoint> vec = points.toVector();
+            vec.resize(points.size() * 2);
+            points = vec.toList();
+        }
+
+        points[index] = QPoint(x, y);
+
+        const bool xPlus1Valid = (x+1 >= 0 && x+1 < m_workImage.width());
+        const bool yPlus1Valid = (y+1 >= 0 && y+1 < m_workImage.height());
+
+
+        bool noBlacks = (!xPlus1Valid) ||
+            ((m_workImage.pixelIndex(x+1, y) == White) &&
+             (!yPlus1Valid || m_workImage.pixelIndex(x+1, y+1) == White));
+        if (noBlacks && (index + 1) >= m_lineSliceSize)
+        {
+            double skew = findSkew(points, index + 1);
+            m_downSkewList.push_back(skew);
+            return;
+        }
+
+        if (xPlus1Valid) {
+            if (m_workImage.pixelIndex(x+1, y) == Black)
+            {
+                downDfs(x+1, y, points, index + 1);
+            }
+            if (yPlus1Valid && m_workImage.pixelIndex(x+1, y+1) == Black)
+            {
+                downDfs(x+1, y+1, points, index + 1);
+            }
+        }
+    }
+
+    double NewSkewCorrection::findSkew(QList<QPoint>& points, int size)
+    {
+        QPointF mean = Munip::meanOfPoints(points, size);
+        QList<double> covmat = Munip::covariance(points, mean, size);
+        if (covmat[1] == 0)
+            return 0;
+        double eigenvalue = Munip::highestEigenValue(covmat);
+        double slope = (eigenvalue - covmat[0]) / (covmat[1]);
+        return slope;
+    }
+
+} // namespace Munip
