@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QProcess>
 
 class ImageWidget;
 class QLabel;
@@ -46,6 +47,7 @@ public slots:
 
 private slots:
     void slotOnSubWindowActivate(QMdiSubWindow *);
+    void slotOnTranscriptionComplete(int exitCode, QProcess::ExitStatus status);
 
 private:
     void setup2ndTab();

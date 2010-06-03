@@ -22,7 +22,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
-#include <QProcess>
+#include <QProcessEnvironment>
 #include <QScopedPointer>
 #include <QSplitter>
 #include <QSpinBox>
@@ -65,6 +65,7 @@ MainWindow::MainWindow()
 
 MainWindow::~MainWindow()
 {
+    delete m_brailleTranscriptionProcess;
 }
 
 MainWindow* MainWindow::instance()
@@ -74,10 +75,6 @@ MainWindow* MainWindow::instance()
 
 void MainWindow::setup2ndTab()
 {
-    QFile file(":/resources/FreeDots.jar");
-    QFileInfo info(file);
-    qDebug() << file.fileName();
-
     QWebSettings::globalSettings()->setAttribute(QWebSettings::PluginsEnabled, true);
     m_webView = new QWebView;
 
@@ -90,6 +87,9 @@ void MainWindow::setup2ndTab()
     splitter->addWidget(m_brailleView);
 
     m_tabWidget->addTab(splitter, QIcon(), "Player/Braille");
+    m_brailleTranscriptionProcess = new QProcess;
+    connect(m_brailleTranscriptionProcess, SIGNAL(finished(int,QProcess::ExitStatus)),
+        this, SLOT(slotOnTranscriptionComplete(int,QProcess::ExitStatus)));
 }
 
 void MainWindow::setupActions()
@@ -398,16 +398,15 @@ void MainWindow::slotPlay()
     file.open(QIODevice::ReadOnly);
     QByteArray content = file.readAll();
 
+    const QString currentDir = QDir().currentPath();
     m_webView->setHtml(content, QUrl::fromLocalFile(QDir::currentPath() + "/"));
+    QDir().setCurrent(currentDir);
 
-    m_brailleTranscriptionProcess = new QProcess;
-    m_brailleTranscriptionProcess->start("java -jar app/resources/FreeDots.jar -nw play.xml");
-    m_brailleTranscriptionProcess->waitForFinished();
-    QByteArray output = m_brailleTranscriptionProcess->readAllStandardOutput();
-    QString utf8 = QString::fromUtf8(output);
-    m_brailleView->setText(utf8);
-
-    m_tabWidget->setCurrentIndex(1);
+    QProcessEnvironment sysEnvironment = QProcessEnvironment::systemEnvironment();
+    QString processString = QString("java -jar \"%1\" -nw \"%2/play.xml\"")
+                            .arg(sysEnvironment.value("FREEDOTS", "freedots.jar"))
+                            .arg(QDir().currentPath());
+    m_brailleTranscriptionProcess->start(processString);
 }
 
 void MainWindow::slotAboutMunip()
@@ -449,4 +448,18 @@ void MainWindow::slotOnSubWindowActivate(QMdiSubWindow *)
         m_showGridAction->setChecked(img->showGrid());
         m_showGridAction->blockSignals(false);
     }
+}
+
+void MainWindow::slotOnTranscriptionComplete(int exitCode, QProcess::ExitStatus status)
+{
+    qDebug() << exitCode << status;
+    QString out = QString::fromUtf8(m_brailleTranscriptionProcess->readAllStandardOutput());
+    QString err = QString::fromUtf8(m_brailleTranscriptionProcess->readAllStandardError());
+    if (exitCode != 0 || status != QProcess::NormalExit) {
+        m_brailleView->setText(tr("Transcription failed.. Retry.\n%1\n%2")
+                    .arg(out).arg(err));
+    } else {
+        m_brailleView->setText(out);
+    }
+    m_tabWidget->setCurrentIndex(1);
 }
