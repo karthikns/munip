@@ -177,7 +177,7 @@ namespace Munip
         else if (className == QByteArray("MonoChromeConversion"))
             step = new MonoChromeConversion(originalImage, queue);
         else if (className == QByteArray("SkewCorrection"))
-            step = new SkewCorrection(originalImage, queue);
+            step = new NewSkewCorrection(originalImage, queue);
         else if (className == QByteArray("StaffLineDetect"))
             step = new StaffLineDetect(originalImage, queue);
         else if (className == QByteArray("StaffLineRemoval"))
@@ -191,7 +191,7 @@ namespace Munip
         else if (className == QByteArray("ImageCluster"))
             step = new ImageCluster(originalImage, queue);
         else if (className == QByteArray("NewSkewCorrection"))
-            step = new NewSkewCorrection(originalImage, queue);
+            step = new SkewCorrection(originalImage, queue);
 
         return step;
     }

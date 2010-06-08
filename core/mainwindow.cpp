@@ -81,12 +81,14 @@ void MainWindow::setup2ndTab()
     m_brailleView = new QTextEdit;
     m_brailleView->setReadOnly(true);
     m_brailleView->setFontPointSize(20);
+    m_brailleView->hide();
 
-    QSplitter *splitter = new QSplitter(Qt::Vertical);
-    splitter->addWidget(m_webView);
-    splitter->addWidget(m_brailleView);
+    //QSplitter *splitter = new QSplitter(Qt::Vertical);
+    //splitter->addWidget(m_webView);
+    //splitter->addWidget(m_brailleView);
 
-    m_tabWidget->addTab(splitter, QIcon(), "Player/Braille");
+    //m_tabWidget->addTab(splitter, QIcon(), "Player/Braille");
+    m_tabWidget->addTab(m_webView, QIcon(), "Player");
     m_brailleTranscriptionProcess = new QProcess;
     connect(m_brailleTranscriptionProcess, SIGNAL(finished(int,QProcess::ExitStatus)),
         this, SLOT(slotOnTranscriptionComplete(int,QProcess::ExitStatus)));
@@ -401,12 +403,15 @@ void MainWindow::slotPlay()
     const QString currentDir = QDir().currentPath();
     m_webView->setHtml(content, QUrl::fromLocalFile(QDir::currentPath() + "/"));
     QDir().setCurrent(currentDir);
+    m_tabWidget->setCurrentIndex(1);
+
+    return;
 
     QProcessEnvironment sysEnvironment = QProcessEnvironment::systemEnvironment();
     QString processString = QString("java -jar \"%1\" -nw %2 \"%3/play.xml\"")
                             .arg(sysEnvironment.value("FREEDOTS", "freedots.jar"))
 #if defined(Q_OS_WIN32) || defined(Q_OS_MAC)
-                            .arg()
+                            .arg("")
 #else
                             .arg("-p")
 #endif
