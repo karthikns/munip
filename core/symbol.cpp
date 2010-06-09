@@ -1172,11 +1172,13 @@ namespace Munip
         QList<int> keys = hollowNoteProjections.keys();
         qSort(keys);
 
-
         // Fill up very thin gaps. (aka the bald note head region ;) )
         const int ThinGapLimit = (dw->staffLineHeight().min >> 1);
 
-        for (int i = keys.first(); i <= keys.last(); ++i) {
+        int start = (keys.isEmpty() ? -1 : keys.first());
+        int end = (keys.isEmpty() ? -2 : keys.last());
+
+        for (int i = start; i <= end; ++i) {
             if (hollowNoteProjections.value(i, 0) > 0) continue;
 
             int runlength = 0;
@@ -1206,7 +1208,9 @@ namespace Munip
         const int ThinRegionLimit = int(qRound(1.1 * dw->staffSpaceHeight().max));
         const int ThickRegionLimit = dw->staffSpaceHeight().max << 1;
 
-        for (int i = keys.first(); i <= keys.last(); ++i) {
+        start = (keys.isEmpty() ? -1 : keys.first());
+        end = (keys.isEmpty() ? -2 : keys.last());
+        for (int i = start; i <= end; ++i) {
             if (hollowNoteProjections.value(i, 0) == 0) continue;
 
             int runlength = 0;
@@ -1233,7 +1237,9 @@ namespace Munip
         const int height = r.height();
         const int noteWidth = 2 * DataWarehouse::instance()->staffSpaceHeight().min;
 
-        for (int i = keys.first(); i <= keys.last(); ++i) {
+        start = (keys.isEmpty() ? -1 : keys.first());
+        end = (keys.isEmpty() ? -2 : keys.last());
+        for (int i = start; i <= end; ++i) {
             if (hollowNoteProjections.value(i, 0) == 0) continue;
 
             int runlength = 0;
