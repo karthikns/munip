@@ -385,11 +385,13 @@ namespace Munip
         qSort(noteSegments.begin(), noteSegments.end(),
                 lessThanNoteSegmentPointers);
 
+#if 0
         mDebug() << Q_FUNC_INFO << endl << "Note segments <sorted>: ";
         foreach (NoteSegment *seg, noteSegments) {
             mDebug() << seg;
         }
         mDebug();
+#endif
     }
 
     QHash<int, int> StaffData::filter(Range , Range height,
@@ -505,7 +507,6 @@ namespace Munip
 
     void StaffData::extractBeams()
     {
-        mDebug() << Q_FUNC_INFO;
         beamsRunCoords.clear();
         VerticalRunlengthImage vRunImage(workImage);
 
@@ -571,8 +572,6 @@ namespace Munip
                 }
             }
         }
-
-        mDebug() << "Num of beam segments = " << beamsRunCoords.size();
     }
 
     StemSegment* StaffData::stemSegmentForRunCoord(const RunCoord& runCoord)
@@ -700,7 +699,6 @@ namespace Munip
 
     void StaffData::extractFlags()
     {
-        mDebug() << Q_FUNC_INFO;
         VerticalRunlengthImage vRunImage(workImage);
 
         QHash<RunCoord, RunCoord> prevCoord;
@@ -819,7 +817,6 @@ namespace Munip
 
     void StaffData::extractPartialBeams()
     {
-        mDebug() << Q_FUNC_INFO;
         VerticalRunlengthImage vRunImage(workImage);
 
         QHash<RunCoord, RunCoord> prevCoord;
@@ -1066,13 +1063,13 @@ namespace Munip
         const int MinArea = 1;
         const int MaxArea = M_PI * MaxRadiusLimit * MaxRadiusLimit;
 
-        if (0) {
-            mDebug() << Q_FUNC_INFO;
-            mDebug() << "Min : " << MinArea << "Max : " << MaxArea;
-            foreach (const Region *region, regions) {
-                mDebug() << region->points.size();
-            }
+#if 0
+        mDebug() << Q_FUNC_INFO;
+        mDebug() << "Min : " << MinArea << "Max : " << MaxArea;
+        foreach (const Region *region, regions) {
+            mDebug() << region->points.size();
         }
+#endif
 
         QPainter p(&workImage);
         p.setPen(QColor(Qt::black));
@@ -1263,11 +1260,13 @@ namespace Munip
         qSort(hollowNoteSegments.begin(), hollowNoteSegments.end(),
                 lessThanNoteSegmentPointers);
 
-        mDebug() << Q_FUNC_INFO << endl << "Hollow Note segments <sorted>: ";
-        foreach (NoteSegment *seg, hollowNoteSegments) {
-            mDebug() << seg;
-        }
-        mDebug();
+#if 0
+            mDebug() << Q_FUNC_INFO << endl << "Hollow Note segments <sorted>: ";
+            foreach (NoteSegment *seg, hollowNoteSegments) {
+                mDebug() << seg;
+            }
+            mDebug();
+#endif
     }
 
     QString StaffData::generateMusicXML(int tempo, int num, int denom)

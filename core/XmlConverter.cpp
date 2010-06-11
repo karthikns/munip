@@ -152,8 +152,6 @@ void XmlConverter::addPlainNote(QString step, QString octave, QString type)
 
     QDomNode node = doc.elementsByTagName("measure").at(currentMeasure);
     node.insertAfter(fragment, node.lastChild());
-
-    qDebug() << Q_FUNC_INFO << step << octave << type;
 }
 
 void XmlConverter::addChord(QList<QString> step, QList<QString> octave, QString type)

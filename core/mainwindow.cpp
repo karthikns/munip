@@ -81,14 +81,12 @@ void MainWindow::setup2ndTab()
     m_brailleView = new QTextEdit;
     m_brailleView->setReadOnly(true);
     m_brailleView->setFontPointSize(20);
-    m_brailleView->hide();
 
-    //QSplitter *splitter = new QSplitter(Qt::Vertical);
-    //splitter->addWidget(m_webView);
-    //splitter->addWidget(m_brailleView);
+    QSplitter *splitter = new QSplitter(Qt::Vertical);
+    splitter->addWidget(m_webView);
+    splitter->addWidget(m_brailleView);
 
-    //m_tabWidget->addTab(splitter, QIcon(), "Player/Braille");
-    m_tabWidget->addTab(m_webView, QIcon(), "Player");
+    m_tabWidget->addTab(splitter, QIcon(), "Player/Braille");
     m_brailleTranscriptionProcess = new QProcess;
     connect(m_brailleTranscriptionProcess, SIGNAL(finished(int,QProcess::ExitStatus)),
         this, SLOT(slotOnTranscriptionComplete(int,QProcess::ExitStatus)));
@@ -393,7 +391,6 @@ void MainWindow::slotPlay()
         }
     }
 
-    qDebug() << Q_FUNC_INFO << tempo << numerator << denominator;
     Munip::StaffData::generateMusicXML(tempo, numerator, denominator);
 
     QFile file(":/resources/play.html");
@@ -403,9 +400,6 @@ void MainWindow::slotPlay()
     const QString currentDir = QDir().currentPath();
     m_webView->setHtml(content, QUrl::fromLocalFile(QDir::currentPath() + "/"));
     QDir().setCurrent(currentDir);
-    m_tabWidget->setCurrentIndex(1);
-
-    return;
 
     QProcessEnvironment sysEnvironment = QProcessEnvironment::systemEnvironment();
     QString processString = QString("java -jar \"%1\" -nw %2 \"%3/play.xml\"")
@@ -417,6 +411,8 @@ void MainWindow::slotPlay()
 #endif
                             .arg(QDir().currentPath());
     m_brailleTranscriptionProcess->start(processString);
+    m_brailleView->setText("Transcription in progress");
+    m_brailleView->setFontItalic(true);
 }
 
 void MainWindow::slotAboutMunip()
@@ -462,7 +458,6 @@ void MainWindow::slotOnSubWindowActivate(QMdiSubWindow *)
 
 void MainWindow::slotOnTranscriptionComplete(int exitCode, QProcess::ExitStatus status)
 {
-    qDebug() << exitCode << status;
     QString out = QString::fromUtf8(m_brailleTranscriptionProcess->readAllStandardOutput());
     QString err = QString::fromUtf8(m_brailleTranscriptionProcess->readAllStandardError());
     if (exitCode != 0 || status != QProcess::NormalExit) {
@@ -471,5 +466,6 @@ void MainWindow::slotOnTranscriptionComplete(int exitCode, QProcess::ExitStatus 
     } else {
         m_brailleView->setText(out);
     }
+    m_brailleView->setFontItalic(false);
     m_tabWidget->setCurrentIndex(1);
 }

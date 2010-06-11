@@ -383,7 +383,6 @@ namespace Munip
             skew += m_skewList[i];
         skew /= modefrequency;
 
-        mDebug() << Q_FUNC_INFO << "Skew: " << skew;
         return skew;
     }
 
@@ -816,7 +815,6 @@ void StaffLineDetect::constructStaff()
 
     int i = 0;
     DataWarehouse::instance()->clearStaff();
-    mDebug() << Q_FUNC_INFO;
     while (i < m_lineList.size())
     {
         Staff s;
@@ -832,8 +830,6 @@ void StaffLineDetect::constructStaff()
         s.setBoundingRect(findStaffBoundingRect(s));
 
         DataWarehouse ::instance()->appendStaff(s);
-        mDebug() << "staff contructed when i = " << i;
-        mDebug() << "Staff rect = " << s.boundingRect() << endl;
 #if 0
         identifySymbolRegions(s);
 #endif
